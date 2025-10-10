@@ -1,0 +1,175 @@
+import { Search, TrendingUp, MapPin } from "lucide-react";
+import { Input } from "../components/ui/input"; //có
+import { Button } from "../components/ui/button"; //có
+import RestaurantCard from "../components/RestaurantCard"; //có
+import { FeaturedRestaurant } from "../components/FeaturedRestaurant"; // có
+import { PromotionBanner } from "../components/PromotionBanner"; //có
+import { restaurants, featuredRestaurants, promotions } from "../../data/mockData"; //có
+import { useLocation } from "../contexts/LocationContext"; // có
+import { useState, useMemo } from "react";
+
+export const HomePage = () => {
+  const [searchQuery, setSearchQuery] = useState("");
+  const [selectedCuisine, setSelectedCuisine] = useState("Tất cả");
+  const { state: locationState, calculateDistance } = useLocation();
+
+  // Calculate distance for each restaurant and sort by distance
+  const restaurantsWithDistance = useMemo(() => {
+    if (!locationState.currentLocation) return restaurants;
+
+    return restaurants
+      .map((restaurant) => {
+        if (!restaurant.coordinates) return { ...restaurant, distance: 0 };
+
+        const distance = calculateDistance(
+          locationState.currentLocation.coordinates.lat,
+          locationState.currentLocation.coordinates.lng,
+          restaurant.coordinates.lat,
+          restaurant.coordinates.lng
+        );
+
+        return { ...restaurant, distance: Math.round(distance * 10) / 10 };
+      })
+      .sort((a, b) => (a.distance || 0) - (b.distance || 0));
+  }, [locationState.currentLocation, calculateDistance]);
+
+  const filteredRestaurants = restaurantsWithDistance.filter(
+    (restaurant) =>
+      restaurant.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      restaurant.cuisine.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
+  const cuisineTypes = [
+    "Tất cả",
+    "Việt Nam",
+    "Ý",
+    "Nhật Bản",
+    "Thái Lan",
+    "Hàn Quốc",
+    "Mỹ",
+  ];
+
+  const finalFilteredRestaurants =
+    selectedCuisine === "Tất cả"
+      ? filteredRestaurants
+      : filteredRestaurants.filter(
+          (restaurant) => restaurant.cuisine === selectedCuisine
+        );
+
+  return (
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      {/* Hero Section */}
+      <div className="text-center mb-8">
+        <h1 className="text-4xl font-bold text-gray-900 mb-4">
+          Đặt món yêu thích của bạn
+        </h1>
+        <p className="text-xl text-gray-600 mb-8">
+          Giao hàng nhanh chóng từ các nhà hàng tốt nhất trong khu vực
+        </p>
+
+        {/* Search Bar */}
+        <div className="max-w-md mx-auto relative">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+          <Input
+            type="text"
+            placeholder="Tìm kiếm nhà hàng hoặc món ăn..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="pl-10 pr-4 py-3 w-full"
+          />
+        </div>
+      </div>
+
+      {/* Promotions */}
+      <div className="mb-8">
+        <h2 className="text-2xl font-bold mb-4">Ưu đãi hôm nay</h2>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {promotions.map((promotion) => (
+            <PromotionBanner key={promotion.id} promotion={promotion} />
+          ))}
+        </div>
+      </div>
+
+      {/* Featured Restaurants */}
+      <div className="mb-8">
+        <div className="flex items-center space-x-2 mb-6">
+          <TrendingUp className="w-6 h-6 text-orange-500" />
+          <h2 className="text-2xl font-bold">Nhà hàng nổi bật</h2>
+        </div>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+          {featuredRestaurants.map((restaurant, index) => (
+            <FeaturedRestaurant
+              key={restaurant.id}
+              restaurant={restaurant}
+              promotion={
+                promotions[0] && index === 0
+                  ? {
+                      title: promotions[0].title,
+                      description: promotions[0].description,
+                    }
+                  : undefined
+              }
+            />
+          ))}
+        </div>
+      </div>
+
+      {/* Restaurants Near You */}
+      {locationState.currentLocation && finalFilteredRestaurants.length > 0 && (
+        <div className="mb-8">
+          <div className="flex items-center space-x-2 mb-6">
+            <MapPin className="w-6 h-6 text-orange-500" />
+            <h2 className="text-2xl font-bold">
+              Nhà hàng gần bạn tại {locationState.currentLocation.name}
+            </h2>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {finalFilteredRestaurants.slice(0, 6).map((restaurant) => (
+              <RestaurantCard key={restaurant.id} restaurant={restaurant} />
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Cuisine Filter */}
+      <div className="mb-8">
+        <h2 className="text-2xl font-bold mb-4">Lọc theo loại ẩm thực</h2>
+        <div className="flex flex-wrap gap-2">
+          {cuisineTypes.map((cuisine) => (
+            <Button
+              key={cuisine}
+              variant={selectedCuisine === cuisine ? "default" : "outline"}
+              onClick={() => setSelectedCuisine(cuisine)}
+              className={
+                selectedCuisine === cuisine
+                  ? "bg-orange-500 hover:bg-orange-600"
+                  : ""
+              }
+            >
+              {cuisine}
+            </Button>
+          ))}
+        </div>
+      </div>
+
+      {/* All Restaurants */}
+      <div className="mb-8">
+        <h2 className="text-2xl font-bold mb-6">Tất cả nhà hàng</h2>
+
+        {finalFilteredRestaurants.length === 0 ? (
+          <div className="text-center py-12">
+            <p className="text-gray-500 text-lg">
+              Không tìm thấy nhà hàng nào phù hợp
+            </p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {finalFilteredRestaurants.map((restaurant) => (
+              <RestaurantCard key={restaurant.id} restaurant={restaurant} />
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
