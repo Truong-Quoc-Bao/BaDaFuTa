@@ -2,14 +2,14 @@ import { Star, Clock, Truck, Tag } from "lucide-react";
 import { Card, CardContent } from "./ui/card";
 import { Badge } from "./ui/badge";
 import { Button } from "./ui/button";
-import { ImageWithFallback } from "../components/figma/ImageWithFallback";
+import { ImageWithFallback } from "./figma/ImageWithFallback";
 import { useNavigate } from "react-router-dom";
 
 export const FeaturedRestaurant = ({ restaurant, promotion }) => {
   const navigate = useNavigate();
 
   const handleClick = () => {
-    navigate(`/restaurant/${restaurant.id}`);
+    navigate(`restaurant/${restaurant.id}`);
   };
 
   return (

@@ -7,7 +7,7 @@ import { Badge } from "./ui/badge";
 import { ImageWithFallback } from "./figma/ImageWithFallback";
 import { useCart } from "../contexts/CartContext";
 import { ToppingSelectionDialog } from "./ToppingSelectionDialog";
-import { toast } from "sonner@2.0.3";
+import { toast } from "sonner";
 import {
   getOptimizedFoodImage,
   optimizeImageUrl,
@@ -17,43 +17,43 @@ import {
 
 export const MenuItemCard = ({ menuItem, restaurant, layout = "vertical" }) => {
   const { addItem } = useCart();
-//   const navigate = useNavigate();
-//   const [showToppingDialog, setShowToppingDialog] = useState(false);
+  const navigate = useNavigate();
+  const [showToppingDialog, setShowToppingDialog] = useState(false);
 
-//   // Check if item is available
-//   const isAvailable = menuItem.isAvailable !== false;
+  // Check if item is available
+  const isAvailable = menuItem.isAvailable !== false;
 
-//   // Check if item has toppings or required options
-//   const hasToppings = menuItem.toppings && menuItem.toppings.length > 0;
+  // Check if item has toppings or required options
+  const hasToppings = menuItem.toppings && menuItem.toppings.length > 0;
 
-//   const handleQuickAdd = (e) => {
-//     e.stopPropagation(); // Prevent opening detail dialog
+  const handleQuickAdd = (e) => {
+    e.stopPropagation(); // Prevent opening detail dialog
 
-//     // E1: Check availability first
-//     if (!isAvailable) {
-//       toast.error(
-//         "Sản phẩm đã hết hàng/ngừng kinh doanh, vui lòng chọn sản phẩm khác."
-//       );
-//       return;
-//     }
+    // E1: Check availability first
+    if (!isAvailable) {
+      toast.error(
+        "Sản phẩm đã hết hàng/ngừng kinh doanh, vui lòng chọn sản phẩm khác."
+      );
+      return;
+    }
 
-//     // Step 4 from Use Case: Show topping selection if item has toppings
-//     if (hasToppings) {
-//       setShowToppingDialog(true);
-//     } else {
-//       // Direct add to cart if no toppings (simpler items)
-//       addItem(menuItem, restaurant);
-//       toast.success(`Đã thêm ${menuItem.name} vào giỏ hàng`);
-//     }
-//   };
+    // Step 4 from Use Case: Show topping selection if item has toppings
+    if (hasToppings) {
+      setShowToppingDialog(true);
+    } else {
+      // Direct add to cart if no toppings (simpler items)
+      addItem(menuItem, restaurant);
+      toast.success(`Đã thêm ${menuItem.name} vào giỏ hàng`);
+    }
+  };
 
-//   const handleCardClick = () => {
-//     navigate(`/restaurant/${restaurant.id}/item/${menuItem.id}`);
-//   };
+  const handleCardClick = () => {
+    navigate(`/restaurant/${restaurant.id}/item/${menuItem.id}`);
+  };
 
-//   const handleCloseToppingDialog = () => {
-//     setShowToppingDialog(false);
-//   };
+  const handleCloseToppingDialog = () => {
+    setShowToppingDialog(false);
+  };
 
   // Vertical layout for catalog page (new design with image on top)
   if (layout === "vertical") {

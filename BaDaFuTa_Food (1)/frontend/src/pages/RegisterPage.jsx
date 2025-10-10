@@ -56,7 +56,7 @@ export default function RegisterPage() {
           {/* Back to home button */}
           <Button
             variant="ghost"
-            onClick={() => navigate("/")}
+            onClick={() => navigate("/h")}
             className="mb-6 flex items-center"
           >
             <ArrowLeft className="w-4 h-4 mr-2" />
@@ -243,7 +243,7 @@ export default function RegisterPage() {
                 </div>
                 <div className="text-xs text-gray-600 mt-4">
                   <p className="text-center">
-                    Bằng việc đăng kí, bạn đã đồng ý với BaDaFuTaFood về{" "}
+                    Bằng việc đăng kí, bạn đã đồng ý với BaDaFuTaFood về <br/>{" "}
                     <Link
                       to="/"
                       className="text-orange-600 hover:text-orange-700 hover:underline "
@@ -270,7 +270,7 @@ export default function RegisterPage() {
                   to="/login"
                   className="text-orange-600 hover:text-orange-700 hover:underline font-medium"
                 >
-                  Đăng nhập ngay
+                  Đăng nhập ngay.
                 </Link>
               </div>
             </CardFooter>

@@ -1502,7 +1502,7 @@ export const menuItems = [
 ];
 
 export const getRestaurantById = (id) => {
-  return restaurants.find(restaurant => restaurant.id === id);
+  return restaurants.find((r) => String(r.id) === String(id));
 };
 
 export const getMenuItemsByRestaurant = (restaurantId) => {

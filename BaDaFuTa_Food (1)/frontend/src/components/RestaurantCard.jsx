@@ -4,7 +4,7 @@ import { Badge } from "./ui/badge";
 import { ImageWithFallback } from "../components/figma/ImageWithFallback";
 import { useNavigate } from "react-router-dom";
 
-export default function RestaurantCard  ({ restaurant }) {
+export default function RestaurantCard ({ restaurant }) {
   const navigate = useNavigate();
 
   const handleClick = () => {
@@ -22,7 +22,7 @@ export default function RestaurantCard  ({ restaurant }) {
           <ImageWithFallback
             src={restaurant.image}
             alt={restaurant.name}
-            className="w-full h-full object-cover"
+            className="rounded-tl-xl rounded-tr-xl w-full h-full object-cover"
           />
 
           {/* Cuisine badge */}

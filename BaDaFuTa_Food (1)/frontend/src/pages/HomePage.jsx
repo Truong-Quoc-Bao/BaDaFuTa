@@ -1,14 +1,13 @@
 import { Search, TrendingUp, MapPin } from "lucide-react";
-import { Input } from "../components/ui/input"; //có
-import { Button } from "../components/ui/button"; //có
-import RestaurantCard from "../components/RestaurantCard"; //có
-import { FeaturedRestaurant } from "../components/FeaturedRestaurant"; // có
-import { PromotionBanner } from "../components/PromotionBanner"; //có
-import { restaurants, featuredRestaurants, promotions } from "../../data/mockData"; //có
-import { useLocation } from "../contexts/LocationContext"; // có
+import { Input } from "../components/ui/input";
+import { Button } from "../components/ui/button";
+import RestaurantCard from "../components/RestaurantCard";
+import { FeaturedRestaurant } from "../components/FeaturedRestaurant";
+import { PromotionBanner } from "../components/PromotionBanner";
+import { restaurants, featuredRestaurants, promotions } from "../../data/mockData";
+import { useLocation } from "../contexts/LocationContext";
 import { useState, useMemo } from "react";
-
-export const HomePage = () => {
+export default function HomePage () {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCuisine, setSelectedCuisine] = useState("Tất cả");
   const { state: locationState, calculateDistance } = useLocation();
@@ -102,7 +101,7 @@ export const HomePage = () => {
               key={restaurant.id}
               restaurant={restaurant}
               promotion={
-                promotions[0] && index === 0
+                index === 0
                   ? {
                       title: promotions[0].title,
                       description: promotions[0].description,
@@ -131,7 +130,7 @@ export const HomePage = () => {
         </div>
       )}
 
-      {/* Cuisine Filter */}
+      {/* Cuisine Filter
       <div className="mb-8">
         <h2 className="text-2xl font-bold mb-4">Lọc theo loại ẩm thực</h2>
         <div className="flex flex-wrap gap-2">
@@ -149,6 +148,30 @@ export const HomePage = () => {
               {cuisine}
             </Button>
           ))}
+        </div>
+      </div> */}
+
+      <div className="mb-8 ">
+        <h2 className="text-2xl font-bold mb-4">Lọc theo loại ẩm thực</h2>
+        <div className="flex flex-wrap gap-3">
+          {cuisineTypes.map((cuisine) => {
+            const isSelected = selectedCuisine === cuisine;
+            return (
+              <button
+                key={cuisine}
+                variant={selectedCuisine === cuisine ? "default" : "outline"}
+                onClick={() => setSelectedCuisine(cuisine)}
+                className={`rounded-xl px-5 py-2 text-base font-semibold border transition-all duration-200
+            ${
+              isSelected
+                ? "bg-orange-500 text-white border-orange-500"
+                : "bg-white text-black border-gray-300 hover:bg-gray-100"
+            }`}
+              >
+                {cuisine}
+              </button>
+            );
+          })}
         </div>
       </div>
 
