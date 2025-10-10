@@ -56,7 +56,7 @@ export default function RegisterPage() {
           {/* Back to home button */}
           <Button
             variant="ghost"
-            onClick={() => navigate("/h")}
+            onClick={() => navigate("/")}
             className="mb-6 flex items-center"
           >
             <ArrowLeft className="w-4 h-4 mr-2" />
@@ -161,11 +161,11 @@ export default function RegisterPage() {
                         className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
                         //disabled={isLoading}
                       >
-                        {/* {showPassword ? (
+                        {showPassword ? (
                           <EyeOff className="w-4 h-4" />
                         ) : (
                           <Eye className="w-4 h-4" />
-                        )} */}
+                        )}
                       </button>
                     </div>
                   </div>
@@ -184,7 +184,11 @@ export default function RegisterPage() {
                         type="button"
                         className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
                       >
-                        <Eye className="w-4 h-4" />
+                        {showPassword ? (
+                          <EyeOff className="w-4 h-4" />
+                        ) : (
+                          <Eye className="w-4 h-4" />
+                        )}
                       </button>
                     </div>
                   </div>
@@ -243,7 +247,7 @@ export default function RegisterPage() {
                 </div>
                 <div className="text-xs text-gray-600 mt-4">
                   <p className="text-center">
-                    Bằng việc đăng kí, bạn đã đồng ý với BaDaFuTaFood về <br/>{" "}
+                    Bằng việc đăng kí, bạn đã đồng ý với BaDaFuTaFood về <br />{" "}
                     <Link
                       to="/"
                       className="text-orange-600 hover:text-orange-700 hover:underline "

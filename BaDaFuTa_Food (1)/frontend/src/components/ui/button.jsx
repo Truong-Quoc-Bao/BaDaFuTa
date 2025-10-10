@@ -14,7 +14,7 @@ const buttonVariants = cva(
         outline:
           "border-0 bg-gray-200 text-foreground hover:bg-red-500 hover:text-white dark:bg-input/30 dark:border-input dark:hover:bg-gray-500",
         secondary:
-          "bg-secondary text-secondary-foreground hover:bg-secondary/80",
+          "text-sm font-medium transition-colors text-orange-600 text-gray-600 hover:text-orange-600",
         ghost: " hover:bg-teal-100 hover:text-gray-900",
         link: "text-primary underline-offset-4 hover:underline",
       },
@@ -31,6 +31,8 @@ const buttonVariants = cva(
     },
   }
 );
+
+
 
 const Button = React.forwardRef(
   ({ className, variant, size, asChild = false, ...props }, ref) => {

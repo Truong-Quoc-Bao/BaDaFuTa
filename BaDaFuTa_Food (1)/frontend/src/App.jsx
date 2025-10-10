@@ -4,6 +4,7 @@ import LoginPage from "./pages/LoginPage"
 import { RestaurantPage } from './pages/RestaurantPage'
 import HomePage from "./pages/HomePage";
 import { MerchantLoginPage } from "./pages/MerchantLoginPage";
+import Header from "./components/Header"
 import './App.css'
 
 function App() {
@@ -14,8 +15,9 @@ function App() {
       <RegisterPage /> 
       <LoginPage />   
       {/* <RestaurantPage/>  */}
-      <MerchantLoginPage/>
+      {/* <MerchantLoginPage/> */} 
       {/* {/* <HomePage/> */}
+      {/* <Header/> */}
     </>
   );
 }
