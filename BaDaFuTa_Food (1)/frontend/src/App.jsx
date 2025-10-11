@@ -13,7 +13,7 @@ function App() {
   return (
     <>
       <RegisterPage /> 
-      <LoginPage />   
+      {/* <LoginPage />    */}
       {/* <RestaurantPage/>  */}
       {/* <MerchantLoginPage/> */} 
       {/* {/* <HomePage/> */}

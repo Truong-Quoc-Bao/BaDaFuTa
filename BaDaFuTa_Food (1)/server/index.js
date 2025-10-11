@@ -4,6 +4,7 @@ import cors from "cors";
 import dotenv from "dotenv";
 import { pool } from "../server/db.js"; // kết nối database
 import restaurantRoutes from "../server/routes/restaurantRoutes.js"; // import router riêng
+import registerRoutes from "./routes/registerRoutes.js";
 
 dotenv.config();
 const app = express();
@@ -12,6 +13,20 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
+app.use(
+  cors({
+    origin: "http://localhost:5173", // FE của anh
+    methods: ["GET", "POST", "PUT", "DELETE"],
+    credentials: true, // nếu cần gửi cookie
+  })
+);
+app.use(
+  cors({
+    origin: "http://localhost:5173",
+    methods: ["GET", "POST", "PUT", "DELETE"],
+    credentials: true,
+  })
+);
 // Health check (kiểm tra server + DB)
 app.get("/api/health", async (_req, res) => {
   try {
@@ -25,6 +40,7 @@ app.get("/api/health", async (_req, res) => {
 // Các route chính
 app.use("/api/restaurants", restaurantRoutes);
 
+app.use("/api/register", registerRoutes);
 // 404 fallback
 app.use((_req, res) => res.status(404).json({ error: "Not found" }));
 

@@ -28,27 +28,123 @@ import { Label } from "../components/ui/label";
 import { Separator } from "../components/ui/separator";
 export default function RegisterPage() {
   const [formData, setFormData] = useState({
-    email: "",
-    name: "",
+    full_name: "",
     phone: "",
+    email: "",
     password: "",
     confirmPassword: "",
   });
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  
+  const [showSuccessDialog, setShowSuccessDialog] = useState(false);
+  const [newUserUNFID, setNewUserUNFID] = useState("");
+
+  const { register, state } = {
+    full_name: "varchar",
+    phone: "varchar",
+    email: "varchar",
+    password: "varchar",
+    comfirmPassword: "varchar",
+  };
 
   const navigate = useNavigate();
 
   const handleChange = (field, value) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
+    if (error) setError(""); // Clear error when user starts typing
   };
 
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    // Chỉ log dữ liệu ra console, không gọi API
-    console.log("Form submitted:", formData);
+  const validateForm = () => {
+    if (!formData.full_name.trim()) return "Vui lòng nhập họ tên";
+    if (!formData.phone.trim()) return "Vui lòng nhập số điện thoại";
+    if (!formData.email.trim()) return "Vui lòng nhập email";
+    if (!formData.password) return "Vui lòng nhập mật khẩu";
+    if (!formData.confirmPassword) return "Vui lòng xác nhận mật khẩu";
+
+    // Phone validation - must start with 0 and have exactly 10 digits
+    const phoneRegex = /^0[0-9]{9}$/;
+    if (!phoneRegex.test(formData.phone.replace(/\s/g, ""))) {
+      return "Số điện thoại phải bắt đầu bằng số 0 và có đúng 10 chữ số";
+    }
+
+    // Email validation
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(formData.email)) {
+      return "Email không hợp lệ";
+    }
+
+    if (formData.password.length < 6) {
+      return "Mật khẩu phải có ít nhất 6 ký tự";
+    }
+
+    if (formData.password !== formData.confirmPassword) {
+      return "Mật khẩu xác nhận không khớp";
+    }
+
+    return null;
   };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    const validationError = validateForm();
+    if (validationError) {
+      setError(validationError);
+      return;
+    }
+
+    setIsLoading(true);
+    setError("");
+
+    try {
+      const res = await fetch("http://localhost:3000/api/register", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          full_name: formData.full_name,
+          phone: formData.phone,
+          email: formData.email,
+          password: formData.password,
+        }),
+      });
+
+      const data = await res.json(); // đây sẽ là { success: true, user: {...} }
+
+      if (!res.ok) {
+        if (data.sdt) {
+          // Nếu số điện thoại đã có → điều hướng sang login
+          navigate("/login");
+          return;
+        }
+        setError(data.error || "Đăng ký thất bại");
+        return;
+      }
+
+      // Nếu success = true thì hiển thị popup
+      setFormData({
+        full_name: "",
+        phone: "",
+        email: "",
+        password: "",
+        confirmPassword: "",
+      });
+      setShowSuccessDialog(true);
+    } catch (err) {
+      console.error("Register error:", err);
+      setError("Có lỗi xảy ra, vui lòng thử lại");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+
+  const handleSuccessDialogClose = () => {
+    setShowSuccessDialog(false);
+    navigate("/", { replace: true });
+  };
+
   return (
     <>
       <div className="min-h-screen bg-gradient-to-br from-orange-50 to-red-50 flex justify-center p-4">
@@ -86,13 +182,13 @@ export default function RegisterPage() {
               </CardDescription>
             </CardHeader>
 
-            <form>
+            <form onSubmit={handleSubmit}>
               <CardContent>
-                {/* {error && (
+                {error && (
                   <Alert variant="destructive">
                     <AlertDescription>{error}</AlertDescription>
                   </Alert>
-                )} */}
+                )}
                 <div className="space-y-4 ">
                   {/* tăng khoảng cách chung */}
                   <div className="space-y-2">
@@ -100,13 +196,15 @@ export default function RegisterPage() {
                     <div className="relative">
                       <User className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
                       <Input
-                        id="name"
+                        id="full_name"
                         type="text"
                         placeholder="Nhập họ và tên đầy đủ"
-                        //value={formData.name}
-                        //onChange={(e) => handleChange("name", e.target.value)}
+                        value={formData.full_name}
+                        onChange={(e) =>
+                          handleChange("full_name", e.target.value)
+                        }
                         className="pl-10"
-                        //disabled={isLoading}
+                        disabled={isLoading}
                       />
                     </div>
                   </div>
@@ -118,10 +216,10 @@ export default function RegisterPage() {
                         id="phone"
                         type="tel"
                         placeholder="Nhập số điện thoại (VD: 0123456789)"
-                        //value={formData.phone}
-                        //onChange={(e) => handleChange("phone", e.target.value)}
+                        value={formData.phone}
+                        onChange={(e) => handleChange("phone", e.target.value)}
                         className="pl-10"
-                        //disabled={isLoading}
+                        disabled={isLoading}
                       />
                     </div>
                     <p className="text-xs text-left text-gray-500">
@@ -136,7 +234,10 @@ export default function RegisterPage() {
                         id="email"
                         type="email"
                         placeholder="Nhập địa chỉ email"
+                        value={formData.email}
+                        onChange={(e) => handleChange("email", e.target.value)}
                         className="pl-10"
+                        disabled={isLoading}
                       />
                     </div>
                   </div>
@@ -148,18 +249,18 @@ export default function RegisterPage() {
                         id="pass"
                         type={showPassword ? "text" : "password"}
                         placeholder="Nhập mật khẩu (tối thiểu 6 ký tự)"
-                        //value={formData.password}
-                        //onChange={(e) =>
-                        //handleChange("password", e.target.value)
-                        //}
+                        value={formData.password}
+                        onChange={(e) =>
+                          handleChange("password", e.target.value)
+                        }
                         className="pl-10 pr-10"
-                        //disabled={isLoading}
+                        disabled={isLoading}
                       />
                       <button
                         type="button"
-                        //onClick={() => setShowPassword(!showPassword)}
+                        onClick={() => setShowPassword(!showPassword)}
                         className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
-                        //disabled={isLoading}
+                        disabled={isLoading}
                       >
                         {showPassword ? (
                           <EyeOff className="w-4 h-4" />
@@ -178,13 +279,22 @@ export default function RegisterPage() {
                         id="confirmPassword"
                         type="password"
                         placeholder="Nhập lại mật khẩu *"
+                        value={formData.confirmPassword}
+                        onChange={(e) =>
+                          handleChange("confirmPassword", e.target.value)
+                        }
                         className="pl-10 pr-10"
+                        disabled={isLoading}
                       />
                       <button
                         type="button"
+                        onClick={() =>
+                          setShowConfirmPassword(!showConfirmPassword)
+                        }
                         className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                        disabled={isLoading}
                       >
-                        {showPassword ? (
+                        {showConfirmPassword ? (
                           <EyeOff className="w-4 h-4" />
                         ) : (
                           <Eye className="w-4 h-4" />
@@ -281,6 +391,16 @@ export default function RegisterPage() {
           </Card>
         </div>
       </div>
+      {/* Popup thành công */}
+      {showSuccessDialog && (
+        <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50">
+          <div className="bg-white p-6 rounded-lg text-center">
+            <p className="mb-4">Đăng ký thành công!</p>
+            <Button onClick={handleSuccessDialogClose}>Sang trang đăng nhập</Button>
+          </div>
+        </div>
+      )}
     </>
   );
+  
 }
