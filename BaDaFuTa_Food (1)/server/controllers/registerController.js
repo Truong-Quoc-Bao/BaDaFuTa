@@ -17,7 +17,7 @@ export const registerUser = async (req, res) => {
     if (emailCheck.rows.length > 0) {
       return res
         .status(400)
-        .json({ success: false, error: "Email đã tồn tại" });
+        .json({ success: false, error: "Email đã tồn tại",email :true });
         
     }
     
@@ -43,7 +43,7 @@ export const registerUser = async (req, res) => {
       [full_name, phone, email, hashedPassword]
     );
 
-    res.json({ success: true, user: result.rows[0], sdt:false });
+    res.json({ success: true, user: result.rows[0], sdt:false , email : false});
     
   } catch (err) {
     console.error(err);
