@@ -8,52 +8,53 @@ import { restaurants, featuredRestaurants, promotions } from "../../data/mockDat
 import { useLocation } from "../contexts/LocationContext";
 import { useState, useMemo } from "react";
 export default function HomePage () {
-  const [searchQuery, setSearchQuery] = useState("");
-  const [selectedCuisine, setSelectedCuisine] = useState("Tất cả");
-  const { state: locationState, calculateDistance } = useLocation();
+  // const [searchQuery, setSearchQuery] = useState("");
+  // const [selectedCuisine, setSelectedCuisine] = useState("Tất cả");
+  // // const { state: locationState, calculateDistance } = useLocation();
 
-  // Calculate distance for each restaurant and sort by distance
-  const restaurantsWithDistance = useMemo(() => {
-    if (!locationState.currentLocation) return restaurants;
+  // // Calculate distance for each restaurant and sort by distance
+  // const restaurantsWithDistance = useMemo(() => {
+  //   if (!locationState.currentLocation) return restaurants;
 
-    return restaurants
-      .map((restaurant) => {
-        if (!restaurant.coordinates) return { ...restaurant, distance: 0 };
+  //   return restaurants
+  //     .map((restaurant) => {
+  //       if (!restaurant.coordinates) return { ...restaurant, distance: 0 };
 
-        const distance = calculateDistance(
-          locationState.currentLocation.coordinates.lat,
-          locationState.currentLocation.coordinates.lng,
-          restaurant.coordinates.lat,
-          restaurant.coordinates.lng
-        );
+  //       const distance = calculateDistance(
+  //         locationState.currentLocation.coordinates.lat,
+  //         locationState.currentLocation.coordinates.lng,
+  //         restaurant.coordinates.lat,
+  //         restaurant.coordinates.lng
+  //       );
 
-        return { ...restaurant, distance: Math.round(distance * 10) / 10 };
-      })
-      .sort((a, b) => (a.distance || 0) - (b.distance || 0));
-  }, [locationState.currentLocation, calculateDistance]);
+  //       return { ...restaurant, distance: Math.round(distance * 10) / 10 };
+  //     })
+  //     .sort((a, b) => (a.distance || 0) - (b.distance || 0));
+  // }, [locationState.currentLocation, calculateDistance]);
 
-  const filteredRestaurants = restaurantsWithDistance.filter(
-    (restaurant) =>
-      restaurant.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      restaurant.cuisine.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  // const filteredRestaurants = restaurantsWithDistance.filter(
+  //   (restaurant) =>
+  //     restaurant.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+  //     restaurant.cuisine.toLowerCase().includes(searchQuery.toLowerCase())
+  // );
 
-  const cuisineTypes = [
-    "Tất cả",
-    "Việt Nam",
-    "Ý",
-    "Nhật Bản",
-    "Thái Lan",
-    "Hàn Quốc",
-    "Mỹ",
-  ];
+  // const cuisineTypes = [
+  //   "Tất cả",
+  //   "Việt Nam",
+  //   "Ý",
+  //   "Nhật Bản",
+  //   "Thái Lan",
+  //   "Hàn Quốc",
+  //   "Mỹ",
+  // ];
 
-  const finalFilteredRestaurants =
-    selectedCuisine === "Tất cả"
-      ? filteredRestaurants
-      : filteredRestaurants.filter(
-          (restaurant) => restaurant.cuisine === selectedCuisine
-        );
+  // const finalFilteredRestaurants =
+  //   selectedCuisine === "Tất cả"
+  //     ? filteredRestaurants
+  //     : filteredRestaurants.filter(
+  //         (restaurant) => restaurant.cuisine === selectedCuisine
+  //       );
+  
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -72,7 +73,7 @@ export default function HomePage () {
           <Input
             type="text"
             placeholder="Tìm kiếm nhà hàng hoặc món ăn..."
-            value={searchQuery}
+            // value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="pl-10 pr-4 py-3 w-full"
           />
@@ -114,21 +115,21 @@ export default function HomePage () {
       </div>
 
       {/* Restaurants Near You */}
-      {locationState.currentLocation && finalFilteredRestaurants.length > 0 && (
+      {/* {locationState.currentLocation && finalFilteredRestaurants.length > 0 && ( */}
         <div className="mb-8">
           <div className="flex items-center space-x-2 mb-6">
             <MapPin className="w-6 h-6 text-orange-500" />
             <h2 className="text-2xl font-bold">
-              Nhà hàng gần bạn tại {locationState.currentLocation.name}
+              {/* Nhà hàng gần bạn tại {locationState.currentLocation.name} */}
             </h2>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {finalFilteredRestaurants.slice(0, 6).map((restaurant) => (
-              <RestaurantCard key={restaurant.id} restaurant={restaurant} />
-            ))}
+            {/* {finalFilteredRestaurants.slice(0, 6).map((restaurant) => ( */}
+              {/* <RestaurantCard key={restaurant.id} restaurant={restaurant} /> */}
+            {/* ))} */}
           </div>
         </div>
-      )}
+      {/* )} */}
 
       {/* Cuisine Filter
       <div className="mb-8">
@@ -154,7 +155,7 @@ export default function HomePage () {
       <div className="mb-8 ">
         <h2 className="text-2xl font-bold mb-4">Lọc theo loại ẩm thực</h2>
         <div className="flex flex-wrap gap-3">
-          {cuisineTypes.map((cuisine) => {
+          {/* {cuisineTypes.map((cuisine) => {
             const isSelected = selectedCuisine === cuisine;
             return (
               <button
@@ -171,7 +172,7 @@ export default function HomePage () {
                 {cuisine}
               </button>
             );
-          })}
+          })} */}
         </div>
       </div>
 
@@ -179,7 +180,7 @@ export default function HomePage () {
       <div className="mb-8">
         <h2 className="text-2xl font-bold mb-6">Tất cả nhà hàng</h2>
 
-        {finalFilteredRestaurants.length === 0 ? (
+        {/* {finalFilteredRestaurants.length === 0 ? (
           <div className="text-center py-12">
             <p className="text-gray-500 text-lg">
               Không tìm thấy nhà hàng nào phù hợp
@@ -191,7 +192,7 @@ export default function HomePage () {
               <RestaurantCard key={restaurant.id} restaurant={restaurant} />
             ))}
           </div>
-        )}
+        )} */}
       </div>
     </div>
   );

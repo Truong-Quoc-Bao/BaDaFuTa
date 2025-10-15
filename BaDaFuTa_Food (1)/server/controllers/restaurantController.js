@@ -20,13 +20,11 @@ export async function getRestaurants(req, res) {
     res.status(500).json({ error: "Internal server error" });
   }
 }
-
 export async function getMenu(req, res) {
   try {
-    // decode lại tên nhà hàng từ URL
     const merchantName = decodeURIComponent(req.params.code);
 
-    // Tìm nhà hàng có tên trùng (không phân biệt hoa thường)
+    // Lấy nhà hàng theo tên
     const merchantRes = await pool.query(
       "SELECT * FROM merchant WHERE LOWER(merchant_name) = LOWER($1)",
       [merchantName]
@@ -38,9 +36,30 @@ export async function getMenu(req, res) {
 
     const merchant = merchantRes.rows[0];
 
-    // Lấy danh sách món ăn của nhà hàng đó
+    // Lấy menu theo danh mục
     const { rows: menu } = await pool.query(
-      "SELECT * FROM menu_item WHERE merchant_id = $1 AND status = TRUE",
+      `
+      SELECT c.id AS category_id,
+             c.category_name,
+             COALESCE(
+               json_agg(
+                 json_build_object(
+                   'item_id', m.id,
+                   'name_item', m.name_item,
+                   'price', m.price,
+                   'description', m.description,
+                   'image_item', m.image_item
+                 )
+               ) FILTER (WHERE m.id IS NOT NULL),
+               '[]'::json
+             ) AS items
+      FROM category c
+      LEFT JOIN menu_item m
+        ON c.id = m.category_id AND m.status = TRUE
+      WHERE c.merchant_id = $1
+      GROUP BY c.id, c.category_name
+      ORDER BY c.category_name
+    `,
       [merchant.id]
     );
 

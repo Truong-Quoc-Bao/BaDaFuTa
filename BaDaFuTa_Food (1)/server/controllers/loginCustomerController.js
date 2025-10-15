@@ -9,11 +9,11 @@ export async function loginCustomer(req, res) {
   if (!identifier || !password) {
     return res
       .status(400)
-      .json({ error: "Vui lòng nhập đủ email/sdt và mật khẩu" });
+      .json({ error: "Vui lòng nhập đủ email/sđt và mật khẩu" });
   }
 
   try {
-    // Tìm user bằng email hoặc phone
+    // Tìm user bằng email hoặc số điện thoại
     const result = await pool.query(
       "SELECT * FROM users WHERE email = $1 OR phone = $1 LIMIT 1",
       [identifier]
@@ -21,8 +21,8 @@ export async function loginCustomer(req, res) {
 
     if (result.rows.length === 0) {
       return res
-        .status(401)
-        .json({ error: "Sai email/số điện thoại hoặc mật khẩu" });
+        .status(404)
+        .json({ error: "Email hoặc số điện thoại không tồn tại" });
     }
 
     const user = result.rows[0];
@@ -30,19 +30,18 @@ export async function loginCustomer(req, res) {
     // So sánh mật khẩu
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) {
-      return res
-        .status(401)
-        .json({ error: "Sai email/số điện thoại hoặc mật khẩu" });
+      return res.status(401).json({ error: "Mật khẩu không chính xác" });
     }
 
-    // Tạo token
+
+    // ✅ Tạo token sau khi xác thực xong
     const token = jwt.sign(
       { id: user.id, role: user.role },
-      "secret_key", // 🔹 bạn có thể đổi sang process.env.JWT_SECRET sau
+      process.env.JWT_SECRET || "secret_key",
       { expiresIn: "7d" }
     );
 
-    // Trả kết quả
+    // ✅ Trả về phản hồi cho FE
     res.json({
       message: "Đăng nhập thành công",
       token,

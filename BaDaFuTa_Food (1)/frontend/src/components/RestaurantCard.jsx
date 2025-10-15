@@ -20,14 +20,15 @@ export default function RestaurantCard ({ restaurant }) {
         {/* Image - takes up 50% of the card height */}
         <div className="h-1/2 relative">
           <ImageWithFallback
-            src={restaurant.image}
-            alt={restaurant.name}
+            src={restaurant?.cover_image.url}
+            alt={restaurant?.merchant_name}
             className="rounded-tl-xl rounded-tr-xl w-full h-full object-cover"
           />
 
           {/* Cuisine badge */}
           <Badge className="absolute top-3 left-3 bg-white/90 backdrop-blur-sm text-gray-800 shadow-lg">
-            {restaurant.cuisine}
+            {/* {restaurant.cuisine} */}
+            <p> Việt Nam</p>
           </Badge>
 
           {/* Rating badge */}
@@ -35,7 +36,8 @@ export default function RestaurantCard ({ restaurant }) {
             <div className="flex items-center space-x-1 bg-white/90 backdrop-blur-sm px-2 py-1 rounded-lg shadow-lg">
               <Star className="w-4 h-4 text-yellow-400 fill-current" />
               <span className="text-sm font-medium text-gray-800">
-                {restaurant.rating}
+                {/* {restaurant.rating} */}
+                <p>4 sao</p>
               </span>
             </div>
           </div>
@@ -48,7 +50,8 @@ export default function RestaurantCard ({ restaurant }) {
               {restaurant.name}
             </h3>
             <p className="text-gray-600 text-sm mb-3 line-clamp-2">
-              {restaurant.description}
+              {/* {restaurant.description} */}
+              đây là nhà hàng
             </p>
           </div>
 
