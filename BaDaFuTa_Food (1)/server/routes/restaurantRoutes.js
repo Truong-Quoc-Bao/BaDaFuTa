@@ -5,8 +5,9 @@ import {
 } from "../controllers/restaurantController.js";
 
 const router = express.Router();
-
+//lấy tất cả nhà hàng
 router.get("/", getRestaurants);
-router.get("/:code/menu", getMenu);
+// lấy menu của nhà hàng 
+router.get("/:id/menu", getMenu);
 
 export default router;

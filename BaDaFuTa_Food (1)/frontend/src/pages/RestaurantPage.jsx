@@ -1,6 +1,8 @@
 import { useNavigate, useParams, Link } from "react-router-dom"; // ✅
 import { useEffect, useState } from "react";
-
+import OpeningStatus from "../components/OpeningStatus";
+import { useCart } from "../contexts/CartContext";
+import { toast } from "sonner"; // ✅ nếu muốn hiện thông báo đẹp
 import { useMemo } from "react";
 import {
   ArrowLeft,
@@ -19,29 +21,61 @@ import { ImageWithFallback } from "../components/figma/ImageWithFallback";
 export const RestaurantPage = () => {
   const navigate = useNavigate();
 
+
+  const { id } = useParams();
+  const { addItem } = useCart();
   const [restaurant, setRestaurant] = useState(null);
   const [menu, setMenu] = useState([]);
-  const [loading, setLoading] = useState(true);
 
+  const [loading, setLoading] = useState(true);
+  const [errMsg, setErrMsg] = useState("");
+
+ 
+  //Lấy menu
   useEffect(() => {
-    const fetchMenu = async () => {
+    if (!id) return;
+
+    const ac = new AbortController();
+    async function fetchMenu() {
       try {
-        const response = await fetch(
-          ` http://localhost:3000/api/restaurants/Seoul%20BBQ%20House/menu`
+        setLoading(true);
+        setErrMsg("");
+
+        const res = await fetch(
+          `http://localhost:3000/api/restaurants/${encodeURIComponent(
+            id
+          )}/menu`,
+          { signal: ac.signal }
         );
-        if (!response.ok) throw new Error("Không tìm thấy quán");
-        const data = await response.json();
-        setRestaurant(data.merchant);
-        setMenu(data.menu);
-      } catch (err) {
-        console.error(err);
+        if (!res.ok) {
+          const t = await res.text().catch(() => "");
+          throw new Error(t || "Không tìm thấy quán");
+        }
+        const data = await res.json();
+
+        setRestaurant(data.merchant ?? null);
+        setMenu(Array.isArray(data.menu) ? data.menu : []);
+      } catch (e) {
+        if (e.name !== "AbortError") {
+          console.error("fetchMenu error:", e);
+          setErrMsg("Không tải được dữ liệu nhà hàng. Vui lòng thử lại.");
+        }
       } finally {
         setLoading(false);
       }
-    };
+    }
 
     fetchMenu();
-  }, []); // ✅ đóng useEffect đúng cách
+    return () => ac.abort();
+  }, [id]);
+
+  //Thêm vào giỏ hàng
+  const handleAddToCart = () => {
+    addItem(menuItem, restaurant, selectedToppings, specialInstructions);
+    toast.success(`Đã thêm ${menuItem.name} vào giỏ hàng`);
+    onClose(); // đóng dialog
+  };
+
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -54,7 +88,7 @@ export const RestaurantPage = () => {
       {/* Restaurant Header Section */}
       <div className="grid grid-cols-1 lg:grid-cols-10 gap-0 rounded-2xl overflow-hidden bg-gray-900 my-8 shadow-lg max-w-7xl mx-auto">
         {/* LEFT: 4/10 - Restaurant Cover Image */}
-        <div className="relative lg:col-span-4 h-[42vh] lg:h-auto aspect-[4/3] lg:aspect-auto overflow-hidden relative w-full h-full flex items-center justify-center ">
+        <div className="relative lg:col-span-4 h-[28vh] lg:h-[300px] overflow-hidden w-full flex items-center justify-center">
           <ImageWithFallback
             src={restaurant?.cover_image?.url}
             alt={restaurant?.merchant_name || "Restaurant cover"}
@@ -232,11 +266,12 @@ export const RestaurantPage = () => {
         <div className="bg-gray-50 px-6 py-4 border-t border-gray-100">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
             <div className="flex items-center space-x-2">
-              <Clock className="w-4 h-4 text-gray-500" />
-              <div>
-                <div className="font-semibold text-gray-900">Giờ mở cửa</div>
-                <div className="text-gray-600">Thứ 2 - CN: 07:00 - 22:00</div>
-              </div>
+              <OpeningStatus time_open={restaurant?.time_open}>
+                <div className="flex items-center space-x-2">
+                  <OpeningStatus.Clock />
+                  <OpeningStatus.Text />
+                </div>
+              </OpeningStatus>
             </div>
 
             <div className="flex items-center space-x-2">
@@ -257,6 +292,7 @@ export const RestaurantPage = () => {
           </div>
         </div>
       </div>
+
       {/* Menu */}
       {Array.isArray(menu) && menu.length > 0 ? (
         menu.map((category) => (
@@ -283,10 +319,11 @@ export const RestaurantPage = () => {
                   return (
                     <div key={item.id} className="h-full">
                       <MenuItemCard
-                        menuItem={item} // đảm bảo prop đúng tên component
+                        menuItem={item}
                         restaurant={restaurant}
                         layout="vertical"
-                        className="h-full" // nếu MenuItemCard nhận className
+                        className="h-full"
+                        onAddToCart={() => handleAddToCart(item)} // ✅ thêm dòng này
                       />
                     </div>
                   );

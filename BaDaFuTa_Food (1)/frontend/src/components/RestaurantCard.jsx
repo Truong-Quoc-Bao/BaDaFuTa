@@ -3,14 +3,16 @@ import { Card, CardContent } from "./ui/card";
 import { Badge } from "./ui/badge";
 import { ImageWithFallback } from "../components/figma/ImageWithFallback";
 import { useNavigate } from "react-router-dom";
+import { useParams } from "react-router-dom";
+import OpeningStatus  from "../components/OpeningStatus";
 
 export default function RestaurantCard ({ restaurant }) {
   const navigate = useNavigate();
-
+  const { code } = useParams();
   const handleClick = () => {
     navigate(`/restaurant/${restaurant.id}`);
   };
-
+ 
   return (
     <Card
       className="overflow-hidden cursor-pointer hover:shadow-lg transition-all duration-300"
@@ -25,13 +27,23 @@ export default function RestaurantCard ({ restaurant }) {
             className="rounded-tl-xl rounded-tr-xl w-full h-full object-cover"
           />
 
+          {/* ✅ Thêm overlay hiển thị trạng thái + thứ */}
+          <div className="absolute bottom-2 left-2 bg-white/80 backdrop-blur-sm px-2 py-1 rounded-lg flex items-center space-x-1 text-sm">
+            <OpeningStatus time_open={restaurant?.time_open}>
+              <div className="flex items-center space-x-2">
+                <OpeningStatus.Clock />
+                <OpeningStatus.Text />
+              </div>
+            </OpeningStatus>
+          </div>
+
           {/* Cuisine badge */}
           <Badge className="absolute top-3 left-3 bg-white/90 backdrop-blur-sm text-gray-800 shadow-lg">
-            {/* {restaurant.cuisine} */}
+            {restaurant.cuisine}
             <p> Việt Nam</p>
           </Badge>
 
-          {/* Rating badge */}
+          {/* Rating badge*/}
           <div className="absolute top-3 right-3">
             <div className="flex items-center space-x-1 bg-white/90 backdrop-blur-sm px-2 py-1 rounded-lg shadow-lg">
               <Star className="w-4 h-4 text-yellow-400 fill-current" />
@@ -47,39 +59,40 @@ export default function RestaurantCard ({ restaurant }) {
         <div className="h-1/2 p-4 flex flex-col justify-between">
           <div className="flex-1">
             <h3 className="font-semibold text-lg mb-2 line-clamp-1">
-              {restaurant.name}
+              {restaurant.merchant_name}
             </h3>
-            <p className="text-gray-600 text-sm mb-3 line-clamp-2">
-              {/* {restaurant.description} */}
-              đây là nhà hàng
+            <p className="text-gray-500 text-sm mb-3 line-clamp-2">
+              {restaurant.description || "Không có mô tả nhà hàng!"}
             </p>
           </div>
 
           <div className="space-y-2">
             {/* Distance and delivery time */}
-            <div className="flex items-center justify-between text-sm">
+            <div className="flex  items-center justify-between text-sm">
               <div className="flex items-center space-x-1 text-gray-500">
                 <Clock className="w-4 h-4" />
-                <span>{restaurant.deliveryTime}</span>
+                {/* <span>{restaurant.deliveryTime}</span> */}
+                <span> 15-20 phút</span>
               </div>
 
-              {restaurant.distance !== undefined && (
-                <div className="flex items-center space-x-1 text-gray-500">
-                  <MapPin className="w-4 h-4" />
-                  <span>{restaurant.distance}km</span>
-                </div>
-              )}
+              {/* {restaurant.distance !== undefined && ( */}
+              <div className="flex items-center space-x-1 text-gray-500">
+                <MapPin className="w-4 h-4" />
+                {/* <span>{restaurant.distance}</span> */}
+                <span>10km</span>
+              </div>
+              {/* )} */}
             </div>
 
             {/* Delivery fee */}
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between w-full">
               <span className="text-sm text-gray-500">Phí giao hàng:</span>
               <div className="flex items-center space-x-1">
                 <Truck className="w-4 h-4 text-orange-500" />
                 <span className="font-medium text-orange-600">
                   {restaurant.deliveryFee === 0
                     ? "Miễn phí"
-                    : `${restaurant.deliveryFee.toLocaleString("vi-VN")}đ`}
+                    : `${restaurant.deliveryFee?.toLocaleString("vi-VN")}đ`}
                 </span>
               </div>
             </div>

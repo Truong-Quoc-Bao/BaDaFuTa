@@ -6,7 +6,8 @@ import { FeaturedRestaurant } from "../components/FeaturedRestaurant";
 import { PromotionBanner } from "../components/PromotionBanner";
 import { restaurants, featuredRestaurants, promotions } from "../../data/mockData";
 import { useLocation } from "../contexts/LocationContext";
-import { useState, useMemo } from "react";
+//import { useState, useMemo } from "react";
+import React, { useEffect, useState } from "react";
 export default function HomePage () {
   // const [searchQuery, setSearchQuery] = useState("");
   // const [selectedCuisine, setSelectedCuisine] = useState("Tất cả");
@@ -54,7 +55,21 @@ export default function HomePage () {
   //     : filteredRestaurants.filter(
   //         (restaurant) => restaurant.cuisine === selectedCuisine
   //       );
-  
+
+const [restaurants, setRestaurants] = useState([]);
+useEffect(() => {
+  const fetchRestaurants = async () => {
+    try {
+      const res = await fetch("http://localhost:3000/api/restaurants"); // localhost:3000/api/merchant/restaurants
+      const data = await res.json();
+      setRestaurants(data);
+    } catch (error) {
+      console.error("Lỗi khi lấy danh sách nhà hàng:", error);
+    }
+  };
+  fetchRestaurants();
+}, []);
+
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -116,19 +131,19 @@ export default function HomePage () {
 
       {/* Restaurants Near You */}
       {/* {locationState.currentLocation && finalFilteredRestaurants.length > 0 && ( */}
-        <div className="mb-8">
-          <div className="flex items-center space-x-2 mb-6">
-            <MapPin className="w-6 h-6 text-orange-500" />
-            <h2 className="text-2xl font-bold">
-              {/* Nhà hàng gần bạn tại {locationState.currentLocation.name} */}
-            </h2>
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {/* {finalFilteredRestaurants.slice(0, 6).map((restaurant) => ( */}
-              {/* <RestaurantCard key={restaurant.id} restaurant={restaurant} /> */}
-            {/* ))} */}
-          </div>
+      <div className="mb-8">
+        <div className="flex items-center space-x-2 mb-6">
+          <MapPin className="w-6 h-6 text-orange-500" />
+          <h2 className="text-2xl font-bold">
+            {/* Nhà hàng gần bạn tại {locationState.currentLocation.name} */}
+          </h2>
         </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {/* {finalFilteredRestaurants.slice(0, 6).map((restaurant) => ( */}
+          {/* <RestaurantCard key={restaurant.id} restaurant={restaurant} /> */}
+          {/* ))} */}
+        </div>
+      </div>
       {/* )} */}
 
       {/* Cuisine Filter
@@ -179,7 +194,6 @@ export default function HomePage () {
       {/* All Restaurants */}
       <div className="mb-8">
         <h2 className="text-2xl font-bold mb-6">Tất cả nhà hàng</h2>
-
         {/* {finalFilteredRestaurants.length === 0 ? (
           <div className="text-center py-12">
             <p className="text-gray-500 text-lg">
@@ -193,6 +207,20 @@ export default function HomePage () {
             ))}
           </div>
         )} */}
+        {restaurants.length > 0 ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {" "}
+            {restaurants.map((r) => (
+              <RestaurantCard key={r.id} restaurant={r} />
+            ))}{" "}
+          </div>
+        ) : (
+          <div className="text-center py-12">
+            <p className="text-gray-500 text-lg">
+              Không tìm thấy nhà hàng nào phù hợp
+            </p>
+          </div>
+        )}{" "}
       </div>
     </div>
   );

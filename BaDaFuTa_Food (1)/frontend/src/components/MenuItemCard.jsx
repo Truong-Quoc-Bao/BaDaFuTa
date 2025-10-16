@@ -26,30 +26,51 @@ export const MenuItemCard = ({ menuItem, restaurant, layout = "vertical" }) => {
   // Check if item has toppings or required options
   const hasToppings = menuItem.toppings && menuItem.toppings.length > 0;
 
-  const handleQuickAdd = (e) => {
-    e.stopPropagation(); // Prevent opening detail dialog
+  // const handleQuickAdd = (e) => {
+  //   e.stopPropagation(); // Prevent opening detail dialog
 
-    // E1: Check availability first
+  //   // E1: Check availability first
+  //   if (!isAvailable) {
+  //     toast.error(
+  //       "Sản phẩm đã hết hàng/ngừng kinh doanh, vui lòng chọn sản phẩm khác."
+  //     );
+  //     return;
+  //   }
+
+  //   // Step 4 from Use Case: Show topping selection if item has toppings
+  //   if (hasToppings) {
+  //     setShowToppingDialog(true);
+  //   } else {
+  //     // Direct add to cart if no toppings (simpler items)
+  //     addItem(menuItem, restaurant);
+  //     toast.success(`Đã thêm ${menuItem.name} vào giỏ hàng`);
+  //   }
+  // };
+
+  const handleQuickAdd = (e) => {
+    e.stopPropagation();
+
     if (!isAvailable) {
-      toast.error(
-        "Sản phẩm đã hết hàng/ngừng kinh doanh, vui lòng chọn sản phẩm khác."
-      );
+      toast.error("Sản phẩm đã hết hàng/ngừng kinh doanh");
       return;
     }
 
-    // Step 4 from Use Case: Show topping selection if item has toppings
     if (hasToppings) {
-      setShowToppingDialog(true);
+      setShowToppingDialog(true); // mở dialog chọn topping
     } else {
-      // Direct add to cart if no toppings (simpler items)
-      addItem(menuItem, restaurant);
+      addItem(menuItem, restaurant); // thêm thẳng vào giỏ
       toast.success(`Đã thêm ${menuItem.name} vào giỏ hàng`);
     }
   };
 
+
+  // const handleCardClick = () => {
+  //   navigate(`/restaurant/${restaurant.id}/item/${menuItem.id}`);
+  // };
   const handleCardClick = () => {
-    navigate(`/restaurant/${restaurant.id}/item/${menuItem.id}`);
+    navigate(`/restaurant/${restaurant.id}/menu/${menuItem.id}`);
   };
+
 
   const handleCloseToppingDialog = () => {
     setShowToppingDialog(false);
@@ -172,9 +193,17 @@ export const MenuItemCard = ({ menuItem, restaurant, layout = "vertical" }) => {
         </Card>
 
         {/* Dialogs */}
-        <ToppingSelectionDialog
+        {/* <ToppingSelectionDialog
           isOpen={showToppingDialog}
           onClose={handleCloseToppingDialog}
+          menuItem={menuItem}
+          restaurant={restaurant}
+          quantity={1}
+        /> */}
+
+        <ToppingSelectionDialog
+          isOpen={showToppingDialog}
+          onClose={() => setShowToppingDialog(false)}
           menuItem={menuItem}
           restaurant={restaurant}
           quantity={1}
