@@ -15,22 +15,28 @@ import { Alert, AlertDescription } from "../components/ui/alert";
 import { Separator } from "../components/ui/separator";
 import { Eye, EyeOff, Loader2, User, Lock, ArrowLeft } from "lucide-react";
 import { useAuth } from "../contexts/AuthContext";
-
+import {  useEffect } from "react"; // <-- thêm useEffect
 export default function LoginPage() {
-
   const [formData, setFormData] = useState({
     identifier: "",
     password: "",
   });
 
-  // usestate 
+  // usestate
   const [identifier, setIdentifier] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
   const navigate = useNavigate();
+  const { state, dispatch } = useAuth(); // <-- lấy state từ AuthContext
 
+  // 🔹 Dán useEffect kiểm tra login ở đây
+  useEffect(() => {
+    if (state.isAuthenticated) {
+      navigate("/", { replace: true }); // nếu đã login, redirect luôn
+    }
+  }, [state.isAuthenticated, navigate]);
 
   // ✅ Hàm cập nhật input
   const handleChange = (e) => {
@@ -66,42 +72,55 @@ export default function LoginPage() {
         body: JSON.stringify({ identifier, password }),
       });
 
-     const data = await res.json();
+      const data = await res.json();
 
-     if (!res.ok) {
-       const errMsg = (data.error || "").toLowerCase();
+      if (!res.ok) {
+        const errMsg = (data.error || "").toLowerCase();
 
-       if (
-         errMsg.includes("not found") ||
-         errMsg.includes("không tồn tại") ||
-         errMsg.includes("email") ||
-         errMsg.includes("phone")
-       ) {
-         setError("Email hoặc số điện thoại không tồn tại!");
-         document.getElementById("email").focus();
-       } else if (
-         errMsg.includes("wrong password") ||
-         errMsg.includes("mật khẩu")
-       ) {
-         setError("Mật khẩu không chính xác!");
-         document.getElementById("password").focus();
-       } else {
-         setError("Đăng nhập thất bại! Vui lòng thử lại.");
-       }
+        if (
+          errMsg.includes("not found") ||
+          errMsg.includes("không tồn tại") ||
+          errMsg.includes("email") ||
+          errMsg.includes("phone")
+        ) {
+          setError("Email hoặc số điện thoại không tồn tại!");
+          document.getElementById("email").focus();
+        } else if (
+          errMsg.includes("wrong password") ||
+          errMsg.includes("mật khẩu")
+        ) {
+          setError("Mật khẩu không chính xác!");
+          document.getElementById("password").focus();
+        } else {
+          setError("Đăng nhập thất bại! Vui lòng thử lại.");
+        }
+      } else {
+        //  localStorage.setItem("token", data.token);
+        //  localStorage.setItem("user", JSON.stringify(data.user)); // ✅ Lưu thông tin user
+        //  navigate("/homepage");
 
-     } else {
-       localStorage.setItem("token", data.token);
-       navigate("/home");
-     }
+        //  localStorage.setItem("token", data.token);
+        //  localStorage.setItem("user", JSON.stringify(data.user));
+        //  //  dispatch({ type: "LOGIN_SUCCESS", payload: data.user });
+        //  navigate("/homepage");
+        //  window.location.reload(); // reload page để đọc localStorage
+
+        //Hoặc
+        //window.location.href = "/"; // reload và đi thẳng homepage
+
+
+        //cách này lưu vào context nên là ko gây load trang mượt hơn
+        localStorage.setItem("token", data.token);
+        localStorage.setItem("user", JSON.stringify(data.user));
+        dispatch({ type: "LOGIN_SUCCESS", payload: data.user }); // cập nhật context
+        navigate("/", { replace: true }); // chuyển sang homepage
+      }
     } catch (err) {
       setError("Không thể kết nối đến máy chủ.");
     } finally {
       setIsLoading(false);
     }
   };
-
-
-
 
   return (
     <>
@@ -165,7 +184,7 @@ export default function LoginPage() {
                                     </div> */}
 
                   <div className="space-y-2">
-                    <Label htmlFor="email">Email</Label>
+                    <Label htmlFor="email">Email/Số điện thoại</Label>
                     <div className="relative">
                       <User className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
                       <Input
@@ -244,7 +263,7 @@ export default function LoginPage() {
                     {/* Đăng nhập */}
                   </Button>
                   <Link
-                    to="#"
+                    to="/forgotpass"
                     className="text-orange-600 text-sm hover:text-orange-700 hover:underline  "
                   >
                     Quên mật khẩu?
@@ -294,7 +313,7 @@ export default function LoginPage() {
               <div className="text-center text-sm text-gray-600">
                 Chưa có tài khoản?{" "}
                 <Link
-                  to="/login"
+                  to="/register"
                   className="text-orange-600 hover:text-orange-700 hover:underline font-medium"
                 >
                   Đăng ký ngay.

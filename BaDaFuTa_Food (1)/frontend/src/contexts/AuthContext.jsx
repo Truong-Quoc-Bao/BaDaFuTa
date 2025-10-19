@@ -14,12 +14,7 @@ const authReducer = (state, action) => {
       };
 
     case "LOGOUT":
-      return {
-        ...state,
-        user: null,
-        isAuthenticated: false,
-        isLoading: false,
-      };
+      return { ...state, user: null, isAuthenticated: false, isLoading: false };
 
     case "UPDATE_USER":
       return {
@@ -42,32 +37,6 @@ export const useAuth = () => {
   return context;
 };
 
-// Mock users database
-const mockUsers = [
-  {
-    id: "1",
-    unfid: "user001",
-    email: "user@example.com",
-    name: "Nguyễn Văn A",
-    phone: "0123456789",
-    gender: "male",
-    dateOfBirth: "1990-01-01",
-    role: "customer",
-    password: "123456",
-  },
-  {
-    id: "2",
-    unfid: "merchant001",
-    email: "merchant@example.com",
-    name: "Chủ nhà hàng",
-    phone: "0987654321",
-    gender: "male",
-    dateOfBirth: "1985-05-15",
-    role: "merchant",
-    password: "123456",
-  },
-];
-
 export const AuthProvider = ({ children }) => {
   const [state, dispatch] = useReducer(authReducer, {
     user: null,
@@ -75,7 +44,7 @@ export const AuthProvider = ({ children }) => {
     isLoading: true,
   });
 
-  // Check for existing session on app start
+  // 🔹 Kiểm tra session khi app khởi động
   useEffect(() => {
     const savedUser = localStorage.getItem("user");
     if (savedUser) {
@@ -89,128 +58,60 @@ export const AuthProvider = ({ children }) => {
     dispatch({ type: "SET_LOADING", payload: false });
   }, []);
 
-  const login = async (unfid, password) => {
+  // 🔹 Đăng nhập từ CSDL (API thật)
+  const login = async (email, password) => {
     dispatch({ type: "SET_LOADING", payload: true });
+    try {
+      const response = await fetch("http://localhost:3000/api/loginCustomer", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, password }),
+      });
 
-    // Simulate API call delay
-    await new Promise((resolve) => setTimeout(resolve, 1000));
+      const data = await response.json();
 
-    // Check if UNFID exists
-    const user = mockUsers.find((u) => u.unfid === unfid);
-    if (!user) {
+      if (!response.ok) {
+        dispatch({ type: "SET_LOADING", payload: false });
+        return { success: false, error: data.message || "Đăng nhập thất bại" };
+      }
+
+      // Lưu user vào localStorage
+      localStorage.setItem("user", JSON.stringify(data.user));
+      dispatch({ type: "LOGIN_SUCCESS", payload: data.user });
+
+      return { success: true };
+    } catch (error) {
       dispatch({ type: "SET_LOADING", payload: false });
-      return { success: false, error: "UNFID không tồn tại" };
+      return { success: false, error: "Lỗi kết nối server" };
     }
-
-    // Check password
-    if (user.password !== password) {
-      dispatch({ type: "SET_LOADING", payload: false });
-      return { success: false, error: "Mật khẩu không chính xác" };
-    }
-
-    // Login success
-    const { password: _, ...userWithoutPassword } = user;
-    localStorage.setItem("user", JSON.stringify(userWithoutPassword));
-    dispatch({ type: "LOGIN_SUCCESS", payload: userWithoutPassword });
-
-    return { success: true };
   };
 
+  // 🔹 Đăng ký (API thật)
   const register = async (data) => {
     dispatch({ type: "SET_LOADING", payload: true });
+    try {
+      const response = await fetch("http://localhost:3000/api/registerCustomer", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data),
+      });
 
-    // Simulate API call delay
-    await new Promise((resolve) => setTimeout(resolve, 1000));
+      const resData = await response.json();
 
-    // Validation
-    if (data.password !== data.confirmPassword) {
+      if (!response.ok) {
+        dispatch({ type: "SET_LOADING", payload: false });
+        return { success: false, error: resData.message || "Đăng ký thất bại" };
+      }
+
+      // Lưu user sau khi đăng ký
+      localStorage.setItem("user", JSON.stringify(resData.user));
+      dispatch({ type: "LOGIN_SUCCESS", payload: resData.user });
+
+      return { success: true };
+    } catch (error) {
       dispatch({ type: "SET_LOADING", payload: false });
-      return { success: false, error: "Mật khẩu xác nhận không khớp" };
+      return { success: false, error: "Không thể kết nối server" };
     }
-
-    if (data.password.length < 6) {
-      dispatch({ type: "SET_LOADING", payload: false });
-      return { success: false, error: "Mật khẩu phải có ít nhất 6 ký tự" };
-    }
-
-    // Generate unique UNFID
-    const generateUNFID = () => {
-      const timestamp = Date.now().toString();
-      const randomNum = Math.floor(Math.random() * 1000)
-        .toString()
-        .padStart(3, "0");
-      return `USER${timestamp.slice(-6)}${randomNum}`;
-    };
-
-    let unfid = generateUNFID();
-    // Ensure UNFID is unique
-    while (mockUsers.find((u) => u.unfid === unfid)) {
-      unfid = generateUNFID();
-    }
-
-    // Check if email already exists
-    const existingEmail = mockUsers.find((u) => u.email === data.email);
-    if (existingEmail) {
-      dispatch({ type: "SET_LOADING", payload: false });
-      return { success: false, error: "Email đã được sử dụng" };
-    }
-
-    // Phone validation - must start with 0 and have exactly 10 digits
-    const phoneRegex = /^0[0-9]{9}$/;
-    if (!phoneRegex.test(data.phone.replace(/\s/g, ""))) {
-      dispatch({ type: "SET_LOADING", payload: false });
-      return {
-        success: false,
-        error: "Số điện thoại phải bắt đầu bằng số 0 và có đúng 10 chữ số",
-      };
-    }
-
-    // Date of birth validation
-    if (!data.dateOfBirth) {
-      dispatch({ type: "SET_LOADING", payload: false });
-      return { success: false, error: "Vui lòng chọn ngày sinh" };
-    }
-
-    // Check if user is at least 13 years old
-    const today = new Date();
-    const birthDate = new Date(data.dateOfBirth);
-    const age = today.getFullYear() - birthDate.getFullYear();
-    const monthDiff = today.getMonth() - birthDate.getMonth();
-
-    if (
-      age < 13 ||
-      (age === 13 && monthDiff < 0) ||
-      (age === 13 && monthDiff === 0 && today.getDate() < birthDate.getDate())
-    ) {
-      dispatch({ type: "SET_LOADING", payload: false });
-      return {
-        success: false,
-        error: "Bạn phải từ 13 tuổi trở lên để đăng ký",
-      };
-    }
-
-    // Create new user
-    const newUser = {
-      id: Date.now().toString(),
-      unfid: unfid,
-      email: data.email,
-      name: data.name,
-      phone: data.phone,
-      gender: data.gender,
-      dateOfBirth: data.dateOfBirth,
-      role: data.role,
-      password: data.password,
-    };
-
-    // Add to mock database
-    mockUsers.push(newUser);
-
-    // Auto login after registration
-    const { password: _, ...userWithoutPassword } = newUser;
-    localStorage.setItem("user", JSON.stringify(userWithoutPassword));
-    dispatch({ type: "LOGIN_SUCCESS", payload: userWithoutPassword });
-
-    return { success: true };
   };
 
   const logout = () => {
@@ -228,7 +129,7 @@ export const AuthProvider = ({ children }) => {
 
   return (
     <AuthContext.Provider
-      value={{ state, login, register, logout, updateUser }}
+      value={{ state, login, register, logout, updateUser, dispatch }}
     >
       {children}
     </AuthContext.Provider>

@@ -39,6 +39,7 @@ app.use("/api/homepage", homepageRoutes);
 app.use("/api/restaurants", restaurantRoutes);
 app.use("/api/register", registerRoutes);
 app.use("/api/login", loginRoutes);
+app.use("/api/login/me", loginRoutes);
 
 
 

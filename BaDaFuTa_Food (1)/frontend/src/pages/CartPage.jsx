@@ -13,10 +13,15 @@ import { ImageWithFallback } from "../components/figma/ImageWithFallback";
 import { toast } from "sonner";
 
 export default function CartPage() {
+
   const navigate = useNavigate();
   const { state, updateQuantity, removeItem, clearCart } = useCart();
   const deliveryFee =
-  state.items.length > 0 ? state.items[0].restaurant.deliveryFee : 0;
+    state.items.length > 0
+      ? state.items[0].restaurant?.deliveryFee ??
+        state.items[0].restaurant?.delivery_fee ??
+        0
+      : 0;
   const subtotal = state.total;
   const total = subtotal + deliveryFee;
 
@@ -62,7 +67,7 @@ export default function CartPage() {
   }
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 bg-gray-100">
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 ">
       <Button
         variant="outline"
         onClick={() => navigate("/")}
@@ -107,9 +112,9 @@ export default function CartPage() {
 
                       <div className="flex-1 min-w-0">
                         <h3 className="font-semibold">{item.menuItem.name}</h3>
-                        <p className="text-sm text-gray-600">
+                        {/* <p className="text-sm text-gray-600">
                           {item.restaurant.name}
-                        </p>
+                        </p> */}
 
                         {/* Display selected toppings */}
                         {item.selectedToppings &&
@@ -149,9 +154,9 @@ export default function CartPage() {
                                 {toppingsTotal.toLocaleString("vi-VN")}đ
                               </span>
                             )}
-                            <span className="text-sm font-semibold text-gray-800">
+                            {/* <span className="text-sm font-semibold text-gray-800">
                               = {itemPrice.toLocaleString("vi-VN")}đ/món
-                            </span>
+                            </span> */}
                           </div>
                         </div>
                       </div>
@@ -233,7 +238,7 @@ export default function CartPage() {
                 <span>{deliveryFee.toLocaleString("vi-VN")}đ</span>
               </div>
 
-              <hr />
+              <hr className="border-t border-gray-300 my-4" />
 
               <div className="flex justify-between font-bold text-lg">
                 <span>Tổng cộng</span>
@@ -251,9 +256,10 @@ export default function CartPage() {
                 Tiến hành thanh toán
               </Button>
 
-              <p className="text-xs text-gray-500 text-center">
+              {/* <p className="text-xs text-gray-500 text-center">
                 * Giá có thể thay đổi tùy theo chính sách của từng nhà hàng
-              </p>
+              </p> */}
+              <br/>
             </CardContent>
           </Card>
         </div>

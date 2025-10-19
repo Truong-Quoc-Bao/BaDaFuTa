@@ -254,7 +254,7 @@ export default function RegisterPage() {
       });
       // Thành công
       alert("Đăng ký thành công!");
-      //navigate("/login");
+      navigate("/login");
       setShowSuccessDialog(true);
     } catch (err) {
       console.error("Register error:", err);
@@ -264,10 +264,10 @@ export default function RegisterPage() {
     }
   };
 
-  const handleSuccessDialogClose = () => {
-    setShowSuccessDialog(false);
-    navigate("/", { replace: true });
-  };
+  // const handleSuccessDialogClose = () => {
+  //   setShowSuccessDialog(false);
+  //   navigate("/login", { replace: true });
+  // };
 
   return (
     <>

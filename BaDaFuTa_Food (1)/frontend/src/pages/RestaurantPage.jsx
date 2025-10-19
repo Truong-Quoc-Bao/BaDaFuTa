@@ -70,11 +70,11 @@ export const RestaurantPage = () => {
   }, [id]);
 
   //Thêm vào giỏ hàng
-  const handleAddToCart = () => {
-    addItem(menuItem, restaurant, selectedToppings, specialInstructions);
+  const handleAddToCart = (menuItem) => {
+    addItem(menuItem, restaurant);
     toast.success(`Đã thêm ${menuItem.name} vào giỏ hàng`);
-    onClose(); // đóng dialog
   };
+
 
 
   return (
@@ -265,7 +265,7 @@ export const RestaurantPage = () => {
         {/* Quick Info Footer */}
         <div className="bg-gray-50 px-6 py-4 border-t border-gray-100">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
-            <div className="flex items-center space-x-2">
+            <div className="flex items-center gap-3">
               <OpeningStatus time_open={restaurant?.time_open}>
                 <div className="flex items-center space-x-2">
                   <OpeningStatus.Clock />
@@ -274,7 +274,7 @@ export const RestaurantPage = () => {
               </OpeningStatus>
             </div>
 
-            <div className="flex items-center space-x-2">
+            <div className="flex items-center gap-3">
               <Truck className="w-4 h-4 text-gray-500" />
               <div>
                 <div className="font-semibold text-gray-900">Thanh toán</div>
@@ -282,7 +282,7 @@ export const RestaurantPage = () => {
               </div>
             </div>
 
-            <div className="flex items-center space-x-2">
+            <div className="flex items-center gap-3">
               <Users className="w-4 h-4 text-gray-500" />
               <div>
                 <div className="font-semibold text-gray-900">Đánh giá</div>
