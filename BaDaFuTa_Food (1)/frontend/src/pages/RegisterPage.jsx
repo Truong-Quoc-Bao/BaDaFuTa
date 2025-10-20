@@ -283,7 +283,7 @@ export default function RegisterPage() {
             Về trang chủ
           </Button>
 
-          <Card>
+          <Card className="hover:scale-100">
             <CardHeader className="space-y-1">
               <div className="flex items-center justify-center mb-4">
                 <div className="w-12 h-12 bg-gradient-to-br from-orange-500 to-red-500 rounded-xl flex items-center justify-center shadow-lg">

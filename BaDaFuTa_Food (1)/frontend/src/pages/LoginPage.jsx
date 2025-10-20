@@ -31,12 +31,20 @@ export default function LoginPage() {
   const navigate = useNavigate();
   const { state, dispatch } = useAuth(); // <-- lấy state từ AuthContext
 
-  // 🔹 Dán useEffect kiểm tra login ở đây
   useEffect(() => {
     if (state.isAuthenticated) {
-      navigate("/", { replace: true }); // nếu đã login, redirect luôn
+      const redirectPath = localStorage.getItem("redirectAfterLogin") || "/";
+      localStorage.removeItem("redirectAfterLogin");
+      navigate(redirectPath, { replace: true });
     }
   }, [state.isAuthenticated, navigate]);
+
+  // // 🔹 Dán useEffect kiểm tra login ở đây
+  // useEffect(() => {
+  //   if (state.isAuthenticated) {
+  //     navigate("/", { replace: true }); // nếu đã login, redirect luôn
+  //   }
+  // }, [state.isAuthenticated, navigate]);
 
   // ✅ Hàm cập nhật input
   const handleChange = (e) => {
@@ -95,10 +103,7 @@ export default function LoginPage() {
           setError("Đăng nhập thất bại! Vui lòng thử lại.");
         }
       } else {
-        //  localStorage.setItem("token", data.token);
-        //  localStorage.setItem("user", JSON.stringify(data.user)); // ✅ Lưu thông tin user
-        //  navigate("/homepage");
-
+  
         //  localStorage.setItem("token", data.token);
         //  localStorage.setItem("user", JSON.stringify(data.user));
         //  //  dispatch({ type: "LOGIN_SUCCESS", payload: data.user });
@@ -113,7 +118,7 @@ export default function LoginPage() {
         localStorage.setItem("token", data.token);
         localStorage.setItem("user", JSON.stringify(data.user));
         dispatch({ type: "LOGIN_SUCCESS", payload: data.user }); // cập nhật context
-        navigate("/", { replace: true }); // chuyển sang homepage
+        navigate(redirectPath, { replace: true }); // chuyển sang theo yêu cầu
       }
     } catch (err) {
       setError("Không thể kết nối đến máy chủ.");
@@ -135,7 +140,7 @@ export default function LoginPage() {
             Về trang chủ
           </Button>
 
-          <Card>
+          <Card className="hover:scale-100">
             <CardHeader className="space-y-1">
               <div className="flex items-center justify-center mb-4">
                 <div className="w-12 h-12 bg-gradient-to-br from-orange-500 to-red-500 rounded-xl flex items-center justify-center shadow-lg">

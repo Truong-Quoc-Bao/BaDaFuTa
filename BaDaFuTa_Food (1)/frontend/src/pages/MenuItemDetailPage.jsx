@@ -2,7 +2,8 @@
 import { useEffect, useMemo, useState } from "react";
 import { useParams, useNavigate, useLocation } from "react-router-dom";
 import { ArrowLeft, Clock, Users, Star, Plus, Minus, Leaf } from "lucide-react";
-
+import { useRef } from "react";
+import toast, { Toaster } from "react-hot-toast";
 import { Button } from "../components/ui/button";
 import { Badge } from "../components/ui/badge";
 import { Card } from "../components/ui/card";
@@ -16,7 +17,7 @@ import {
   hasDiscount,
   calculateDiscountPercentage,
 } from "../utils/imageUtils";
-
+import { useAuth } from "../contexts/AuthContext";
 const currencyVN = (n) => (Number(n) || 0).toLocaleString("vi-VN") + "đ";
 
 export default function MenuItemDetailPage() {
@@ -24,6 +25,48 @@ export default function MenuItemDetailPage() {
   const navigate = useNavigate();
   const location = useLocation();
   const { addItem } = useCart();
+  // 🧩 Lấy user từ AuthContext
+  const { state: authState } = useAuth();
+  const user = authState.user;
+  //animaotion
+  const imgRef = useRef(null); // ref cho ảnh món ăn
+  const cartIconRef = useRef(null); // ref cho icon giỏ hàng (nếu có)
+  const flyToCart = () => {
+    if (!imgRef.current || !cartIconRef.current) return;
+
+    const imgRect = imgRef.current.getBoundingClientRect();
+    const cartRect = cartIconRef.current.getBoundingClientRect();
+
+    const flyImg = imgRef.current.cloneNode(true);
+    flyImg.style.position = "fixed";
+    flyImg.style.left = imgRect.left + "px";
+    flyImg.style.top = imgRect.top + "px";
+    flyImg.style.width = imgRect.width + "px";
+    flyImg.style.height = imgRect.height + "px";
+    flyImg.style.transition =
+      "all 0.7s cubic-bezier(0.65, 0, 0.35, 1), transform 0.7s";
+    flyImg.style.zIndex = 1000;
+    flyImg.style.pointerEvents = "none";
+
+    document.body.appendChild(flyImg);
+
+    requestAnimationFrame(() => {
+      flyImg.style.left = cartRect.left + "px";
+      flyImg.style.top = cartRect.top + "px";
+      flyImg.style.width = "20px";
+      flyImg.style.height = "20px";
+      flyImg.style.opacity = "0.5";
+      flyImg.style.transform = "rotate(20deg)";
+    });
+
+    flyImg.addEventListener(
+      "transitionend",
+      () => {
+        flyImg.remove();
+      },
+      { once: true }
+    );
+  };
 
   const stateItem = location.state?.menuItem || null;
   const stateRestaurant = location.state?.restaurant || null;
@@ -78,12 +121,140 @@ export default function MenuItemDetailPage() {
 
   const handleAdd = () => setQty((v) => v + 1);
   const handleSub = () => setQty((v) => Math.max(1, v - 1));
+// thêm món
+  
 
   const handleAddToCart = () => {
     if (!item || !restaurant) return;
-    if (item.toppings?.length) setShowToppingDialog(true);
-    else addItem(item, restaurant, qty);
+
+    if (!isAvailable) {
+      toast.error(`${qty} phần ${item.name} đã hết hàng, thử món khác nhé!`);
+      return;
+    }
+
+    if (item.toppings?.length && !toppingSelected) {
+      setShowToppingDialog(true);
+    } else {
+      addItem(item, restaurant, qty);
+
+      // chỉ chạy animation khi cả 2 ref có giá trị
+      if (imgRef.current && cartIconRef.current) {
+        flyToCart(); // chạy animation
+      }
+
+      // hiện toast sau animation (hoặc cùng lúc, tuỳ ý)
+   
+      toast.custom((t) => (
+        <div
+          className={`${
+            t.visible ? "animate-enter" : "animate-leave"
+          } flex items-center gap-2 bg-white border border-gray-300 w-[50vw] sm:w-[380px] p-3 rounded-lg`}
+        >
+          <div className="w-5 h-5 flex-shrink-0 flex items-center justify-center bg-green-500 rounded-full text-white font-bold">
+            ✓
+          </div>
+          <img
+            src={item.image}
+            alt={item.name}
+            className="w-7 h-7 sm:w-8 sm:h-8 object-cover rounded"
+          />
+          <span className="text-xs sm:text-sm font-medium leading-snug break-words">
+            Đã thêm <span className="font-bold text-black">{qty} </span> cái{" "}
+            <span className="font-bold text-black">{item.name}</span> vào giỏ
+            hàng!
+          </span>
+        </div>
+      ));
+
+    }
   };
+
+  // const handleAddToCart = () => {
+  //   if (!item || !restaurant) return;
+
+  //   if (!isAvailable) {
+  //     toast.error(`${qty} phần ${item.name} đã hết hàng, thử món khác nhé!`);
+  //     return;
+  //   }
+
+  //   if (item.toppings?.length && !toppingSelected) {
+  //     toast.error(`Chưa chọn topping cho ${qty} phần ${item.name}!`);
+  //     return;
+  //   }
+
+  //   addItem(item, restaurant, qty);
+  //   flyToCart();
+
+  //   toast.custom((t) => (
+  //     <div
+  //       className={`${
+  //         t.visible ? "animate-enter" : "animate-leave"
+  //       } pointer-events-auto flex items-center gap-2 bg-white border border-green-500 p-3 rounded shadow-md`}
+  //     >
+  //       <div className="w-5 h-5 flex-shrink-0 flex items-center justify-center bg-green-500 rounded-full text-white font-bold">
+  //         ✓
+  //       </div>
+  //       <img
+  //         src={item.image}
+  //         alt={item.name}
+  //         className="w-8 h-8 object-cover rounded"
+  //       />
+  //       <span className="font-medium">
+  //         <span className="font-bold capitalize text-black ml-1">{qty}</span>{" "}
+  //         cái
+  //         <span className="font-bold capitalize text-black ml-1">
+  //           {item.name}
+  //         </span>{" "}
+  //         vừa bay thẳng vào giỏ của ní
+  //         <span className="font-bold capitalize text-black ml-1">{" "}
+  //           {user.full_name}
+  //         </span>
+  //         !
+  //       </span>
+  //     </div>
+  //   ));
+  // };
+
+  // const handleAddToCart = () => {
+  //   if (!item || !restaurant) return;
+  //   if (item.toppings?.length) setShowToppingDialog(true);
+  //   else addItem(item, restaurant, qty);
+  //   flyToCart(); // chạy animation
+  //   toast.custom((t) => (
+  //     <div
+  //       className={`${
+  //         t.visible ? "animate-enter" : "animate-leave"
+  //       } pointer-events-auto flex items-center gap-2 bg-white border border-green-500 p-3 rounded shadow-md`}
+  //     >
+  //       {/* Icon tích xanh */}
+  //       <div className="w-5 h-5 flex-shrink-0 flex items-center justify-center bg-green-500 rounded-full text-white font-bold">
+  //         ✓
+  //       </div>
+
+  //       {/* Ảnh món ăn */}
+  //       <img
+  //         src={item.image}
+  //         alt={item.name}
+  //         className="w-8 h-8 object-cover rounded"
+  //       />
+
+  //       {/* Nội dung */}
+  //       <span className="font-medium">
+  //         {item.name} đã được thêm vào giỏ hàng!
+  //       </span>
+  //     </div>
+  //   ));
+
+  // };
+
+  // const handleAddToCart = () => {
+  //   if (!item || !restaurant) return;
+  //   if (item.toppings?.length) {
+  //     setShowToppingDialog(true);
+  //   } else {
+  //     addItemWithToppings(item, restaurant, [], "", qty); // truyền quantity
+  //   }
+  // };
 
   const optimizedImg = useMemo(() => {
     if (!item?.image && !item?.name) return null;
@@ -119,35 +290,32 @@ export default function MenuItemDetailPage() {
   const isAvailable = item?.isAvailable !== false;
 
   return (
-    <main className="flex-1">
-      {/* Nút back nổi */}
-      <Button
-        onClick={handleBack}
-        variant="outline"
-        className="fixed top-4 left-4 z-50 bg-white/95 backdrop-blur-sm shadow-lg h-9 px-4"
-      >
+    <main className="flex-1 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      {/* Nút back  */}
+      <Button onClick={handleBack} variant="outline" className="mb-6">
         <ArrowLeft className="w-4 h-4 mr-2" />
-        Quay lại
+        Quay lại Menu
       </Button>
-
       {/* Layout responsive */}
       <div
         className="grid grid-cols-1 lg:grid-cols-2 min-h-screen bg-white overflow-hidden
-        max-w-7xl mx-auto my-8 rounded-2xl shadow-sm transition-all duration-500"
+        max-w-7xl mx-auto my-8 rounded-2xl transition-all duration-500"
       >
         {/* LEFT: Ảnh món ăn */}
         <div
           className="relative group w-full lg:h-auto aspect-[4/3] overflow-hidden 
-  rounded-t-2xl lg:rounded-l-2xl lg:rounded-tr-none flex items-center justify-center bg-white"
+        rounded-t-2xl lg:rounded-l-2xl lg:rounded-tr-none flex items-center justify-center bg-white"
         >
           {/* Bọc ảnh trong 1 khung relative riêng */}
-          <div className="relative w-full h-full flex items-center justify-center">
+          <div className="border border-gray-200 relative w-full h-full flex items-center justify-center">
             {optimizedImg ? (
               <ImageWithFallback
+                ref={imgRef}
                 src={optimizedImg}
                 alt={item.name}
-                className="w-full h-full object-cover lg:object-cover sm:object-contain transition-transform duration-700 ease-out 
-        group-hover:scale-105 group-hover:brightness-110"
+                //         className="w-full h-full object-cover lg:object-cover sm:object-contain transition-transform duration-700 ease-out
+                // group-hover:scale-105 group-hover:brightness-110"
+                className="w-full h-full object-cover transition-transform duration-700 ease-out group-hover:scale-105 group-hover:brightness-110"
               />
             ) : (
               <div className="flex items-center justify-center w-full h-full text-gray-400 italic text-sm">
@@ -213,10 +381,11 @@ export default function MenuItemDetailPage() {
         </div>
 
         {/* RIGHT: Thông tin chi tiết */}
-        <div className="p-6 sm:p-8 lg:p-10 space-y-6 overflow-y-auto max-w-2xl mx-auto w-full">
+        {/* <div className="p-6 sm:p-8 lg:p-10 space-y-6 overflow-y-auto max-w-2xl mx-auto w-full"> */}
+        <div className="p-6 sm:p-6 lg:p-4 space-y-6 overflow-y-auto max-w-2xl mx-auto w-full">
           {/* Thông tin món */}
           <div className="border-b border-gray-200 pb-6">
-            <h2 className="text-3xl font-bold text-gray-900 mb-3">
+            <h2 className="text-3xl font-bold text-gray-900 -mt-4 mb-1 leading-snug">
               {item.name}
             </h2>
             <p className="text-gray-600 text-lg leading-relaxed mb-4">
@@ -273,7 +442,7 @@ export default function MenuItemDetailPage() {
           </div>
 
           {/* Số lượng + Thêm vào giỏ */}
-          <Card className="p-6">
+          <Card className="p-6 hover:scale-100">
             <div className="flex items-center justify-between mb-6">
               <span className="font-bold text-gray-900 text-xl">Số lượng:</span>
               <div className="flex items-center space-x-2">
@@ -312,7 +481,6 @@ export default function MenuItemDetailPage() {
           </Card>
         </div>
       </div>
-
       {/* Dialog topping */}
       <ToppingSelectionDialog
         isOpen={showToppingDialog}
@@ -321,6 +489,7 @@ export default function MenuItemDetailPage() {
         restaurant={restaurant}
         quantity={qty}
       />
+      <Toaster position="top-right" />
     </main>
   );
 }

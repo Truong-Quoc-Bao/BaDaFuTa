@@ -10,11 +10,16 @@ import {
 import { Badge } from "../components/ui/badge";
 import { useCart } from "../contexts/CartContext";
 import { ImageWithFallback } from "../components/figma/ImageWithFallback";
+import { useAuth } from "../contexts/AuthContext"; // 🔹 import auth
 import { toast } from "sonner";
 
 export default function CartPage() {
-
   const navigate = useNavigate();
+
+  const { state: authState } = useAuth(); // 🔹 lấy user info
+  //const user = authState.user; // 🔹 check login
+
+  //lấy giỏ hàng
   const { state, updateQuantity, removeItem, clearCart } = useCart();
   const deliveryFee =
     state.items.length > 0
@@ -27,16 +32,23 @@ export default function CartPage() {
 
   const handleCheckout = () => {
     // E3: Check if cart is empty
-    if (state.items.length === 0) {
+    if (!state.items || state.items.length === 0) {
       toast.error("Giỏ hàng rỗng, hãy thêm sản phẩm.");
       return;
+    } else {
+      if (!authState.isAuthenticated) {
+        localStorage.setItem("redirectAfterLogin", "/cart/checkout");
+        navigate("/login");
+        return;
+      }
+      navigate("/cart/checkout");
     }
-    navigate("/checkout");
   };
+  
 
   if (state.items.length === 0) {
     return (
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 bg-gray-100 ">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8  ">
         <Button
           variant="outline"
           onClick={() => navigate("/")}
@@ -71,7 +83,7 @@ export default function CartPage() {
       <Button
         variant="outline"
         onClick={() => navigate("/")}
-        className="mb-6 bg-white border border-gray-300"
+        className="mb-6 bg-white"
       >
         <ArrowLeft className="w-4 h-4 mr-2" />
         Quay lại
@@ -85,7 +97,7 @@ export default function CartPage() {
             <Button
               variant="outline"
               onClick={clearCart}
-              className="text-red-600 hover:text-red-700"
+              className="text-red-600 hover:text-red-700 bg-white"
             >
               <Trash2 className="w-4 h-4 mr-2" />
               Xóa tất cả
@@ -101,7 +113,7 @@ export default function CartPage() {
               const itemPrice = item.menuItem.price + toppingsTotal;
 
               return (
-                <Card key={item.id}>
+                <Card key={item.id} className="hover:scale-100">
                   <CardContent className="p-4">
                     <div className="flex items-start space-x-4">
                       <ImageWithFallback
@@ -112,9 +124,9 @@ export default function CartPage() {
 
                       <div className="flex-1 min-w-0">
                         <h3 className="font-semibold">{item.menuItem.name}</h3>
-                        {/* <p className="text-sm text-gray-600">
-                          {item.restaurant.name}
-                        </p> */}
+                        <p className="text-sm text-gray-600">
+                          Tên nhà hàng: {item.restaurant.name}
+                        </p>
 
                         {/* Display selected toppings */}
                         {item.selectedToppings &&
@@ -219,7 +231,7 @@ export default function CartPage() {
 
         {/* Order Summary - Step 8 from Use Case */}
         <div className="lg:col-span-1">
-          <Card className="sticky top-4">
+          <Card className="sticky top-4 hover:scale-100">
             <CardHeader>
               <CardTitle>Tóm tắt đơn hàng</CardTitle>
             </CardHeader>
@@ -259,7 +271,7 @@ export default function CartPage() {
               {/* <p className="text-xs text-gray-500 text-center">
                 * Giá có thể thay đổi tùy theo chính sách của từng nhà hàng
               </p> */}
-              <br/>
+              <br />
             </CardContent>
           </Card>
         </div>

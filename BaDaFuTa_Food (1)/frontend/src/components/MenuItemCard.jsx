@@ -7,7 +7,8 @@ import { Badge } from "./ui/badge";
 import { ImageWithFallback } from "./figma/ImageWithFallback";
 import { useCart } from "../contexts/CartContext";
 import { ToppingSelectionDialog } from "./ToppingSelectionDialog";
-import { toast } from "sonner";
+// import { toast } from "sonner";
+import toast, { Toaster } from "react-hot-toast";
 import {
   getOptimizedFoodImage,
   optimizeImageUrl,
@@ -43,7 +44,28 @@ export const MenuItemCard = ({ menuItem, restaurant, layout = "vertical" }) => {
     } else {
       // Direct add to cart if no toppings (simpler items)
       addItem(menuItem, restaurant);
-      toast.success(`Đã thêm ${menuItem.name} vào giỏ hàng`);
+      // toast.success(`Đã thêm ${menuItem.name} vào giỏ hàng`);
+      toast.custom((t) => (
+        <div
+          className={`${
+            t.visible ? "animate-enter" : "animate-leave"
+          } flex items-center gap-2 bg-white border border-gray-300 w-[50vw] sm:w-[380px] p-3 rounded-lg`}
+        >
+          <div className="w-5 h-5 flex-shrink-0 flex items-center justify-center bg-green-500 rounded-full text-white font-bold">
+            ✓
+          </div>
+          <img
+            src={menuItem.image}
+            alt={menuItem.name}
+            className="w-7 h-7 sm:w-8 sm:h-8 object-cover rounded"
+          />
+          <span className="text-xs sm:text-sm font-medium leading-snug break-words">
+            Đã thêm <span className="font-bold text-black"> 1 </span> cái{" "}
+            <span className="font-bold text-black">{menuItem.name}</span> vào
+            giỏ hàng!
+          </span>
+        </div>
+      ));
     }
   };
 
@@ -67,11 +89,18 @@ export const MenuItemCard = ({ menuItem, restaurant, layout = "vertical" }) => {
   // const handleCardClick = () => {
   //   navigate(`/restaurant/${restaurant.id}/item/${menuItem.id}`);
   // };
+  // const handleCardClick = () => {
+  //   navigate(`/restaurant/${restaurant.id}/menu/${menuItem.id}`);
+  // };
+
+
   const handleCardClick = () => {
-    navigate(`/restaurant/${restaurant.id}/menu/${menuItem.id}`);
+    const rid = restaurant?.slug || restaurant?.id;
+    if (!rid || !menuItem?.id) return;
+    navigate(`/restaurant/${rid}/menu/${menuItem.id}`, {
+      state: { menuItem, restaurant }, // ⬅️ gửi sẵn data
+    });
   };
-
-
   const handleCloseToppingDialog = () => {
     setShowToppingDialog(false);
   };
@@ -85,6 +114,7 @@ export const MenuItemCard = ({ menuItem, restaurant, layout = "vertical" }) => {
             !isAvailable ? "opacity-60" : ""
           }`}
           onClick={handleCardClick}
+          
         >
           <div className="flex flex-col h-80">
             {/* Image - takes up 50% of the card height */}

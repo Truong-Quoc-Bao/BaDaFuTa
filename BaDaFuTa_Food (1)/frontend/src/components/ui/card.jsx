@@ -6,7 +6,7 @@ function Card({ className, ...props }) {
     <div
       data-slot="card"
       className={cn(
-        "shadow-lg bg-white border-0 text-card-foreground flex flex-col gap-6 rounded-xl",
+        "shadow-lg hover:scale-102 transition-transform duration-300 bg-white border border-gray-200 text-card-foreground flex flex-col gap-6 rounded-xl",
         className
       )}
       {...props}
@@ -64,7 +64,7 @@ function CardContent({ className, ...props }) {
   return (
     <div
       data-slot="card-content"
-      className={cn("px-6 [&:last-child]:pb", className)}
+      className={cn("px-6  [&:last-child]:pb-6", className)}
       {...props}
     />
   );

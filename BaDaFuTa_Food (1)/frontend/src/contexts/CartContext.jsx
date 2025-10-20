@@ -195,9 +195,14 @@ export const CartProvider = ({ children }) => {
   }, [state]);
 
   // helpers
-  const addItem = (menuItem, restaurant) => {
-    dispatch({ type: "ADD_ITEM", payload: { menuItem, restaurant } });
+  // const addItem = (menuItem, restaurant) => {
+  //   dispatch({ type: "ADD_ITEM", payload: { menuItem, restaurant } });
+  // };
+
+  const addItem = (menuItem, restaurant, quantity = 1) => {
+    dispatch({ type: "ADD_ITEM", payload: { menuItem, restaurant, quantity } });
   };
+
 
   const addItemWithToppings = (
     menuItem,

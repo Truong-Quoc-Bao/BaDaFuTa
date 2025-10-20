@@ -1,1 +1,84 @@
 @import "tailwindcss";
+
+
+/* @layer base {
+  @media (max-width: 640px) {
+    html {
+      font-size: 14px; /* toàn trang nhỏ lại (mặc định 16px) */
+    /* }
+
+    button, input, select, textarea {
+      font-size: 0.875rem; /* = 14px */
+      /* padding: 0.4rem 0.6rem; nút nhỏ gọn hơn */
+    /* }
+
+    img {
+      max-width: 90%;
+      height: auto;
+    }
+  }
+} */ 
+
+@layer base {
+  /* Cỡ chữ mặc định (desktop) */
+  html {
+    font-size: 16px;
+  }
+
+  /* Tablet nhỏ hơn xíu */
+  @media (max-width: 1024px) {
+    html {
+      font-size: 15px;
+    }
+    button, input, select, textarea {
+      font-size: 0.9375rem; /* 15px */
+      padding: 0.5rem 0.75rem;
+    }
+  }
+
+  /* Điện thoại */
+  @media (max-width: 640px) {
+    html {
+      font-size: 14px;
+    }
+
+    /* body {
+      padding: 0 0.5rem;
+    } */
+
+    button, input, select, textarea {
+      font-size: 0.875rem; /* 14px */
+      padding: 0.4rem 0.6rem;
+      border-radius: 0.375rem; /* bo nhẹ hơn */
+    }
+
+    img {
+      max-width: 100%;
+      height: auto;
+    }
+
+    h1 {
+      font-size: 1.5rem;
+    }
+    h2 {
+      font-size: 1.25rem;
+    }
+    h3 {
+      font-size: 1.125rem;
+    }
+    p, span, label {
+      font-size: 0.9rem;
+    }
+  }
+
+  /* Màn hình cực nhỏ (rất nhỏ hoặc iPhone SE) */
+  @media (max-width: 400px) {
+    html {
+      font-size: 13px;
+    }
+    button, input {
+      padding: 0.35rem 0.5rem;
+    }
+  }
+}
+

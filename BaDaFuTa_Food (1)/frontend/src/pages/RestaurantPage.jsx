@@ -2,7 +2,8 @@ import { useNavigate, useParams, Link } from "react-router-dom"; // ✅
 import { useEffect, useState } from "react";
 import OpeningStatus from "../components/OpeningStatus";
 import { useCart } from "../contexts/CartContext";
-import { toast } from "sonner"; // ✅ nếu muốn hiện thông báo đẹp
+// import { toast, Toaster } from "sonner"; // ✅ nếu muốn hiện thông báo đẹp
+import toast, { Toaster } from "react-hot-toast";
 import { useMemo } from "react";
 import {
   ArrowLeft,
@@ -70,11 +71,11 @@ export const RestaurantPage = () => {
   }, [id]);
 
   //Thêm vào giỏ hàng
-  const handleAddToCart = (menuItem) => {
-    addItem(menuItem, restaurant);
+  const handleAddToCart = () => {
+    addItem(menuItem, restaurant, selectedToppings, specialInstructions);
     toast.success(`Đã thêm ${menuItem.name} vào giỏ hàng`);
+    onClose(); // đóng dialog
   };
-
 
 
   return (
@@ -334,6 +335,7 @@ export const RestaurantPage = () => {
                 </p>
               )}
             </div>
+            <Toaster position="top-right" />
           </section>
         ))
       ) : (

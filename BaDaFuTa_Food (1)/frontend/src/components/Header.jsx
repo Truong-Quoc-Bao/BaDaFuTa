@@ -155,6 +155,7 @@
 
 
 
+import { useRef } from "react";
 
 import { ShoppingCart, User, Package, LogOut, Settings } from "lucide-react";
 import { Logo } from "./Logo";
@@ -175,7 +176,8 @@ import { useAuth } from "../contexts/AuthContext";
 import { useNavigate, useLocation } from "react-router-dom";
 
 export const Header = () => {
-
+  // trong component Header:
+  const cartIconRef = useRef(null);
   //lấy thoong tin
   const { state } = useCart();
   const { state: authState, logout } = useAuth();
@@ -200,9 +202,6 @@ export const Header = () => {
       .toUpperCase()
       .slice(0, 2);
   };
-
-
-
 
   // const { state } = useCart();
   // const { state: authState, logout } = useAuth();
@@ -274,10 +273,11 @@ export const Header = () => {
             <div className="hidden md:block">{/* <LocationSelector /> */}</div>
             {/* Cart */}
             <Button
+              ref={cartIconRef}
               variant="outline"
               size="sm"
               onClick={() => navigate("/cart")}
-              className="relative bg-white"
+              className="relative bg-white rounded-lg"
             >
               <ShoppingCart className="w-4 h-4" />
               {totalItems > 0 && (
@@ -291,88 +291,90 @@ export const Header = () => {
             </Button>
             {/* User Menu */}
             {authState.isAuthenticated && authState.user ? (
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="flex items-center rounded-lg space-x-2"
+                  >
+                    <Avatar className="w-6 h-6">
+                      <AvatarImage src={authState.user.avatar} />
+                      <AvatarFallback className="text-xs">
+                        {getInitials(authState.user.full_name)}
+                      </AvatarFallback>
+                    </Avatar>
+                    <span className="hidden sm:inline">
+                      {authState.user.full_name}
+                    </span>
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-56">
+                  <div className="p-2">
+                    <p className="font-medium">{authState.user.full_name}</p>
+                    <p className="text-sm text-gray-500">
+                      {authState.user.email}
+                    </p>
+                    <Badge
+                      variant="secondary"
+                      className="text-xs mt-1 bg-gray-300"
+                    >
+                      {authState.user.role === "customer"
+                        ? "Khách hàng"
+                        : "Chủ cửa hàng"}
+                    </Badge>
+                  </div>
+                  <DropdownMenuSeparator className="border-t border-gray-300 my-1" />{" "}
+                  <DropdownMenuItem onClick={() => navigate("/my-orders")}>
+                    <Package className="w-4 h-4 mr-2" />
+                    Đơn hàng của tôi
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => navigate("/profile")}>
+                    <User className="w-4 h-4 mr-2" />
+                    Thông tin cá nhân
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => navigate("/settings")}>
+                    <Settings className="w-4 h-4 mr-2" />
+                    Cài đặt
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator className="border-t border-gray-300 my-1" />{" "}
+                  <DropdownMenuItem
+                    onClick={handleLogout}
+                    className="text-red-600"
+                  >
+                    <LogOut className="w-4 h-4 mr-2" />
+                    Đăng xuất
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            ) : (
+              <div className="flex items-center space-x-2">
                 <Button
                   variant="outline"
                   size="sm"
-                  className="flex items-center space-x-2"
+                  onClick={() => navigate("/login")}
                 >
-                  <Avatar className="w-6 h-6">
-                    <AvatarImage src={authState.user.avatar} />
-                    <AvatarFallback className="text-xs">
-                      {getInitials(authState.user.full_name)}
-                    </AvatarFallback>
-                  </Avatar>
-                  <span className="hidden sm:inline">
-                    {authState.user.full_name}
-                  </span>
+                  <User className="w-4 h-4" />
+                  <span className="hidden sm:inline ml-2">Đăng nhập</span>
                 </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-56">
-                <div className="p-2">
-                  <p className="font-medium">{authState.user.full_name}</p>
-                  <p className="text-sm text-gray-500">
-                    {authState.user.email}
-                  </p>
-                  <Badge variant="secondary" className="text-xs mt-1 bg-gray-300">
-                    {authState.user.role === "customer"
-                        ? "Khách hàng"
-                        : "Chủ cửa hàng"}
-                  </Badge>
-                </div>
-                <DropdownMenuSeparator className="border-t border-gray-300 my-1" />{" "}
-                <DropdownMenuItem onClick={() => navigate("/my-orders")}>
-                  <Package className="w-4 h-4 mr-2" />
-                  Đơn hàng của tôi
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => navigate("/profile")}>
-                  <User className="w-4 h-4 mr-2" />
-                  Thông tin cá nhân
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => navigate("/settings")}>
-                  <Settings className="w-4 h-4 mr-2" />
-                  Cài đặt
-                </DropdownMenuItem>
-                <DropdownMenuSeparator className="border-t border-gray-300 my-1" />{" "}
-                <DropdownMenuItem
-                  onClick={handleLogout}
-                  className="text-red-600"
+                <Button
+                  variant="default"
+                  size="sm"
+                  onClick={() => navigate("/register")}
+                  className="bg-orange-500 hover:bg-orange-600 hidden w-[100px] sm:inline-flex"
                 >
-                  <LogOut className="w-4 h-4 mr-2" />
-                  Đăng xuất
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-            ) : (
-            <div className="flex items-center space-x-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => navigate("/login")}
-              >
-                <User className="w-4 h-4" />
-                <span className="hidden sm:inline ml-2">Đăng nhập</span>
-              </Button>
-                  <Button
-                    variant="default"
-                size="sm"
-                onClick={() => navigate("/register")}
-                className="bg-orange-500 hover:bg-orange-600 hidden w-[100px] sm:inline-flex"
-              >
-                Đăng ký
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => navigate("/merchant/login")}
-                className="text-orange-600 border-orange-600 hover:bg-orange-50 hidden md:inline-flex"
-              >
-                Merchant
-              </Button>
-            </div>
-            )
-            }
+                  Đăng ký
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => navigate("/merchantlogin")}
+                  className="text-orange-600 border-orange-600 hover:bg-orange-50 hidden md:inline-flex"
+                >
+                  Merchant
+                </Button>
+              </div>
+            )}
           </div>
         </div>
       </div>

@@ -14,9 +14,9 @@ import {
 } from "../components/ui/card";
 import { Logo } from "../components/Logo";
 import { toast } from "sonner";
-import { Store, Lock, User } from "lucide-react";
+import { Store, Lock, User, ArrowLeft } from "lucide-react";
 
-export function MerchantLoginPage() {
+export default function MerchantLoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
@@ -51,6 +51,14 @@ export function MerchantLoginPage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-orange-50 to-red-50 flex items-center justify-center p-4">
       <div className="w-full max-w-md">
+        <Button
+          variant="ghost"
+          onClick={() => navigate("/")}
+          className="mb-6 text-gray-600 hover:text-gray-900"
+        >
+          <ArrowLeft className="w-4 h-4 mr-2" />
+          Về trang chủ
+        </Button>
         {/* Logo */}
         <div className="text-center mb-8">
           <Logo className="mx-auto mb-4" />
@@ -58,7 +66,7 @@ export function MerchantLoginPage() {
           <p className="text-gray-600 mt-2">Đăng nhập để quản lý nhà hàng</p>
         </div>
 
-        <Card className="shadow-xl border-0">
+        <Card className="shadow-xl border-0 hover:scale-100">
           <CardHeader className="text-center pb-6">
             <div className="mx-auto w-12 h-12 bg-orange-100 rounded-full flex items-center justify-center mb-4">
               <Store className="w-6 h-6 text-orange-600" />
@@ -101,11 +109,7 @@ export function MerchantLoginPage() {
                 </div>
               </div>
 
-              <Button
-                type="submit"
-                variant="default"
-                disabled={loading}
-              >
+              <Button type="submit" variant="default" disabled={loading}>
                 {loading ? "Đang đăng nhập..." : "Đăng nhập"}
               </Button>
             </form>
