@@ -17,9 +17,17 @@ import {
 } from "../utils/imageUtils";
 
 export const MenuItemCard = ({ menuItem, restaurant, layout = "vertical" }) => {
-  const { addItem } = useCart();
+  //const { addItem } = useCart();
   const navigate = useNavigate();
   const [showToppingDialog, setShowToppingDialog] = useState(false);
+
+  const {
+    state: cartState,
+    addItem,
+    clearCart,
+    draftOrder,
+    setDraftOrder,
+  } = useCart();
 
   // Check if item is available
   const isAvailable = menuItem.isAvailable !== false;
@@ -36,6 +44,22 @@ export const MenuItemCard = ({ menuItem, restaurant, layout = "vertical" }) => {
         "Sản phẩm đã hết hàng/ngừng kinh doanh, vui lòng chọn sản phẩm khác."
       );
       return;
+    }
+
+    // kiểm tra nếu giỏ đang có món từ nhà hàng khác
+    if (
+      cartState.items.length > 0 &&
+      cartState.items[0].restaurant.id !== restaurant.id
+    ) {
+      if (
+        window.confirm(
+          "Bạn đang chuyển sang nhà hàng khác, giỏ hàng cũ sẽ bị xóa. Tiếp tục?"
+        )
+      ) {
+        clearCart();
+      } else {
+        return; // hủy thêm món
+      }
     }
 
     // Step 4 from Use Case: Show topping selection if item has toppings

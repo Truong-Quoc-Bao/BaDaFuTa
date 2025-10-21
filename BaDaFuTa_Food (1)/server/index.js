@@ -15,13 +15,29 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
+// app.use(
+//   cors({
+//     origin: "http://localhost:5173", // FE của anh
+//     methods: ["GET", "POST", "PUT", "DELETE"],
+//     credentials: true, // nếu cần gửi cookie
+//   })
+// );
+
+
+// Cấu hình CORS mở rộng để truy cập từ các thiết bị trong cùng Wi-Fi
+
 app.use(
   cors({
-    origin: "http://localhost:5173", // FE của anh
+    origin: [
+      "http://localhost:5173", // Cho phép frontend trên máy tính
+      "http://192.168.100.124:5173", // 👈 Cho phép điện thoại truy cập FE (ở nhà)
+      "http://172.20.10.3:5173", // đt
+    ],
     methods: ["GET", "POST", "PUT", "DELETE"],
-    credentials: true, // nếu cần gửi cookie
+    credentials: true,
   })
 );
+
 
 
 // Health check (kiểm tra server + DB)
@@ -48,4 +64,7 @@ app.use((_req, res) => res.status(404).json({ error: "Not found" }));
 
 // Start server
 const PORT = process.env.PORT || 4000;
-app.listen(PORT, () => console.log(`Server chạy tại http://localhost:${PORT}`));
+// app.listen(PORT, () => console.log(`Server chạy tại http://localhost:${PORT}`));
+
+app.listen(3000, "0.0.0.0", () => console.log("Server running on port 3000"));
+

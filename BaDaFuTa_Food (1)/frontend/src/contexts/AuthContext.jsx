@@ -62,11 +62,14 @@ export const AuthProvider = ({ children }) => {
   const login = async (email, password) => {
     dispatch({ type: "SET_LOADING", payload: true });
     try {
-      const response = await fetch("http://localhost:3000/api/loginCustomer", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password }),
-      });
+      const response = await fetch(
+        "http://192.168.100.124:3000/api/loginCustomer",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email, password }),
+        }
+      );
 
       const data = await response.json();
 
@@ -90,11 +93,14 @@ export const AuthProvider = ({ children }) => {
   const register = async (data) => {
     dispatch({ type: "SET_LOADING", payload: true });
     try {
-      const response = await fetch("http://localhost:3000/api/registerCustomer", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(data),
-      });
+      const response = await fetch(
+        "192.168.100.124:3000/api/registerCustomer",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(data),
+        }
+      );
 
       const resData = await response.json();
 

@@ -94,4 +94,5 @@ function OpeningStatus({ time_open, children }) {
 OpeningStatus.Clock = OpeningClock;
 OpeningStatus.Text = OpeningText;
 
+export { useOpenState }; // thêm dòng này
 export default OpeningStatus;

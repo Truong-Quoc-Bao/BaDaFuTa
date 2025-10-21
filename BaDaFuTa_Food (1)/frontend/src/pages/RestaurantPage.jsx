@@ -43,7 +43,9 @@ export const RestaurantPage = () => {
         setErrMsg("");
 
         const res = await fetch(
-          `http://localhost:3000/api/restaurants/${encodeURIComponent(
+          //`http://localhost:3000/api/restaurants/${encodeURIComponent(
+          //`http://192.168.100.124:3000/api/restaurants/${encodeURIComponent(
+          `http://172.20.10.3:3000/api/restaurants/${encodeURIComponent(
             id
           )}/menu`,
           { signal: ac.signal }
@@ -335,7 +337,16 @@ export const RestaurantPage = () => {
                 </p>
               )}
             </div>
-            <Toaster position="top-right" />
+            <Toaster
+              position="top-right"
+              toastOptions={{
+                duration: 1000, // 1 giây tự tắt
+                style: { pointerEvents: "none" }, // tránh bị touch giữ
+                pauseOnFocusLoss: false,
+                pauseOnHover: false,
+              }}
+            />
+            {/* <Toaster position="top-right" /> */}
           </section>
         ))
       ) : (

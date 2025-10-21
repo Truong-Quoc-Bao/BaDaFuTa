@@ -8,6 +8,7 @@ import {
   CardHeader,
   CardTitle,
 } from "../components/ui/card";
+import { Logo } from "../components/Logo";
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
 import { Label } from "../components/ui/label";
@@ -74,7 +75,9 @@ export default function LoginPage() {
     }
 
     try {
-      const res = await fetch("http://localhost:3000/api/login", {
+      // const res = await fetch("http://localhost:3000/api/login", {
+      const res = await fetch("http://172.20.10.3:3000/api/login", {
+        // const res = await fetch("http://192.168.100.124:3000/api/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ identifier, password }),
@@ -143,7 +146,7 @@ export default function LoginPage() {
           <Card className="hover:scale-100">
             <CardHeader className="space-y-1">
               <div className="flex items-center justify-center mb-4">
-                <div className="w-12 h-12 bg-gradient-to-br from-orange-500 to-red-500 rounded-xl flex items-center justify-center shadow-lg">
+                {/* <div className="w-12 h-12 bg-gradient-to-br from-orange-500 to-red-500 rounded-xl flex items-center justify-center shadow-lg">
                   <svg
                     viewBox="0 0 24 24"
                     className="w-7 h-7 text-white"
@@ -155,6 +158,9 @@ export default function LoginPage() {
                     <circle cx="12" cy="12" r="6" />
                     <circle cx="12" cy="12" r="2" fill="currentColor" />
                   </svg>
+                </div> */}
+                <div className="w-20 h-20 bg-gradient-to-br from-orange-100 to-orange-600 rounded-3xl flex items-center justify-center shadow-xl border-4 border-white">
+                  <Logo size="lg" className="text-white" />
                 </div>
               </div>
               <CardTitle className="text-2xl text-center">Đăng nhập</CardTitle>

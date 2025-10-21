@@ -250,7 +250,7 @@ export default function CartPage() {
                 <span>{deliveryFee.toLocaleString("vi-VN")}đ</span>
               </div>
 
-              <hr className="border-t border-gray-300 my-4" />
+              <hr className="border-t border-gray-200 my-4" />
 
               <div className="flex justify-between font-bold text-lg">
                 <span>Tổng cộng</span>

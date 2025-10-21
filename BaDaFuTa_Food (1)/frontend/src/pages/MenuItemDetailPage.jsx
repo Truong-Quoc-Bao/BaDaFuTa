@@ -24,7 +24,7 @@ export default function MenuItemDetailPage() {
   const { restaurantId, itemId } = useParams();
   const navigate = useNavigate();
   const location = useLocation();
-  const { addItem } = useCart();
+  // const { addItem } = useCart();
   // 🧩 Lấy user từ AuthContext
   const { state: authState } = useAuth();
   const user = authState.user;
@@ -121,17 +121,37 @@ export default function MenuItemDetailPage() {
 
   const handleAdd = () => setQty((v) => v + 1);
   const handleSub = () => setQty((v) => Math.max(1, v - 1));
-// thêm món
-  
+  // thêm món
+
+
+  const { state: cartState, addItem, clearCart } = useCart(); // lấy state giỏ hàng
 
   const handleAddToCart = () => {
     if (!item || !restaurant) return;
 
+    // kiểm tra nếu giỏ đang có món từ nhà hàng khác
+    if (
+      cartState.items.length > 0 &&
+      cartState.items[0].restaurant.id !== restaurant.id
+    ) {
+      if (
+        window.confirm(
+          "Bạn đang chuyển sang nhà hàng khác, giỏ hàng cũ sẽ bị xóa. Tiếp tục?"
+        )
+      ) {
+        clearCart();
+      } else {
+        return; // hủy thêm món
+      }
+    }
+
+    //hết món
     if (!isAvailable) {
       toast.error(`${qty} phần ${item.name} đã hết hàng, thử món khác nhé!`);
       return;
     }
 
+    // Nếu món có topping chưa chọn, mở dialog
     if (item.toppings?.length && !toppingSelected) {
       setShowToppingDialog(true);
     } else {
@@ -142,13 +162,12 @@ export default function MenuItemDetailPage() {
         flyToCart(); // chạy animation
       }
 
-      // hiện toast sau animation (hoặc cùng lúc, tuỳ ý)
-   
+      /// hiện toast sau animation (hoặc cùng lúc, tuỳ ý)
       toast.custom((t) => (
         <div
           className={`${
             t.visible ? "animate-enter" : "animate-leave"
-          } flex items-center gap-2 bg-white border border-gray-300 w-[50vw] sm:w-[380px] p-3 rounded-lg`}
+          } flex items-center gap-2 bg-white border border-gray-200 w-[50vw] sm:w-[380px] p-3 rounded-lg`}
         >
           <div className="w-5 h-5 flex-shrink-0 flex items-center justify-center bg-green-500 rounded-full text-white font-bold">
             ✓
@@ -165,87 +184,8 @@ export default function MenuItemDetailPage() {
           </span>
         </div>
       ));
-
     }
   };
-
-  // const handleAddToCart = () => {
-  //   if (!item || !restaurant) return;
-
-  //   if (!isAvailable) {
-  //     toast.error(`${qty} phần ${item.name} đã hết hàng, thử món khác nhé!`);
-  //     return;
-  //   }
-
-  //   if (item.toppings?.length && !toppingSelected) {
-  //     toast.error(`Chưa chọn topping cho ${qty} phần ${item.name}!`);
-  //     return;
-  //   }
-
-  //   addItem(item, restaurant, qty);
-  //   flyToCart();
-
-  //   toast.custom((t) => (
-  //     <div
-  //       className={`${
-  //         t.visible ? "animate-enter" : "animate-leave"
-  //       } pointer-events-auto flex items-center gap-2 bg-white border border-green-500 p-3 rounded shadow-md`}
-  //     >
-  //       <div className="w-5 h-5 flex-shrink-0 flex items-center justify-center bg-green-500 rounded-full text-white font-bold">
-  //         ✓
-  //       </div>
-  //       <img
-  //         src={item.image}
-  //         alt={item.name}
-  //         className="w-8 h-8 object-cover rounded"
-  //       />
-  //       <span className="font-medium">
-  //         <span className="font-bold capitalize text-black ml-1">{qty}</span>{" "}
-  //         cái
-  //         <span className="font-bold capitalize text-black ml-1">
-  //           {item.name}
-  //         </span>{" "}
-  //         vừa bay thẳng vào giỏ của ní
-  //         <span className="font-bold capitalize text-black ml-1">{" "}
-  //           {user.full_name}
-  //         </span>
-  //         !
-  //       </span>
-  //     </div>
-  //   ));
-  // };
-
-  // const handleAddToCart = () => {
-  //   if (!item || !restaurant) return;
-  //   if (item.toppings?.length) setShowToppingDialog(true);
-  //   else addItem(item, restaurant, qty);
-  //   flyToCart(); // chạy animation
-  //   toast.custom((t) => (
-  //     <div
-  //       className={`${
-  //         t.visible ? "animate-enter" : "animate-leave"
-  //       } pointer-events-auto flex items-center gap-2 bg-white border border-green-500 p-3 rounded shadow-md`}
-  //     >
-  //       {/* Icon tích xanh */}
-  //       <div className="w-5 h-5 flex-shrink-0 flex items-center justify-center bg-green-500 rounded-full text-white font-bold">
-  //         ✓
-  //       </div>
-
-  //       {/* Ảnh món ăn */}
-  //       <img
-  //         src={item.image}
-  //         alt={item.name}
-  //         className="w-8 h-8 object-cover rounded"
-  //       />
-
-  //       {/* Nội dung */}
-  //       <span className="font-medium">
-  //         {item.name} đã được thêm vào giỏ hàng!
-  //       </span>
-  //     </div>
-  //   ));
-
-  // };
 
   // const handleAddToCart = () => {
   //   if (!item || !restaurant) return;
@@ -435,7 +375,7 @@ export default function MenuItemDetailPage() {
                 ))}
               </div>
             ) : (
-              <div className="p-3 bg-white rounded-lg border border-dashed border-gray-300 text-gray-500 italic">
+              <div className="p-3 bg-white rounded-lg border border-dashed border-gray-200 text-gray-500 italic">
                 Chưa cập nhật
               </div>
             )}
@@ -489,7 +429,15 @@ export default function MenuItemDetailPage() {
         restaurant={restaurant}
         quantity={qty}
       />
-      <Toaster position="top-right" />
+      <Toaster
+        position="top-right"
+        toastOptions={{
+          duration: 1000, // 1 giây tự tắt
+          style: { pointerEvents: "none" }, // tránh bị touch giữ
+          pauseOnFocusLoss: false,
+          pauseOnHover: false,
+        }}
+      />
     </main>
   );
 }

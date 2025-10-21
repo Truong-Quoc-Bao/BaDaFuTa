@@ -4,23 +4,67 @@ import { Badge } from "./ui/badge";
 import { ImageWithFallback } from "../components/figma/ImageWithFallback";
 import { useNavigate } from "react-router-dom";
 import { useParams } from "react-router-dom";
-import OpeningStatus  from "../components/OpeningStatus";
+// import OpeningStatus  from "../components/OpeningStatus";
+import OpeningStatus, { useOpenState } from "../components/OpeningStatus";
+import toast, { Toaster } from "react-hot-toast"; 
+// import { toast } from "react-toastify";
+// import "react-toastify/dist/ReactToastify.css";
+
+
+// // Khởi tạo toast ở root app
+// toast.configure();
 
 export default function RestaurantCard ({ restaurant }) {
   const navigate = useNavigate();
   const { code } = useParams();
+  // const handleClick = () => {
+  //   navigate(`/restaurant/${restaurant.id}`);
+  // };
+  // ✅ Lấy trạng thái mở cửa
+
+
+
+  const { isOpen } = useOpenState(restaurant?.time_open);
+
+  // const handleClick = () => {
+  //   if (!isOpen) {
+  //     toast.error("Nhà hàng đã hết giờ mở cửa!");
+  //     return; // không chuyển trang
+  //   }
+  //   navigate(`/restaurant/${restaurant.id}`);
+  // };
+
   const handleClick = () => {
+    if (!isOpen) {
+      const hour = new Date().getHours();
+      let msg = "Nhà hàng đã nghỉ 😅";
+
+      if (hour < 11) msg = "Sáng nay nhà hàng chưa mở nè 🌞🍳";
+      else if (hour < 14) msg = "Ôi không! Nhà hàng đang nghỉ trưa 🍕😴";
+      else if (hour < 18) msg = "Chiều nay nhà hàng chưa mở lại 😎";
+      else msg = "Tối rồi, nhà hàng đã đóng cửa 🌙🍽️";
+
+      toast.error(msg); // ✅ toast sẽ hiển thị
+      return;
+    }
+
     navigate(`/restaurant/${restaurant.id}`);
   };
- 
+
   return (
     <Card
-      className="overflow-hidden cursor-pointer hover:shadow-lg transition-all duration-300"
+      // className="overflow-hidden cursor-pointer hover:shadow-lg transition-all duration-300"
+      // onClick={handleClick}
+      className={`overflow-hidden cursor-pointer hover:shadow-lg transition-all duration-300 ${
+        !isOpen ? "opacity-70" : ""
+      }`} // mờ khi đóng cửa
       onClick={handleClick}
     >
+      
       <div className="flex flex-col h-80">
         {/* Image - takes up 50% of the card height */}
         <div className="h-1/2 relative">
+          
           <ImageWithFallback
             src={restaurant?.cover_image.url}
             alt={restaurant?.merchant_name}
@@ -99,6 +143,7 @@ export default function RestaurantCard ({ restaurant }) {
           </div>
         </div>
       </div>
+      
     </Card>
   );
 };
