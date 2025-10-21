@@ -6,23 +6,20 @@ import { useNavigate } from "react-router-dom";
 import { useParams } from "react-router-dom";
 // import OpeningStatus  from "../components/OpeningStatus";
 import OpeningStatus, { useOpenState } from "../components/OpeningStatus";
-import toast, { Toaster } from "react-hot-toast"; 
+import toast, { Toaster } from "react-hot-toast";
 // import { toast } from "react-toastify";
 // import "react-toastify/dist/ReactToastify.css";
-
 
 // // Khởi tạo toast ở root app
 // toast.configure();
 
-export default function RestaurantCard ({ restaurant }) {
+export default function RestaurantCard({ restaurant }) {
   const navigate = useNavigate();
   const { code } = useParams();
   // const handleClick = () => {
   //   navigate(`/restaurant/${restaurant.id}`);
   // };
   // ✅ Lấy trạng thái mở cửa
-
-
 
   const { isOpen } = useOpenState(restaurant?.time_open);
 
@@ -60,11 +57,9 @@ export default function RestaurantCard ({ restaurant }) {
       }`} // mờ khi đóng cửa
       onClick={handleClick}
     >
-      
       <div className="flex flex-col h-80">
         {/* Image - takes up 50% of the card height */}
         <div className="h-1/2 relative">
-          
           <ImageWithFallback
             src={restaurant?.cover_image.url}
             alt={restaurant?.merchant_name}
@@ -143,7 +138,6 @@ export default function RestaurantCard ({ restaurant }) {
           </div>
         </div>
       </div>
-      
     </Card>
   );
-};
+}

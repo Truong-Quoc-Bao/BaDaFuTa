@@ -50,6 +50,7 @@
       font-size: 0.875rem; /* 14px */
       padding: 0.4rem 0.6rem;
       border-radius: 0.375rem; /* bo nhẹ hơn */
+      -webkit-text-size-adjust: 100%; 
     }
 
     img {
