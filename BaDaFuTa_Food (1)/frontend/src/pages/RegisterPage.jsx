@@ -336,10 +336,10 @@ export default function RegisterPage() {
                             handleChange("full_name", e.target.value)
                           }
                           className={cn(
-                            "pl-10 border transition-colors duration-200 focus:ring-0 focus:outline-none",
+                            "pl-10 ",
                             !formData.full_name && error?.includes("họ tên")
                               ? "border-red-500 focus:border-red-500"
-                              : "border-gray-300 focus:border-transparent"
+                              : " "
                           )}
                           disabled={isLoading}
                         />
@@ -358,14 +358,14 @@ export default function RegisterPage() {
                             handleChange("phone", e.target.value)
                           }
                           className={cn(
-                            "pl-10 pr-10 border transition-colors duration-200 focus:ring-0 focus:outline-none",
+                            "pl-10 pr-10 ",
                             !formData.phone && error?.includes("số điện thoại")
                               ? "border-red-500 focus:border-red-500"
                               : phoneError
                               ? "border-red-500 hover:border-red-500 focus:border-red-500"
                               : formData.phone.length === 10 && !phoneError
                               ? "border-green-500 hover:border-green-500 focus:border-green-500"
-                              : "border-gray-300 focus:border-transparent"
+                              : " "
                           )}
                           disabled={isLoading}
                         />
@@ -398,14 +398,14 @@ export default function RegisterPage() {
                             handleChange("email", e.target.value)
                           }
                           className={cn(
-                            "pl-10 pr-10 border transition-colors duration-200 focus:ring-0 focus:outline-none",
+                            "pl-10 pr-10",
                             !formData.email && error?.includes("email")
                               ? "border-red-500 focus:border-red-500"
                               : emailError
                               ? "border-red-500 hover:border-red-500 focus:border-red-500"
                               : formData.email && !emailError
                               ? "border-green-500 hover:border-green-500 focus:border-green-500"
-                              : "border-gray-300 focus:border-transparent"
+                              : " "
                           )}
                           disabled={isLoading}
                         />
@@ -440,7 +440,7 @@ export default function RegisterPage() {
                             handleChange("password", e.target.value)
                           }
                           className={cn(
-                            "pl-10 pr-10 border transition-colors duration-200 focus:ring-0 focus:outline-none",
+                            "pl-10 pr-10 ",
                             !formData.password && error?.includes("mật khẩu")
                               ? "border-red-500 focus:border-red-500"
                               : passwordError
@@ -455,7 +455,7 @@ export default function RegisterPage() {
                                 : passwordError === "Mật khẩu mạnh - tốt"
                                 ? "border-green-500 hover:border-green-500 focus:border-green-500"
                                 : "border-gray-300 focus:border-orange-500"
-                              : "border-gray-300 focus:border-transparent"
+                              : " "
                           )}
                           disabled={isLoading}
                         />
@@ -529,7 +529,7 @@ export default function RegisterPage() {
                             }
                           }}
                           className={cn(
-                            "pl-10 pr-10 border transition-colors duration-200 focus:ring-0 focus:outline-none",
+                            "pl-10 pr-10 ",
                             !formData.confirmPassword &&
                               error?.includes("xác nhận mật khẩu")
                               ? "border-red-500 focus:border-red-500"
@@ -537,7 +537,7 @@ export default function RegisterPage() {
                               ? "border-red-500 focus:border-red-500"
                               : formData.confirmPassword && !confirmPassword
                               ? "border-green-500 focus:border-green-500"
-                              : "border-gray-300 focus:border-transparent" // mặc định nếu rỗng nhưng chưa submit
+                              : " " // mặc định nếu rỗng nhưng chưa submit
                           )}
                           disabled={isLoading}
                         />
