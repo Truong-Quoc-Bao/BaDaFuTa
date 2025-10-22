@@ -125,6 +125,33 @@ export const AuthProvider = ({ children }) => {
     dispatch({ type: "LOGOUT" });
   };
 
+
+  // const logout = () => {
+  //   try {
+  //     // Lưu ID user cũ (nếu có)
+  //     const previousUserId = state.user?._id;
+
+  //     // Xóa thông tin user trong localStorage
+  //     localStorage.removeItem("user");
+  //     localStorage.removeItem("token");
+
+  //     // 🔥 Xóa luôn giỏ hàng của user này khỏi localStorage
+  //     try {
+  //       if (previousUserId) {
+  //         localStorage.removeItem(`cart_user_${previousUserId}`);
+  //       }
+  //     } catch (e) {
+  //       console.error("Error removing user cart:", e);
+  //     }
+
+  //     // Cập nhật lại context
+  //     dispatch({ type: "LOGOUT" });
+  //   } catch (error) {
+  //     console.error("Logout error:", error);
+  //   }
+  // };
+
+
   const updateUser = (data) => {
     if (state.user) {
       const updatedUser = { ...state.user, ...data };

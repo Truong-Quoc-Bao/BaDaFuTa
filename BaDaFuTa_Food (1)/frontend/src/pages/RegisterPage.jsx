@@ -352,7 +352,7 @@ export default function RegisterPage() {
                         <Input
                           id="phone"
                           type="tel"
-                          placeholder="Nhập số điện thoại (VD: 0123456789)"
+                          placeholder="Nhập số điện thoại"
                           value={formData.phone}
                           onChange={(e) =>
                             handleChange("phone", e.target.value)
@@ -651,7 +651,7 @@ export default function RegisterPage() {
                     </Button>
                   </div>
                 </div>
-                <div className="text-xs text-gray-600 mt-4">
+                {/* <div className="text-xs text-gray-600 mt-4">
                   <p className="text-center">
                     Bằng việc đăng kí, bạn đã đồng ý với BaDaFuTaFood về <br />{" "}
                     <Link
@@ -668,6 +668,23 @@ export default function RegisterPage() {
                       Chính sách bảo mật
                     </Link>
                   </p>
+                </div> */}
+
+                <div className="text-xs text-gray-600 mt-4 text-center">
+                  Bằng việc đăng kí, bạn đã đồng ý với BaDaFuTaFood về <br />
+                  <Link
+                    to="/"
+                    className="text-orange-600 hover:text-orange-700 hover:underline"
+                  >
+                    Điều khoản dịch vụ
+                  </Link>{" "}
+                  và{" "}
+                  <Link
+                    to="/"
+                    className="text-orange-600 hover:text-orange-700 hover:underline"
+                  >
+                    Chính sách bảo mật
+                  </Link>
                 </div>
               </CardContent>
             </form>

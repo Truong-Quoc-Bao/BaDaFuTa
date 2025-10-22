@@ -7,6 +7,7 @@ function Input({ className, type = "text", ...props }) {
       type={type}
       data-slot="input"
       className={cn(
+        "text-[16px]",
         "placeholder:text-gray-400 text-black placeholder:text-muted-foreground selection:bg-primary selection:text-primary-foreground dark:bg-input/30 border flex h-9 w-full min-w-0 px-3 py-1 bg-input-background transition-[color,box-shadow] outline-none",
         "file:inline-flex file:h-7 file:border-0 file:bg-transparent file:text-sm file:font-medium",
         "disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50",
