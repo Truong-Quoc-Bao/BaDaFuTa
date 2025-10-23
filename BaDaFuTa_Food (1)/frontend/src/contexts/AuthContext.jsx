@@ -123,6 +123,8 @@ export const AuthProvider = ({ children }) => {
   const logout = () => {
     localStorage.removeItem("user");
     dispatch({ type: "LOGOUT" });
+    window.dispatchEvent(new Event("user-logged-out"));
+
   };
 
 

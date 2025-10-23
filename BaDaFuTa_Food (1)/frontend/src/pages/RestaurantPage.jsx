@@ -44,8 +44,8 @@ export const RestaurantPage = () => {
 
         const res = await fetch(
           //`http://localhost:3000/api/restaurants/${encodeURIComponent(
-          //`http://192.168.100.124:3000/api/restaurants/${encodeURIComponent(
-          `http://172.20.10.3:3000/api/restaurants/${encodeURIComponent(
+          `http://192.168.100.124:3000/api/restaurants/${encodeURIComponent(
+          // `http://172.20.10.3:3000/api/restaurants/${encodeURIComponent(
             id
           )}/menu`,
           { signal: ac.signal }

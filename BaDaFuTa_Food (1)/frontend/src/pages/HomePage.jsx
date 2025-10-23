@@ -61,8 +61,8 @@ useEffect(() => {
   const fetchRestaurants = async () => {
     try {
       // const res = await fetch("http://localhost:3000/api/restaurants"); // localhost:3000/api/merchant/restaurants
-      // const res = await fetch("http://192.168.100.124:3000/api/restaurants"); // localhost:3000/api/merchant/restaurants
-      const res = await fetch("http://172.20.10.3:3000/api/restaurants"); // localhost:3000/api/merchant/restaurants
+      const res = await fetch("http://192.168.100.124:3000/api/restaurants"); // localhost:3000/api/merchant/restaurants
+      // const res = await fetch("http://172.20.10.3:3000/api/restaurants"); // localhost:3000/api/merchant/restaurants
       const data = await res.json();
       setRestaurants(data);
     } catch (error) {
