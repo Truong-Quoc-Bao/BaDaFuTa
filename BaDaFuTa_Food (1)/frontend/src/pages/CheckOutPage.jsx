@@ -68,8 +68,8 @@ export default function CheckOutPage () {
 
     
   useEffect(() => {
-      if (!user) return;
-      
+    if (!user) return;
+
     // 1️⃣ Hiển thị ngay địa chỉ mặc định từ user
     if (user) {
       const defaultAddress = {
@@ -79,52 +79,66 @@ export default function CheckOutPage () {
         address: user.address,
         note: user.note,
       };
-        
-       const savedAddresses = [
-         {
-           id: 2,
-           full_name: "Nguyễn Văn A",
-           phone: "0912345678",
-           address: "123 Đường ABC, Quận 1, TP.HCM",
-           note: "Giao giờ hành chính",
-         },
-         {
-           id: 3,
-           full_name: "Trần Thị B",
-           phone: "0987654321",
-           address: "456 Đường XYZ, Quận 3, TP.HCM",
-           note: "",
-         },
-       ];
 
-    //   setAddressList([defaultAddress]);
-    //   setSelectedAddress(defaultAddress);
-        setAddressList([defaultAddress, ...savedAddresses]);
-        setSelectedAddress(defaultAddress);
+      const savedAddresses = [
+        {
+          id: 2,
+          full_name: "Nguyễn Văn A",
+          phone: "0912345678",
+          address: "123 Đường ABC, Quận 1, TP.HCM",
+          note: "Giao giờ hành chính",
+        },
+        {
+          id: 3,
+          full_name: "Trần Thị B",
+          phone: "0987654321",
+          address: "456 Đường XYZ, Quận 3, TP.HCM",
+          note: "",
+        },
+      ];
+
+      //   setAddressList([defaultAddress]);
+      //   setSelectedAddress(defaultAddress);
+      setAddressList([defaultAddress, ...savedAddresses]);
+      setSelectedAddress(defaultAddress);
     }
     // 2️⃣ Lấy vị trí tự động background
-    if (navigator.geolocation) {
+    if ("geolocation" in navigator) {
       navigator.geolocation.getCurrentPosition(
         async (position) => {
           const { latitude, longitude } = position.coords;
+          console.log("📍 Vị trí hiện tại:", latitude, longitude);
+
           try {
             const res = await fetch(
               `https://nominatim.openstreetmap.org/reverse?lat=${latitude}&lon=${longitude}&format=json`
             );
             const data = await res.json();
-            const fullAddress = data.display_name || user.address;
+            const fullAddress = data.display_name || user?.address || "";
 
-            // Cập nhật address mà không block render
+            // Cập nhật state mà không block render
             setFormData((prev) => ({ ...prev, address: fullAddress }));
             setSelectedAddress((prev) => ({ ...prev, address: fullAddress }));
           } catch (err) {
-            console.log("Không thể lấy địa chỉ tự động:", err);
+            console.log("❌ Không thể lấy địa chỉ tự động:", err);
           }
         },
-        (err) => console.log("Không thể lấy vị trí:", err.message)
+        (err) => {
+          console.warn("⚠️ Lỗi khi lấy vị trí:", err.message);
+        },
+        {
+          enableHighAccuracy: true,
+          timeout: 10000,
+          maximumAge: 0,
+        }
       );
+    } else {
+      console.warn("⚠️ Trình duyệt không hỗ trợ Geolocation.");
     }
   }, [user]);
+
+
+  
 
   // 🧾 Hàm thay đổi input
   const handleInputChange = (e) => {
