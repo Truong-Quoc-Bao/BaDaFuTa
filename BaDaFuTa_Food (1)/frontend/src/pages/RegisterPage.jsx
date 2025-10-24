@@ -76,7 +76,6 @@ export default function RegisterPage() {
   //   comfirmPassword: "varchar",
   // };
 
- 
 
   // Phone validation - must start with 0 and have exactly 10 digits
 
