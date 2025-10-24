@@ -1,5 +1,5 @@
 import { useNavigate, Link } from "react-router-dom";
-import React, { useState } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import {
   Eye,
   EyeOff,
@@ -30,11 +30,27 @@ import { Input } from "../components/ui/input";
 import { Label } from "../components/ui/label";
 import { Separator } from "../components/ui/separator";
 import { cn } from "../components/ui/utils";
+import { useLocation } from "react-router-dom";
+import { useAuth } from "../contexts/AuthContext";
+
 
 export default function RegisterPage() {
+  const navigate = useNavigate();
+  const { state } = useAuth();
+
+  useEffect(() => {
+    if (state.isAuthenticated) {
+      const redirectPath = localStorage.getItem("redirectAfterLogin") || "/";
+      localStorage.removeItem("redirectAfterLogin");
+      navigate(redirectPath, { replace: true }); // replace để chặn quay lại login/register/OTP
+    }
+  }, [state.isAuthenticated, navigate]);
+
+  const location = useLocation();
+  const phoneFromVerification = location.state?.phone || "";
   const [formData, setFormData] = useState({
     full_name: "",
-    phone: "",
+    phone: phoneFromVerification,
     email: "",
     password: "",
     confirmPassword: "",
@@ -52,15 +68,15 @@ export default function RegisterPage() {
   //const [showEmailExists, setShowEmailExistss] = useStates(false);
   const [newUserUNFID, setNewUserUNFID] = useState("");
 
-  const { register, state } = {
-    full_name: "varchar",
-    phone: "varchar",
-    email: "varchar",
-    password: "varchar",
-    comfirmPassword: "varchar",
-  };
+  // const { register, state } = {
+  //   full_name: "varchar",
+  //   phone: "varchar",
+  //   email: "varchar",
+  //   password: "varchar",
+  //   comfirmPassword: "varchar",
+  // };
 
-  const navigate = useNavigate();
+ 
 
   // Phone validation - must start with 0 and have exactly 10 digits
 
@@ -211,7 +227,6 @@ export default function RegisterPage() {
       return;
     }
 
-
     setIsLoading(true);
     setError("");
     setShowPhoneExists(false);
@@ -357,8 +372,9 @@ export default function RegisterPage() {
                           onChange={(e) =>
                             handleChange("phone", e.target.value)
                           }
+                          disabled={true}
                           className={cn(
-                            "pl-10 pr-10 ",
+                            "pl-10 pr-10 bg-gray-100 cursor-not-allowed",
                             !formData.phone && error?.includes("số điện thoại")
                               ? "border-red-500 focus:border-red-500"
                               : phoneError
@@ -367,7 +383,7 @@ export default function RegisterPage() {
                               ? "border-green-500 hover:border-green-500 focus:border-green-500"
                               : " "
                           )}
-                          disabled={isLoading}
+                          // disabled={isLoading}
                         />
                         {/* ❌ Dấu X khi lỗi */}
                         {phoneError && (
@@ -608,7 +624,10 @@ export default function RegisterPage() {
                       <Button
                         variant="outline"
                         type="button"
-                        onClick={() => setShowPhoneExists(false)}
+                        // onClick={() => setShowPhoneExists(false)}
+                        onClick={() => {
+                          navigate("/phone-otp"); // quay về trang xác nhận OTP
+                        }}
                         className=" w-[130px] h-[40px] px-4 py-2 rounded transition"
                       >
                         Nhập số khác

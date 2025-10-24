@@ -7,6 +7,8 @@ import restaurantRoutes from "../server/routes/restaurantRoutes.js"; // import r
 import registerRoutes from "./routes/registerRoutes.js";
 import loginRoutes from "./routes/loginCustomerRoutes.js";
 import homepageRoutes from "./routes/homepageRoutes.js";
+import otpRoutes from "./routes/otpRoutes.js";
+
 
 dotenv.config();
 const app = express();
@@ -56,7 +58,7 @@ app.use("/api/restaurants", restaurantRoutes);
 app.use("/api/register", registerRoutes);
 app.use("/api/login", loginRoutes);
 app.use("/api/login/me", loginRoutes);
-
+app.use("/api/otp", otpRoutes);
 
 
 // 404 fallback

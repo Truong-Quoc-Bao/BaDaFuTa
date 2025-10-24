@@ -39,6 +39,9 @@ export default function LoginPage() {
       navigate(redirectPath, { replace: true });
     }
   }, [state.isAuthenticated, navigate]);
+  
+
+  
 
   // // 🔹 Dán useEffect kiểm tra login ở đây
   // useEffect(() => {
@@ -324,7 +327,8 @@ export default function LoginPage() {
               <div className="text-center text-sm text-gray-600">
                 Chưa có tài khoản?{" "}
                 <Link
-                  to="/register"
+                  to="/phone-otp"
+                  // to="/register"
                   className="text-orange-600 hover:text-orange-700 hover:underline font-medium"
                 >
                   Đăng ký ngay.

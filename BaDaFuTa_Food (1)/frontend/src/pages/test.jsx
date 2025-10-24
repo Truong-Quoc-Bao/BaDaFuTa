@@ -970,3 +970,299 @@ export const CartProvider = ({ children }) => {
 //     </CartContext.Provider>
 //   );
 // };
+
+
+
+
+
+
+
+
+
+
+
+import React, { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
+import {
+  Loader2,
+  Phone,
+  ArrowLeft,
+  Check,
+  XCircle,
+  ShieldCheck,
+} from "lucide-react";
+
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "../components/ui/card";
+import { Button } from "../components/ui/button";
+import { Input } from "../components/ui/input";
+import { Label } from "../components/ui/label";
+import { Separator } from "../components/ui/separator";
+import { cn } from "../components/ui/utils";
+import { Logo } from "../components/Logo";
+
+export default function PhoneVerification() {
+  const [phone, setPhone] = useState("");
+  const [phoneError, setPhoneError] = useState("");
+  const [otp, setOtp] = useState("");
+  const [otpSent, setOtpSent] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [countdown, setCountdown] = useState(0); // 🕒 thời gian đếm ngược
+  const [successMessage, setSuccessMessage] = useState("");
+  const navigate = useNavigate();
+
+  const handleChange = (value) => {
+    setPhone(value);
+    const phoneRegex = /^0\d{9}$/;
+
+    if (!value) setPhoneError("");
+    else if (!value.startsWith("0"))
+      setPhoneError("Số điện thoại phải bắt đầu bằng 0");
+    else if (value.length > 10)
+      setPhoneError("Số điện thoại không được quá 10 số");
+    else if (!phoneRegex.test(value))
+      setPhoneError("Số điện thoại phải có đúng 10 chữ số");
+    else setPhoneError("");
+  };
+
+  const startCountdown = () => {
+    setCountdown(60); // 60 giây
+  };
+
+  // 🔁 đếm ngược
+  useEffect(() => {
+    if (countdown <= 0) return;
+    const timer = setTimeout(() => setCountdown(countdown - 1), 1000);
+    return () => clearTimeout(timer);
+  }, [countdown]);
+
+  const handleSendOtp = async (e) => {
+    e.preventDefault();
+    const normalizedPhone = phone.trim();
+
+    if (phoneError || normalizedPhone.length !== 10) {
+      return alert("Vui lòng nhập số điện thoại hợp lệ!");
+    }
+
+    setLoading(true);
+    try {
+      const res = await fetch("http://192.168.100.124:3000/api/otp/send", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ phone: normalizedPhone }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setOtpSent(true);
+        startCountdown(); // bắt đầu đếm ngược
+        alert(data.message);
+      } else {
+        alert(data.message || "Không thể gửi OTP!");
+      }
+    } catch (err) {
+      console.error(err);
+      alert("Lỗi mạng!");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const [otpError, setOtpError] = useState(""); // 🔴 lỗi OTP
+
+  const handleVerifyOtp = async () => {
+    if (!otp.trim()) {
+      setOtpError("Vui lòng nhập mã OTP!");
+      return;
+    }
+    setLoading(true);
+    try {
+      const res = await fetch("http://192.168.100.124:3000/api/otp/verify", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ phone, otp }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setOtpError("");
+        setOtpMessage("");
+        setSuccessMessage("Xác minh thành công!");
+        // điều hướng sau 1s để người dùng nhìn thấy message
+        setTimeout(() => navigate("/register", { state: { phone } }), 1000);
+      } else {
+        setOtpError(data.message || "OTP không đúng!");
+      }
+    } catch (err) {
+      console.error(err);
+      setOtpError("Lỗi mạng!");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-orange-50 to-red-50 flex items-center justify-center p-4">
+      <div className="w-full max-w-md">
+        <Button
+          variant="ghost"
+          onClick={() => navigate("/login")}
+          className="mb-6 text-gray-600 hover:text-gray-900"
+        >
+          <ArrowLeft className="w-4 h-4 mr-2" /> Quay lại đăng nhập
+        </Button>
+
+        <Card className="hover:scale-100">
+          <CardHeader className="space-y-1">
+            <div className="flex items-center justify-center mb-4">
+              <div className="w-20 h-20 bg-gradient-to-br from-orange-100 to-orange-600 rounded-3xl flex items-center justify-center shadow-xl border-4 border-white">
+                <Logo size="lg" className="text-white" />
+              </div>
+            </div>
+            <CardTitle className="text-2xl text-center">
+              Xác minh số điện thoại
+            </CardTitle>
+            <CardDescription className="text-center">
+              Vui lòng xác nhận số điện thoại để tiếp tục đăng ký tài khoản
+            </CardDescription>
+          </CardHeader>
+
+          <CardContent className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="phone">Số điện thoại *</Label>
+              <div className="relative">
+                <Phone className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+                <Input
+                  id="phone"
+                  type="tel"
+                  placeholder="Nhập số điện thoại (VD: 0987...)"
+                  value={phone}
+                  onChange={(e) => handleChange(e.target.value)}
+                  disabled={otpSent}
+                  className={cn(
+                    "pl-10 pr-10",
+                    phoneError
+                      ? "border-red-500 hover:border-red-500 focus:border-red-500"
+                      : phone.length === 10
+                      ? "border-green-500 hover:border-green-500 focus:border-green-500"
+                      : "border-gray-300"
+                  )}
+                />
+                {phoneError && (
+                  <XCircle className="absolute right-3 top-1/2 transform -translate-y-1/2 text-red-500 w-4 h-4" />
+                )}
+                {!phoneError && phone.length === 10 && (
+                  <Check className="absolute right-3 top-1/2 transform -translate-y-1/2 text-green-500 w-4 h-4" />
+                )}
+              </div>
+              {phoneError && (
+                <p className="text-xs text-red-500 text-left">{phoneError}</p>
+              )}
+            </div>
+
+            {otpSent && (
+              <div className="space-y-2">
+                <Label htmlFor="otp">Mã OTP</Label>
+                <div className="relative">
+                  <ShieldCheck className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+                  <Input
+                    id="otp"
+                    type="text"
+                    placeholder="Nhập mã OTP"
+                    value={otp}
+                    onChange={(e) => {
+                      setOtp(e.target.value);
+                      setOtpError(""); // xóa lỗi khi người dùng gõ lại
+                    }}
+                    className={cn(
+                      "pl-10 pr-10",
+                      otpError
+                        ? "border-red-500 hover:border-red-500 focus:border-red-500"
+                        : otp.length > 0
+                        ? "border-green-500 hover:border-green-500 focus:border-green-500"
+                        : "border-gray-300"
+                    )}
+                  />
+                  {otpError && (
+                    <XCircle className="absolute right-3 top-1/2 transform -translate-y-1/2 text-red-500 w-4 h-4" />
+                  )}
+                </div>
+                {successMessage && (
+                  <p className="text-xs text-green-500 mt-1">
+                    {successMessage}
+                  </p>
+                )}
+
+                {otpError && (
+                  <p className="text-xs text-red-500 mt-1">{otpError}</p>
+                )}
+                {/* ⏱️ Hiển thị đếm ngược */}
+                {countdown > 0 && (
+                  <p className="text-xs text-gray-500 mt-1">
+                    Bạn có thể gửi lại OTP sau {countdown}s
+                  </p>
+                )}
+              </div>
+            )}
+
+            {!otpSent ? (
+              <Button
+                onClick={handleSendOtp}
+                className="w-full bg-orange-500 hover:bg-orange-600"
+                disabled={loading}
+              >
+                {loading ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" /> Đang gửi
+                    OTP...
+                  </>
+                ) : (
+                  "Gửi OTP"
+                )}
+              </Button>
+            ) : (
+              <Button
+                onClick={countdown === 0 ? handleSendOtp : handleVerifyOtp}
+                className={`w-full ${
+                  countdown === 0
+                    ? "bg-orange-500 hover:bg-orange-600"
+                    : "bg-green-600 hover:bg-green-700"
+                }`}
+                disabled={loading}
+              >
+                {loading ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    {countdown === 0 ? "Đang gửi OTP..." : "Đang xác minh..."}
+                  </>
+                ) : countdown === 0 ? (
+                  "Gửi lại OTP"
+                ) : (
+                  "Xác minh OTP"
+                )}
+              </Button>
+            )}
+          </CardContent>
+
+          <CardFooter className="text-center text-sm text-gray-600">
+            <Separator />
+            <div className="pt-4">
+              Đã có tài khoản?{" "}
+              <Button
+                variant="link"
+                className="text-orange-600 hover:text-orange-700 font-medium p-0"
+                onClick={() => navigate("/login")}
+              >
+                Đăng nhập ngay
+              </Button>
+            </div>
+          </CardFooter>
+        </Card>
+      </div>
+    </div>
+  );
+}

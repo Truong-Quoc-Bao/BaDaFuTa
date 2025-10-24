@@ -2,6 +2,7 @@ import { Routes, Route, Navigate, useLocation } from "react-router-dom";
 import { CartProvider } from "./contexts/CartContext";
 import { AuthProvider } from "./contexts/AuthContext";
 import MerchantLogin from "./pages/MerchantLoginPage"
+import PhoneVerification from "./pages/PhoneVerification"
 import { Header } from "./components/Header";
 import { Footer } from "./components/Footer";
 import LoginPage from "./pages/LoginPage";
@@ -22,7 +23,7 @@ import { Toaster } from "react-hot-toast";
 
 function App() {
   const location = useLocation(); // ✅ lấy location hiện tại
-  const hideHeaderFooter = ["/login", "/register", "/merchantlogin"].includes(location.pathname);
+  const hideHeaderFooter = ["/login", "/register", "/merchantlogin", "/phone-otp"].includes(location.pathname);
 
   return (
     <AuthProvider>
@@ -49,6 +50,7 @@ function App() {
         /> */}
         <Routes>
           <Route path="/" element={<HomePage />} />
+          <Route path="/phone-otp" element={<PhoneVerification/>}/>
           <Route path="/login" element={<LoginPage />} />
           <Route path="/register" element={<RegisterPage />} />
           <Route path="/merchantlogin" element={<MerchantLogin />} />
