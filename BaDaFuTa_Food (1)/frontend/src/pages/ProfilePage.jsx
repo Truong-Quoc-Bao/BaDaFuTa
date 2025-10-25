@@ -104,7 +104,7 @@ export const ProfilePage = () => {
   if (!state.user) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <Card className="w-full max-w-md">
+        <Card className="w-full max-w-md hover:scale-100">
           <CardContent className="p-6 text-center">
             <p>Vui lòng đăng nhập để xem thông tin cá nhân</p>
             <Button onClick={() => navigate("/login")} className="mt-4">
@@ -132,7 +132,7 @@ export const ProfilePage = () => {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Profile Card */}
           <div className="lg:col-span-1">
-            <Card>
+            <Card className="hover:scale-100">
               <CardContent className="p-6 text-center">
                 {/* <Avatar className="w-24 h-24 mx-auto mb-4">
                   <AvatarImage src={state.user.avatar} />
@@ -206,7 +206,7 @@ export const ProfilePage = () => {
 
           {/* Profile Information */}
           <div className="lg:col-span-2">
-            <Card>
+            <Card className="hover:scale-100">
               <CardHeader className="flex flex-row items-center justify-between">
                 <CardTitle>Thông tin cá nhân</CardTitle>
                 {!isEditing ? (
