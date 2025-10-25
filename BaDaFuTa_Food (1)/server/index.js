@@ -17,26 +17,30 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-// app.use(
-//   cors({
-//     origin: "http://localhost:5173", // FE của anh
-//     methods: ["GET", "POST", "PUT", "DELETE"],
-//     credentials: true, // nếu cần gửi cookie
-//   })
-// );
-
 
 // Cấu hình CORS mở rộng để truy cập từ các thiết bị trong cùng Wi-Fi
-
 app.use(
   cors({
     origin: [
       "http://localhost:5173", // Cho phép frontend trên máy tính
       "http://192.168.100.124:5173", // 👈 Cho phép điện thoại truy cập FE (ở nhà)
       "http://172.20.10.3:5173", // đt
+      "https://unnibbed-unthrilled-averi.ngrok-free.dev",
     ],
     methods: ["GET", "POST", "PUT", "DELETE"],
     credentials: true,
+  })
+);
+app.use(
+  session({
+    secret: "abc123",
+    resave: false,
+    saveUninitialized: true,
+    cookie: {
+      secure: true, // true nếu chạy HTTPS
+      httpOnly: true,
+      sameSite: "none", // cần cho cross-site cookie khi FE khác domain (ngrok)
+    },
   })
 );
 

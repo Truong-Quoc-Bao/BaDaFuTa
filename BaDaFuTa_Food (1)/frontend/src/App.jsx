@@ -17,6 +17,7 @@ import MenuItemDetailPage from "./pages/MenuItemDetailPage";
 import CartPage from "./pages/CartPage";
 import CheckOutPage from "./pages/CheckOutPage"
 import { Toaster } from "react-hot-toast";
+import "./index.css";
 // import { ToastContainer } from "react-toastify";
 // import "react-toastify/dist/ReactToastify.css";
 

@@ -6,7 +6,11 @@ module.exports = {
         accent: "#38bdf8", // màu xanh nhẹ
         "accent-foreground": "#ffffff", // chữ trắng khi hover
       },
+      fontFamily: {
+        sans: ["Nunito", "Poppins", "Quicksand", "sans-serif"],
+      },
     },
   },
   plugins: [],
 };
+

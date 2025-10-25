@@ -7,6 +7,15 @@ export default defineConfig({
   plugins: [react(), tailwindcss()],
 
   server: {
+    host: true,
+    port: 5173,
+    // ✅ Cho phép ngrok host truy cập
+    allowedHosts: [
+      "localhost",
+      "127.0.0.1",
+      "192.168.100.124",
+      "unnibbed-unthrilled-averi.ngrok-free.dev", // thêm host ngrok
+    ],
     proxy: {
       "/api192": {
         target: "http://192.168.100.124:3000",

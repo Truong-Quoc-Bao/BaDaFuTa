@@ -86,7 +86,7 @@ export default function PhoneVerification() {
     setOtpMessage("");
 
     try {
-      const res = await fetch("http://192.168.100.124:3000/api/otp/send", {
+      const res = await fetch("/api192/otp/send", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ phone: normalizedPhone }),
@@ -128,7 +128,7 @@ export default function PhoneVerification() {
     setOtpMessage("");
 
     try {
-      const res = await fetch("http://192.168.100.124:3000/api/otp/verify", {
+      const res = await fetch("/api192/otp/verify", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ phone, otp }),

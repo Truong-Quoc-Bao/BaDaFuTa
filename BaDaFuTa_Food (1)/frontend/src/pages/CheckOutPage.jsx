@@ -1,6 +1,6 @@
 import { useAuth } from "../contexts/AuthContext";
 import { useNavigate, useLocation } from "react-router-dom";
-import { useEffect, useState } from "react";
+import { useRef, useEffect, useState } from "react";
 import { Button } from "../components/ui/button"
 import { ArrowLeft, CreditCard, MapPin, Phone, User, Edit, Plus } from "lucide-react";
 import { ImageWithFallback } from "../components/figma/ImageWithFallback";
@@ -22,6 +22,7 @@ import {
   DialogTitle,
   DialogFooter,
 } from "../components/ui/dialog";
+
 
 export default function CheckOutPage () {
   // 🧩 Lấy user từ AuthContext
@@ -53,11 +54,12 @@ export default function CheckOutPage () {
   const [error, setError] = useState(null);
 
   const [formData, setFormData] = useState({
-    name: "",
+    full_name: "",
     phone: "",
     address: "",
     note: "",
   });
+
     
     const handleSelectAddress = (addr) => {
       setSelectedAddress(addr);
@@ -66,134 +68,73 @@ export default function CheckOutPage () {
       setIsDialogOpen(false);
     };
 
+  const noteRef = useRef(formData.note || "");
+  const [note, setNote] = useState(formData.note || "");
+
+  const handleConfirmNote = () => {
+    console.log("📝 Ghi chú đã xác nhận:", noteRef.current);
+  };
     
-  // useEffect(() => {
-  //   if (!user) return;
 
-  //   // 1️⃣ Hiển thị ngay địa chỉ mặc định từ user
-  //   if (user) {
-  //     const defaultAddress = {
-  //       id: 1,
-  //       full_name: user.full_name,
-  //       phone: user.phone,
-  //       address: user.address,
-  //       note: user.note,
-  //     };
-
-  //     const savedAddresses = [
-  //       {
-  //         id: 2,
-  //         full_name: "Nguyễn Văn A",
-  //         phone: "0912345678",
-  //         address: "123 Đường ABC, Quận 1, TP.HCM",
-  //         note: "Giao giờ hành chính",
-  //       },
-  //       {
-  //         id: 3,
-  //         full_name: "Trần Thị B",
-  //         phone: "0987654321",
-  //         address: "456 Đường XYZ, Quận 3, TP.HCM",
-  //         note: "",
-  //       },
-  //     ];
-
-  //     //   setAddressList([defaultAddress]);
-  //     //   setSelectedAddress(defaultAddress);
-  //     setAddressList([defaultAddress, ...savedAddresses]);
-  //     setSelectedAddress(defaultAddress);
-  //   }
-  //   // 2️⃣ Lấy vị trí tự động background
-  //   if ("geolocation" in navigator) {
-  //     navigator.geolocation.getCurrentPosition(
-  //       async (position) => {
-  //         const { latitude, longitude } = position.coords;
-  //         console.log("📍 Vị trí hiện tại:", latitude, longitude);
-
-  //         try {
-  //           const res = await fetch(
-  //             `https://nominatim.openstreetmap.org/reverse?lat=${latitude}&lon=${longitude}&format=json`
-  //           );
-  //           const data = await res.json();
-  //           const fullAddress = data.display_name || user?.address || "";
-
-  //           // Cập nhật state mà không block render
-  //           setFormData((prev) => ({ ...prev, address: fullAddress }));
-  //           setSelectedAddress((prev) => ({ ...prev, address: fullAddress }));
-  //         } catch (err) {
-  //           console.log("❌ Không thể lấy địa chỉ tự động:", err);
-  //         }
-  //       },
-  //       (err) => {
-  //         console.warn("⚠️ Lỗi khi lấy vị trí:", err.message);
-  //       },
-  //       {
-  //         enableHighAccuracy: true,
-  //         timeout: 10000,
-  //         maximumAge: 0,
-  //       }
-  //     );
-  //   } else {
-  //     console.warn("⚠️ Trình duyệt không hỗ trợ Geolocation.");
-  //   }
-  // }, [user]);
-
+  
 useEffect(() => {
   if (!user) return;
 
+  const defaultAddress = {
+    id: 1,
+    full_name: user?.full_name ?? "Người dùng",
+    phone: user?.phone ?? "",
+    address: user?.address ?? "",
+    note: user?.note ?? "",
+  };
+
+  // set ngay
+  setAddressList([defaultAddress]);
+  setSelectedAddress(defaultAddress);
+  setFormData((prev) => ({ ...prev, address: defaultAddress.address }));
+
+  // Hàm fetch địa chỉ từ lat/lon
   const fetchAddress = async (lat, lon) => {
     try {
       const res = await fetch(
         `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lon}&format=json`
       );
       const data = await res.json();
-      const fullAddress = data.display_name || user?.address || "";
+      const fullAddress = data.display_name || defaultAddress.address;
 
       setFormData((prev) => ({ ...prev, address: fullAddress }));
       setSelectedAddress((prev) => ({ ...prev, address: fullAddress }));
     } catch (err) {
-      console.log("❌ Không thể lấy địa chỉ tự động:", err);
+      console.log("Reverse geocode error:", err);
     }
   };
 
-  const fallbackPosition = { latitude: 12.2388, longitude: 109.1967 }; // Nha Trang
+  // Fallback IP / HCM city
+  const fetchAddressByIP = () => {
+    console.warn("Using fallback location (HCM city)");
+    fetchAddress(10.762622, 106.660172); // default HCM city
+  };
 
+  // Lấy GPS nếu trình duyệt hỗ trợ
   if ("geolocation" in navigator) {
-    // Lấy thật khi HTTPS hoặc localhost
-    if (
-      window.location.protocol === "https:" ||
-      window.location.hostname === "localhost"
-    ) {
-      navigator.geolocation.getCurrentPosition(
-        (position) => {
-          fetchAddress(position.coords.latitude, position.coords.longitude);
-        },
-        (err) => {
-          console.warn("⚠️ Lỗi khi lấy vị trí, dùng fallback:", err.message);
-          fetchAddress(fallbackPosition.latitude, fallbackPosition.longitude);
-        },
-        { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
-      );
-    } else {
-      console.warn("⚠️ Không lấy được vị trí thật trên LAN, dùng fallback");
-      fetchAddress(fallbackPosition.latitude, fallbackPosition.longitude);
-    }
+    navigator.geolocation.getCurrentPosition(
+      (pos) => fetchAddress(pos.coords.latitude, pos.coords.longitude),
+      (err) => {
+        console.warn("GPS fail, fallback IP:", err.message);
+        fetchAddressByIP();
+      },
+      { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+    );
   } else {
-    console.warn("⚠️ Trình duyệt không hỗ trợ Geolocation.");
-    fetchAddress(fallbackPosition.latitude, fallbackPosition.longitude);
+    console.warn("Geolocation not supported, fallback IP");
+    fetchAddressByIP();
   }
-
-  const defaultAddress = {
-    id: 1,
-    full_name: user.full_name,
-    phone: user.phone,
-    address: user.address,
-    note: user.note,
-  };
-  setAddressList([defaultAddress]);
-  setSelectedAddress(defaultAddress);
 }, [user]);
 
-  
+
+
+
+
 
   // 🧾 Hàm thay đổi input
   const handleInputChange = (e) => {
@@ -213,7 +154,7 @@ useEffect(() => {
   const handleAddNewAddress = () => {
     setIsAdding(true);
     setIsEditing(false);
-    setFormData({ name: "", phone: "", address: "", note: "" });
+    setFormData({ full_name: "", phone: "", address: "", note: "" });
     setIsDialogOpen(true); // 👈 mở popup
   };
 
@@ -224,7 +165,11 @@ useEffect(() => {
         addr.id === selectedAddress.id ? { ...formData, id: addr.id } : addr
       )
     );
-    setSelectedAddress(formData);
+    setSelectedAddress({
+      ...formData,
+      id: formData.id ?? selectedAddress?.id ?? Date.now(),
+    });
+
     localStorage.setItem("selectedAddress", JSON.stringify(formData)); // ✅ cập nhật luôn
     setIsEditing(false);
     alert("✅ Đã cập nhật thông tin giao hàng!");
@@ -260,7 +205,6 @@ useEffect(() => {
         {/* Checkout Form */}
         <div className="lg:col-span-2">
           <Card className="mb-6  hover:scale-100">
-
             <CardHeader className="flex justify-between items-center">
               <CardTitle>Thông tin giao hàng</CardTitle>
               <div className="flex space-x-2">
@@ -274,22 +218,84 @@ useEffect(() => {
             </CardHeader>
 
             <CardContent>
-              <div className="flex justify-between items-center mb-4">
-                <div>
-                  <p className="font-semibold">{selectedAddress?.full_name}</p>
-                  <p className="text-sm text-gray-500">
-                    {selectedAddress?.phone}
+              <div className="flex justify-between items-start p-4 rounded-xl border border-gray-200 bg-white shadow-sm mb-4">
+                <div className="space-y-2">
+                  <p className="text-base font-semibold text-gray-800 flex items-center gap-2">
+                    <MapPin className="w-5 h-5 text-accent" />
+                    <span>Địa chỉ giao hàng mặc định</span>
                   </p>
-                  <p className="text-sm text-gray-500">
-                    {selectedAddress?.address}
+                  <p className="flex items-center gap-2 text-sm text-gray-500">
+                    <User className="w-4 h-4 text-accent" />
+                    <span>Tên khách hàng: </span>
+                    <span className="font-semibold text-gray-900">
+                      {selectedAddress?.full_name || "Người dùng"}
+                    </span>
                   </p>
+                  <p className="flex items-center gap-2 text-sm text-gray-500">
+                    <Phone className="w-4 h-4 text-accent" />
+                    <span> Số điện thoại giao hàng: </span>
+                    <span className="font-semibold text-gray-900">
+                      {selectedAddress?.phone || ""}
+                    </span>
+                  </p>
+                  <p className="flex items-start gap-2 text-sm text-gray-500">
+                    <MapPin className="w-4 h-4 text-accent mt-0.5 flex-shrink-0" />
+                    <span className="flex flex-wrap">
+                      <span className="whitespace-nowrap mr-1">
+                        Địa chỉ giao hàng:
+                      </span>
+                      <span className="font-semibold text-gray-900 break-words">
+                        {selectedAddress?.address || "Chưa có địa chỉ"}
+                      </span>
+                    </span>
+                  </p>
+                  {/* 📝 Ghi chú giao hàng */}
+                  <div className="w-full">
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Ghi chú giao hàng
+                    </label>
+                    <Textarea
+                      placeholder="Nhập ghi chú cho đơn hàng (VD: Giao buổi sáng, gọi trước khi tới...)"
+                      value={formData.note} // ✅ bind trực tiếp với formData
+                      onChange={(e) => {
+                        setFormData((prev) => ({
+                          ...prev,
+                          note: e.target.value,
+                        }));
+                        setSelectedAddress((prev) => ({
+                          ...prev,
+                          note: e.target.value,
+                        })); // nếu muốn đồng bộ với selectedAddress
+                      }}
+                      className="w-full min-h-[90px] text-gray-800"
+                    />
+                  </div>
+
+                  {/* <div className="mt-3 flex">
+                    <Button className="" onClick={handleConfirmNote}>
+                      Xác nhận
+                    </Button>
+                  </div> */}
+                </div>
+                <div className="flex space-x-2">
+                  <Button
+                    variant="outline"
+                    onClick={() => {
+                      setFormData(selectedAddress); // ✅ nạp dữ liệu đang chọn
+                      setIsEditing(true); // ✅ bật chế độ sửa
+                      setIsAdding(false);
+                      setIsDialogOpen(true); // ✅ mở popup
+                    }}
+                  >
+                    <Edit /> Sửa
+                  </Button>
                 </div>
               </div>
 
               {/* Popup danh sách địa chỉ */}
               {/* Popup sửa hoặc thêm địa chỉ */}
               <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-                <DialogContent className="max-w-lg">
+                <DialogContent className="max-w-lg border border-gray-200 rounded-lg">
                   <DialogHeader>
                     <DialogTitle>
                       {isEditing
@@ -317,8 +323,8 @@ useEffect(() => {
                       <div>
                         <Label>Họ tên</Label>
                         <Input
-                          name="name"
-                          value={formData.name}
+                          name="full_name"
+                          value={formData.full_name}
                           onChange={handleInputChange}
                           placeholder="Nhập họ tên người nhận"
                         />
@@ -438,9 +444,11 @@ useEffect(() => {
                                 variant="outline"
                                 size="sm"
                                 onClick={() => {
-                                  setFormData(addr);
+                                  // setFormData(addr);
+                                  setFormData(selectedAddress); // ✅ nạp dữ liệu đang chọn
                                   setIsEditing(true);
                                   setIsAdding(false);
+                                  setIsDialogOpen(true); // ✅ mở popup sửa
                                 }}
                               >
                                 <Edit className="w-4 h-4 mr-1" /> Sửa
@@ -491,6 +499,7 @@ useEffect(() => {
                     address: "",
                     note: "",
                   });
+                  setIsDialogOpen(true); // ✅ thêm dòng này để hiện popup
                 }}
               >
                 <Plus className="w-4 h-4 mr-1" /> Thêm địa chỉ mới
