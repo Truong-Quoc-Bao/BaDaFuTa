@@ -67,76 +67,131 @@ export default function CheckOutPage () {
     };
 
     
-  useEffect(() => {
-    if (!user) return;
+  // useEffect(() => {
+  //   if (!user) return;
 
-    // 1️⃣ Hiển thị ngay địa chỉ mặc định từ user
-    if (user) {
-      const defaultAddress = {
-        id: 1,
-        full_name: user.full_name,
-        phone: user.phone,
-        address: user.address,
-        note: user.note,
-      };
+  //   // 1️⃣ Hiển thị ngay địa chỉ mặc định từ user
+  //   if (user) {
+  //     const defaultAddress = {
+  //       id: 1,
+  //       full_name: user.full_name,
+  //       phone: user.phone,
+  //       address: user.address,
+  //       note: user.note,
+  //     };
 
-      const savedAddresses = [
-        {
-          id: 2,
-          full_name: "Nguyễn Văn A",
-          phone: "0912345678",
-          address: "123 Đường ABC, Quận 1, TP.HCM",
-          note: "Giao giờ hành chính",
-        },
-        {
-          id: 3,
-          full_name: "Trần Thị B",
-          phone: "0987654321",
-          address: "456 Đường XYZ, Quận 3, TP.HCM",
-          note: "",
-        },
-      ];
+  //     const savedAddresses = [
+  //       {
+  //         id: 2,
+  //         full_name: "Nguyễn Văn A",
+  //         phone: "0912345678",
+  //         address: "123 Đường ABC, Quận 1, TP.HCM",
+  //         note: "Giao giờ hành chính",
+  //       },
+  //       {
+  //         id: 3,
+  //         full_name: "Trần Thị B",
+  //         phone: "0987654321",
+  //         address: "456 Đường XYZ, Quận 3, TP.HCM",
+  //         note: "",
+  //       },
+  //     ];
 
-      //   setAddressList([defaultAddress]);
-      //   setSelectedAddress(defaultAddress);
-      setAddressList([defaultAddress, ...savedAddresses]);
-      setSelectedAddress(defaultAddress);
+  //     //   setAddressList([defaultAddress]);
+  //     //   setSelectedAddress(defaultAddress);
+  //     setAddressList([defaultAddress, ...savedAddresses]);
+  //     setSelectedAddress(defaultAddress);
+  //   }
+  //   // 2️⃣ Lấy vị trí tự động background
+  //   if ("geolocation" in navigator) {
+  //     navigator.geolocation.getCurrentPosition(
+  //       async (position) => {
+  //         const { latitude, longitude } = position.coords;
+  //         console.log("📍 Vị trí hiện tại:", latitude, longitude);
+
+  //         try {
+  //           const res = await fetch(
+  //             `https://nominatim.openstreetmap.org/reverse?lat=${latitude}&lon=${longitude}&format=json`
+  //           );
+  //           const data = await res.json();
+  //           const fullAddress = data.display_name || user?.address || "";
+
+  //           // Cập nhật state mà không block render
+  //           setFormData((prev) => ({ ...prev, address: fullAddress }));
+  //           setSelectedAddress((prev) => ({ ...prev, address: fullAddress }));
+  //         } catch (err) {
+  //           console.log("❌ Không thể lấy địa chỉ tự động:", err);
+  //         }
+  //       },
+  //       (err) => {
+  //         console.warn("⚠️ Lỗi khi lấy vị trí:", err.message);
+  //       },
+  //       {
+  //         enableHighAccuracy: true,
+  //         timeout: 10000,
+  //         maximumAge: 0,
+  //       }
+  //     );
+  //   } else {
+  //     console.warn("⚠️ Trình duyệt không hỗ trợ Geolocation.");
+  //   }
+  // }, [user]);
+
+useEffect(() => {
+  if (!user) return;
+
+  const fetchAddress = async (lat, lon) => {
+    try {
+      const res = await fetch(
+        `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lon}&format=json`
+      );
+      const data = await res.json();
+      const fullAddress = data.display_name || user?.address || "";
+
+      setFormData((prev) => ({ ...prev, address: fullAddress }));
+      setSelectedAddress((prev) => ({ ...prev, address: fullAddress }));
+    } catch (err) {
+      console.log("❌ Không thể lấy địa chỉ tự động:", err);
     }
-    // 2️⃣ Lấy vị trí tự động background
-    if ("geolocation" in navigator) {
+  };
+
+  const fallbackPosition = { latitude: 12.2388, longitude: 109.1967 }; // Nha Trang
+
+  if ("geolocation" in navigator) {
+    // Lấy thật khi HTTPS hoặc localhost
+    if (
+      window.location.protocol === "https:" ||
+      window.location.hostname === "localhost"
+    ) {
       navigator.geolocation.getCurrentPosition(
-        async (position) => {
-          const { latitude, longitude } = position.coords;
-          console.log("📍 Vị trí hiện tại:", latitude, longitude);
-
-          try {
-            const res = await fetch(
-              `https://nominatim.openstreetmap.org/reverse?lat=${latitude}&lon=${longitude}&format=json`
-            );
-            const data = await res.json();
-            const fullAddress = data.display_name || user?.address || "";
-
-            // Cập nhật state mà không block render
-            setFormData((prev) => ({ ...prev, address: fullAddress }));
-            setSelectedAddress((prev) => ({ ...prev, address: fullAddress }));
-          } catch (err) {
-            console.log("❌ Không thể lấy địa chỉ tự động:", err);
-          }
+        (position) => {
+          fetchAddress(position.coords.latitude, position.coords.longitude);
         },
         (err) => {
-          console.warn("⚠️ Lỗi khi lấy vị trí:", err.message);
+          console.warn("⚠️ Lỗi khi lấy vị trí, dùng fallback:", err.message);
+          fetchAddress(fallbackPosition.latitude, fallbackPosition.longitude);
         },
-        {
-          enableHighAccuracy: true,
-          timeout: 10000,
-          maximumAge: 0,
-        }
+        { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
       );
     } else {
-      console.warn("⚠️ Trình duyệt không hỗ trợ Geolocation.");
+      console.warn("⚠️ Không lấy được vị trí thật trên LAN, dùng fallback");
+      fetchAddress(fallbackPosition.latitude, fallbackPosition.longitude);
     }
-  }, [user]);
+  } else {
+    console.warn("⚠️ Trình duyệt không hỗ trợ Geolocation.");
+    fetchAddress(fallbackPosition.latitude, fallbackPosition.longitude);
+  }
 
+  const defaultAddress = {
+    id: 1,
+    full_name: user.full_name,
+    phone: user.phone,
+    address: user.address,
+    note: user.note,
+  };
+  setAddressList([defaultAddress]);
+  setSelectedAddress(defaultAddress);
+}, [user]);
 
   
 

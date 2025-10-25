@@ -230,55 +230,69 @@ export default function RegisterPage() {
     setError("");
     setShowPhoneExists(false);
 
-    try {
-      // const res = await fetch("http://localhost:3000/api/register", {
-      // const res = await fetch("http://172.20.10.3:3000/api/register", {
-      const res = await fetch("http://192.168.100.124:3000/api/register", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          full_name: formData.full_name,
-          phone: formData.phone,
-          email: formData.email,
-          password: formData.password,
-        }),
-      });
+    const hosts = [
+      "/apiLocal/register",
+      "/api192/register",
+      "/api172/register",
+      "/api/register", // fallback
+    ];
 
-      const data = await res.json(); // đây sẽ là { success: true, user: {...} }
+    for (const url of hosts) {
+      try {
+        // const res = await fetch("http://localhost:3000/api/register", {
+        // const res = await fetch("http://172.20.10.3:3000/api/register", {
+        // const res = await fetch("http://192.168.100.124:3000/api/register", {
+        const res = await fetch(url, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            full_name: formData.full_name,
+            phone: formData.phone,
+            email: formData.email,
+            password: formData.password,
+          }),
+        });
 
-      if (!res.ok) {
-        if (data.sdt) {
-          // Nếu số điện thoại đã có → điều hướng sang login
-          setShowPhoneExists(true);
+        const data = await res.json(); // đây sẽ là { success: true, user: {...} }
+
+        if (!res.ok) {
+          if (data.sdt) {
+            // Nếu số điện thoại đã có → điều hướng sang login
+            setShowPhoneExists(true);
+            return;
+          }
+          if (data.email) {
+            setEmailError("⚠️ Email này đã được đăng ký"); // ← hiển thị thông báo
+            document.getElementById("email").focus();
+            return;
+          }
+          setError(data.error || "Đăng ký thất bại");
           return;
         }
-        if (data.email) {
-          setEmailError("⚠️ Email này đã được đăng ký"); // ← hiển thị thông báo
-          document.getElementById("email").focus();
-          return;
-        }
-        setError(data.error || "Đăng ký thất bại");
-        return;
+
+        // Nếu success = true thì hiển thị popup
+        setFormData({
+          full_name: "",
+          phone: "",
+          email: "",
+          password: "",
+          confirmPassword: "",
+        });
+        // Thành công
+        alert("Đăng ký thành công!");
+        navigate("/login");
+        setShowSuccessDialog(true);
+        console.log("Đăng ký thành công từ host:", url);
+        return; // thoát loop nếu thành công
+      } catch (err) {
+        console.error("Register error:", err);
+        setError("Có lỗi xảy ra, vui lòng thử lại");
+      } finally {
+        setIsLoading(false);
       }
-
-      // Nếu success = true thì hiển thị popup
-      setFormData({
-        full_name: "",
-        phone: "",
-        email: "",
-        password: "",
-        confirmPassword: "",
-      });
-      // Thành công
-      alert("Đăng ký thành công!");
-      navigate("/login");
-      setShowSuccessDialog(true);
-    } catch (err) {
-      console.error("Register error:", err);
-      setError("Có lỗi xảy ra, vui lòng thử lại");
-    } finally {
-      setIsLoading(false);
     }
+    setError("Không thể đăng ký từ bất kỳ host nào");
+    setIsLoading(false);
   };
 
   // const handleSuccessDialogClose = () => {

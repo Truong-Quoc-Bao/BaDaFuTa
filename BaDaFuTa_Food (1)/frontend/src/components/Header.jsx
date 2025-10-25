@@ -204,7 +204,7 @@ export const Header = () => {
                 <Button
                   variant="default"
                   size="sm"
-                  onClick={() => navigate("/register")}
+                  onClick={() => navigate("/phone-otp")}
                   className="bg-orange-500 hover:bg-orange-600 hidden w-[100px] sm:inline-flex"
                 >
                   Đăng ký
@@ -279,7 +279,9 @@ export const Header = () => {
                         ? "text-orange-600"
                         : "text-gray-600 hover:text-orange-600"
                     }${isLoggedIn ? "cursor-not-allowed opacity-50" : ""}`}
-                    title={isLoggedIn ? "Phải đăng xuất mới có thể dùng được !" : ""}
+                    title={
+                      isLoggedIn ? "Phải đăng xuất mới có thể dùng được !" : ""
+                    }
                     onClick={() => {
                       if (isLoggedIn) {
                         toast.error("Phải đăng xuất mới dùng được Merchant!"); // ✅ dùng toast

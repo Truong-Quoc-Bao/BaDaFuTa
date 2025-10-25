@@ -57,20 +57,51 @@ export default function HomePage () {
   //       );
 
 const [restaurants, setRestaurants] = useState([]);
-useEffect(() => {
-  const fetchRestaurants = async () => {
-    try {
-      // const res = await fetch("http://localhost:3000/api/restaurants"); // localhost:3000/api/merchant/restaurants
-      const res = await fetch("http://192.168.100.124:3000/api/restaurants"); // localhost:3000/api/merchant/restaurants
-      // const res = await fetch("http://172.20.10.3:3000/api/restaurants"); // localhost:3000/api/merchant/restaurants
-      const data = await res.json();
-      setRestaurants(data);
-    } catch (error) {
-      console.error("Lỗi khi lấy danh sách nhà hàng:", error);
-    }
-  };
-  fetchRestaurants();
-}, []);
+// useEffect(() => {
+//   const fetchRestaurants = async () => {
+//     try {
+//       // const res = await fetch("http://localhost:3000/api/restaurants"); // localhost:3000/api/merchant/restaurants
+//       const res = await fetch("/api/restaurants");
+//       // const res = await fetch("http://192.168.100.124:3000/api/restaurants"); // localhost:3000/api/merchant/restaurants
+//       // const res = await fetch("http://172.20.10.3:3000/api/restaurants"); // localhost:3000/api/merchant/restaurants
+//       const data = await res.json();
+//       setRestaurants(data);
+//     } catch (error) {
+//       console.error("Lỗi khi lấy danh sách nhà hàng:", error);
+//     }
+//   };
+//   fetchRestaurants();
+// }, []);
+  
+  
+  useEffect(() => {
+    const fetchRestaurants = async () => {
+      const hosts = [
+        "/api/restaurants",
+        "/api192/restaurants",
+        "/apiLocal/restaurants",
+        "/api172/restaurants",
+      ];
+
+      for (const url of hosts) {
+        try {
+          const res = await fetch(url);
+          if (!res.ok) throw new Error(`Failed at ${url}`);
+          const data = await res.json();
+          setRestaurants(data);
+          console.log("Lấy dữ liệu từ:", url);
+          return; // nếu thành công thì thoát loop
+        } catch (err) {
+          console.warn(err.message);
+        }
+      }
+
+      console.error("Không thể lấy dữ liệu từ bất kỳ host nào");
+    };
+
+    fetchRestaurants();
+  }, []);
+
 
 
   return (

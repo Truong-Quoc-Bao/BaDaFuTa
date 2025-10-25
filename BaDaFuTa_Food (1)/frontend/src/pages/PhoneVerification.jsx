@@ -24,19 +24,17 @@ import { Separator } from "../components/ui/separator";
 import { cn } from "../components/ui/utils";
 import { Logo } from "../components/Logo";
 import { useAuth } from "../contexts/AuthContext";
-
 export default function PhoneVerification() {
+  const navigate = useNavigate();
+  const { state } = useAuth();
 
-    const navigate = useNavigate();
-    const { state } = useAuth();
-
-    useEffect(() => {
-      if (state.isAuthenticated) {
-        const redirectPath = localStorage.getItem("redirectAfterLogin") || "/";
-        localStorage.removeItem("redirectAfterLogin");
-        navigate(redirectPath, { replace: true });
-      }
-    }, [state.isAuthenticated, navigate]);
+  useEffect(() => {
+    if (state.isAuthenticated) {
+      const redirectPath = localStorage.getItem("redirectAfterLogin") || "/";
+      localStorage.removeItem("redirectAfterLogin");
+      navigate(redirectPath, { replace: true });
+    }
+  }, [state.isAuthenticated, navigate]);
 
   const [phone, setPhone] = useState("");
   const [phoneError, setPhoneError] = useState("");
@@ -158,7 +156,6 @@ export default function PhoneVerification() {
       setLoading(false);
     }
   };
-
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-orange-50 to-red-50 flex items-center justify-center p-4">

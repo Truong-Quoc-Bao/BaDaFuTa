@@ -33,44 +33,93 @@ export const RestaurantPage = () => {
 
  
   //Lấy menu
+  // useEffect(() => {
+  //   if (!id) return;
+
+  //   const ac = new AbortController();
+  //   async function fetchMenu() {
+  //     try {
+  //       setLoading(true);
+  //       setErrMsg("");
+
+  //       const res = await fetch(
+  //         //`http://localhost:3000/api/restaurants/${encodeURIComponent(
+  //         `http://192.168.100.124:3000/api/restaurants/${encodeURIComponent(
+  //         // `http://172.20.10.3:3000/api/restaurants/${encodeURIComponent(
+  //           id
+  //         )}/menu`,
+  //         { signal: ac.signal }
+  //       );
+  //       if (!res.ok) {
+  //         const t = await res.text().catch(() => "");
+  //         throw new Error(t || "Không tìm thấy quán");
+  //       }
+  //       const data = await res.json();
+
+  //       setRestaurant(data.merchant ?? null);
+  //       setMenu(Array.isArray(data.menu) ? data.menu : []);
+  //     } catch (e) {
+  //       if (e.name !== "AbortError") {
+  //         console.error("fetchMenu error:", e);
+  //         setErrMsg("Không tải được dữ liệu nhà hàng. Vui lòng thử lại.");
+  //       }
+  //     } finally {
+  //       setLoading(false);
+  //     }
+  //   }
+
+  //   fetchMenu();
+  //   return () => ac.abort();
+  // }, [id]);
+
+
   useEffect(() => {
     if (!id) return;
 
     const ac = new AbortController();
+
     async function fetchMenu() {
-      try {
-        setLoading(true);
-        setErrMsg("");
+      
+      const hosts = [
+        `/api192/restaurants/${encodeURIComponent(id)}/menu`,
+        `/apiLocal/restaurants/${encodeURIComponent(id)}/menu`,
+        `/api172/restaurants/${encodeURIComponent(id)}/menu`,
+      ];
+      setLoading(true);
+      setErrMsg("");
 
-        const res = await fetch(
-          //`http://localhost:3000/api/restaurants/${encodeURIComponent(
-          `http://192.168.100.124:3000/api/restaurants/${encodeURIComponent(
-          // `http://172.20.10.3:3000/api/restaurants/${encodeURIComponent(
-            id
-          )}/menu`,
-          { signal: ac.signal }
-        );
-        if (!res.ok) {
-          const t = await res.text().catch(() => "");
-          throw new Error(t || "Không tìm thấy quán");
-        }
-        const data = await res.json();
+      for (const url of hosts) {
+        try {
+          const res = await fetch(url, { signal: ac.signal });
+          if (!res.ok) {
+            const t = await res.text().catch(() => "");
+            throw new Error(t || `Không tìm thấy nhà hàng tại ${url}`);
+          }
 
-        setRestaurant(data.merchant ?? null);
-        setMenu(Array.isArray(data.menu) ? data.menu : []);
-      } catch (e) {
-        if (e.name !== "AbortError") {
-          console.error("fetchMenu error:", e);
-          setErrMsg("Không tải được dữ liệu nhà hàng. Vui lòng thử lại.");
+          const data = await res.json();
+          setRestaurant(data.merchant ?? null);
+          setMenu(Array.isArray(data.menu) ? data.menu : []);
+          console.log("Lấy dữ liệu menu từ:", url);
+          return; // thành công thì thoát loop
+        } catch (e) {
+          if (e.name !== "AbortError") {
+            console.warn(e.message);
+            // tiếp tục thử host tiếp theo
+          }
         }
-      } finally {
-        setLoading(false);
       }
+
+      setErrMsg(
+        "Không tải được dữ liệu nhà hàng từ bất kỳ host nào. Vui lòng thử lại."
+      );
+      setRestaurant(null);
+      setMenu([]);
     }
 
     fetchMenu();
     return () => ac.abort();
   }, [id]);
+
 
   //Thêm vào giỏ hàng
   const handleAddToCart = () => {
