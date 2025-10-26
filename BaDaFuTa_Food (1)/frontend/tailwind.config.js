@@ -1,5 +1,6 @@
 /** @type {import('tailwindcss').Config} */
 module.exports = {
+  darkMode: "class", // bật dark mode bằng class, không auto theo OS
   theme: {
     extend: {
       colors: {
@@ -14,3 +15,10 @@ module.exports = {
   plugins: [],
 };
 
+module.exports = {
+  darkMode: "class", // bật dark mode bằng class, không auto theo OS
+  theme: {
+    extend: {},
+  },
+  plugins: [],
+};

@@ -2,7 +2,7 @@ import { useAuth } from "../contexts/AuthContext";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useRef, useEffect, useState } from "react";
 import { Button } from "../components/ui/button"
-import { ArrowLeft, CreditCard, MapPin, Phone, User, Edit, Plus } from "lucide-react";
+import { ArrowLeft, CreditCard, MapPin, Phone, User, Edit, Plus, Edit3, FileText} from "lucide-react";
 import { ImageWithFallback } from "../components/figma/ImageWithFallback";
 import {Textarea} from "../components/ui/textarea"
 import {
@@ -22,6 +22,7 @@ import {
   DialogTitle,
   DialogFooter,
 } from "../components/ui/dialog";
+import { Clock } from "lucide-react";
 
 
 export default function CheckOutPage () {
@@ -60,13 +61,12 @@ export default function CheckOutPage () {
     note: "",
   });
 
-    
-    const handleSelectAddress = (addr) => {
-      setSelectedAddress(addr);
-      setFormData(addr);
-      localStorage.setItem("selectedAddress", JSON.stringify(addr)); // ✅ lưu vào localStorage
-      setIsDialogOpen(false);
-    };
+  const handleSelectAddress = (addr) => {
+    setSelectedAddress(addr);
+    setFormData(addr);
+    localStorage.setItem(`selectedAddress_${user?.id}`, JSON.stringify(addr));
+    setIsDialogOpen(false);
+  };
 
   const noteRef = useRef(formData.note || "");
   const [note, setNote] = useState(formData.note || "");
@@ -74,65 +74,203 @@ export default function CheckOutPage () {
   const handleConfirmNote = () => {
     console.log("📝 Ghi chú đã xác nhận:", noteRef.current);
   };
-    
 
-  
-useEffect(() => {
-  if (!user) return;
+  // useEffect(() => {
+  //   if (!user) return;
 
-  const defaultAddress = {
-    id: 1,
-    full_name: user?.full_name ?? "Người dùng",
-    phone: user?.phone ?? "",
-    address: user?.address ?? "",
-    note: user?.note ?? "",
-  };
+  //   // ✅ Kiểm tra localStorage trước
+  //  const savedAddress = JSON.parse(
+  //    localStorage.getItem(`selectedAddress_${user?.id}`)
+  //  );
 
-  // set ngay
-  setAddressList([defaultAddress]);
-  setSelectedAddress(defaultAddress);
-  setFormData((prev) => ({ ...prev, address: defaultAddress.address }));
+  //   if (savedAddress) {
+  //     setAddressList([savedAddress]);
+  //     setSelectedAddress(savedAddress);
+  //     setFormData(savedAddress);
+  //     return;
+  //   }
 
-  // Hàm fetch địa chỉ từ lat/lon
-  const fetchAddress = async (lat, lon) => {
-    try {
-      const res = await fetch(
-        `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lon}&format=json`
+  //   const defaultAddress = {
+  //     id: 1,
+  //     full_name: user?.full_name ?? "Người dùng",
+  //     phone: user?.phone ?? "",
+  //     address: "", // để trống nếu user từ chối GPS
+  //     note: user?.note ?? "",
+  //   };
+
+  //   setAddressList([defaultAddress]);
+  //   setSelectedAddress(defaultAddress);
+  //   setFormData((prev) => ({ ...prev, address: defaultAddress.address }));
+
+  //   // Hàm fetch địa chỉ từ lat/lon
+  //   const fetchAddress = async (lat, lon) => {
+  //     try {
+  //       const res = await fetch(
+  //         `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lon}&format=json`
+  //       );
+  //       const data = await res.json();
+  //       const fullAddress = data.display_name || defaultAddress.address;
+
+  //       setFormData((prev) => ({ ...prev, address: fullAddress }));
+  //       setSelectedAddress((prev) => ({ ...prev, address: fullAddress }));
+  //     } catch (err) {
+  //       console.log("Reverse geocode error:", err);
+  //     }
+  //   };
+
+  //   // Lấy GPS nếu trình duyệt hỗ trợ
+  //   if ("geolocation" in navigator) {
+  //     navigator.geolocation.getCurrentPosition(
+  //       (pos) => fetchAddress(pos.coords.latitude, pos.coords.longitude),
+  //       (err) => {
+  //         // console.warn("GPS fail, fallback IP:", err.message);
+  //         // fetchAddressByIP();
+  //         console.warn("GPS bị từ chối:", err.message);
+  //         // hiển thị input trực tiếp
+  //         setIsEditing(true);
+  //         setFormData(defaultAddress); // input trống để user nhập
+  //       },
+  //       { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+  //     );
+  //   } else {
+  //     console.warn("Geolocation không hỗ trợ");
+  //     setIsEditing(true); // bật nhập thủ công
+  //     setIsAdding(false);
+  //     setFormData(defaultAddress);
+  //     setIsDialogOpen(true);
+
+  //     // console.warn("Geolocation not supported, fallback IP");
+  //     // fetchAddressByIP();
+  //   }
+  // }, [user]);
+
+  useEffect(() => {
+    if (!user) return;
+
+    // ✅ Lấy danh sách địa chỉ cũ từ localStorage
+    const savedAddresses =
+      JSON.parse(localStorage.getItem(`addressList_${user.id}`)) || [];
+
+    setAddressList(savedAddresses);
+
+    const defaultAddress = {
+      id: Date.now(),
+      full_name: user?.full_name ?? "Người dùng",
+      phone: user?.phone ?? "",
+      address: "", // để trống nếu GPS bị từ chối
+      note: "",
+    };
+
+    // Hàm fetch địa chỉ từ GPS
+    const fetchAddress = async (lat, lon) => {
+      try {
+        const res = await fetch(
+          `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lon}&format=json`
+        );
+        const data = await res.json();
+        const gpsAddress = {
+          ...defaultAddress,
+          address: data.display_name || "",
+        };
+        setFormData(gpsAddress);
+        setSelectedAddress(gpsAddress);
+      } catch (err) {
+        console.log("Reverse geocode error:", err);
+        setFormData(defaultAddress);
+        setSelectedAddress(defaultAddress);
+      }
+    };
+
+    // Lấy GPS nếu trình duyệt hỗ trợ
+    if ("geolocation" in navigator) {
+      navigator.geolocation.getCurrentPosition(
+        (pos) => fetchAddress(pos.coords.latitude, pos.coords.longitude),
+        (err) => {
+          console.warn("GPS bị từ chối:", err.message);
+          // hiển thị input trống
+          setIsEditing(true);
+          setFormData(defaultAddress);
+          setSelectedAddress(defaultAddress);
+        },
+        { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
       );
-      const data = await res.json();
-      const fullAddress = data.display_name || defaultAddress.address;
-
-      setFormData((prev) => ({ ...prev, address: fullAddress }));
-      setSelectedAddress((prev) => ({ ...prev, address: fullAddress }));
-    } catch (err) {
-      console.log("Reverse geocode error:", err);
+    } else {
+      console.warn("Geolocation không hỗ trợ");
+      setIsEditing(true);
+      setFormData(defaultAddress);
+      setSelectedAddress(defaultAddress);
     }
-  };
+  }, [user]);
 
-  // Fallback IP / HCM city
-  const fetchAddressByIP = () => {
-    console.warn("Using fallback location (HCM city)");
-    fetchAddress(10.762622, 106.660172); // default HCM city
-  };
 
-  // Lấy GPS nếu trình duyệt hỗ trợ
-  if ("geolocation" in navigator) {
-    navigator.geolocation.getCurrentPosition(
-      (pos) => fetchAddress(pos.coords.latitude, pos.coords.longitude),
-      (err) => {
-        console.warn("GPS fail, fallback IP:", err.message);
-        fetchAddressByIP();
-      },
-      { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+const [showConfirmPopup, setShowConfirmPopup] = useState(false);
+const [countdown, setCountdown] = useState(20);
+
+  const handleSaveOnCheckout = () => {
+    const newAddress = { ...formData, id: Date.now() };
+
+    // Tính thời gian dự kiến giao hàng: 35-40 phút
+    const now = new Date();
+    const minutesToAdd = Math.floor(Math.random() * 6) + 35;
+    const estimatedTime = new Date(now.getTime() + minutesToAdd * 60000);
+    // Gán estimatedTime ngay vào address
+    const finalAddress = { ...newAddress, estimatedTime };
+
+    const isExisting = addressList.some(
+      (addr) =>
+        addr.full_name === newAddress.full_name &&
+        addr.phone === newAddress.phone &&
+        addr.address === newAddress.address
     );
-  } else {
-    console.warn("Geolocation not supported, fallback IP");
-    fetchAddressByIP();
-  }
-}, [user]);
 
+    // Hiển thị popup xác nhận
+    setSelectedAddress(finalAddress); // ✅ gán ngay để popup show thời gian
+    setShowConfirmPopup(true);
+    setCountdown(20); // reset countdown
 
+    const timer = setInterval(() => {
+      setCountdown((prev) => {
+        if (prev <= 1) {
+          clearInterval(timer);
+          setShowConfirmPopup(false);
 
+          if (!isExisting) {
+            // Lưu địa chỉ mới
+            const updatedList = [...addressList, finalAddress];
+            setAddressList(updatedList);
+            localStorage.setItem(
+              `addressList_${user.id}`,
+              JSON.stringify(updatedList)
+            );
+            setSelectedAddress(newAddress);
+            alert("✅ Địa chỉ mới đã được lưu vào danh sách địa chỉ cũ!");
+          } else {
+            // Dùng lại địa chỉ cũ
+            // setSelectedAddress(
+            //   addressList.find(
+            //     (addr) =>
+            //       addr.full_name === newAddress.full_name &&
+            //       addr.phone === newAddress.phone &&
+            //       addr.address === newAddress.address
+            //   )
+            // );
+            // alert("✅ Đang sử dụng địa chỉ cũ, không lưu trùng!");
+            const existingAddr = addressList.find(
+              (addr) =>
+                addr.full_name === newAddress.full_name &&
+                addr.phone === newAddress.phone &&
+                addr.address === newAddress.address
+            );
+            setSelectedAddress({ ...existingAddr, estimatedTime });
+            // alert("✅ Đang sử dụng địa chỉ cũ, không lưu trùng!");
+          }
+
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+  };
 
 
 
@@ -165,27 +303,34 @@ useEffect(() => {
         addr.id === selectedAddress.id ? { ...formData, id: addr.id } : addr
       )
     );
-    setSelectedAddress({
-      ...formData,
-      id: formData.id ?? selectedAddress?.id ?? Date.now(),
-    });
 
-    localStorage.setItem("selectedAddress", JSON.stringify(formData)); // ✅ cập nhật luôn
+    const updatedAddress = {
+      ...formData,
+      id: selectedAddress?.id ?? Date.now(),
+    };
+    setSelectedAddress(updatedAddress);
+
+    localStorage.setItem(
+      `selectedAddress_${user?.id}`,
+      JSON.stringify(updatedAddress)
+    );
+
     setIsEditing(false);
     alert("✅ Đã cập nhật thông tin giao hàng!");
   };
 
-
   // 💾 Lưu khi thêm mớ
-   const handleSaveAdd = () => {
-      const newAddress = { ...formData, id: Date.now() };
-      setAddressList((prev) => [...prev, newAddress]);
-      setSelectedAddress(newAddress);
-      localStorage.setItem("selectedAddress", JSON.stringify(newAddress)); // ✅ lưu
-      setIsAdding(false);
-      alert("✅ Đã thêm địa chỉ mới!");
-    };
-   
+  const handleSaveAdd = () => {
+    const newAddress = { ...formData, id: Date.now() };
+    setAddressList((prev) => [...prev, newAddress]);
+    setSelectedAddress(newAddress);
+    localStorage.setItem(
+      `selectedAddress_${user?.id}`,
+      JSON.stringify(newAddress)
+    );
+    setIsAdding(false);
+    alert("✅ Đã thêm địa chỉ mới!");
+  };
 
   if (!user) return <p>Đang tải thông tin người dùng...</p>;
   if (!selectedAddress) return <p>Đang tải địa chỉ giao hàng...</p>;
@@ -205,7 +350,7 @@ useEffect(() => {
         {/* Checkout Form */}
         <div className="lg:col-span-2">
           <Card className="mb-6  hover:scale-100">
-            <CardHeader className="flex justify-between items-center">
+            <CardHeader className="font-semibold text-2xl flex justify-between items-center">
               <CardTitle>Thông tin giao hàng</CardTitle>
               <div className="flex space-x-2">
                 <Button
@@ -219,7 +364,7 @@ useEffect(() => {
 
             <CardContent>
               <div className="flex justify-between items-start p-4 rounded-xl border border-gray-200 bg-white shadow-sm mb-4">
-                <div className="space-y-2">
+                <div className="space-y-2 w-full">
                   <p className="text-base font-semibold text-gray-800 flex items-center gap-2">
                     <MapPin className="w-5 h-5 text-accent" />
                     <span>Địa chỉ giao hàng mặc định</span>
@@ -238,22 +383,36 @@ useEffect(() => {
                       {selectedAddress?.phone || ""}
                     </span>
                   </p>
+
+                  {/* Địa chỉ giao hàng */}
                   <p className="flex items-start gap-2 text-sm text-gray-500">
                     <MapPin className="w-4 h-4 text-accent mt-0.5 flex-shrink-0" />
-                    <span className="flex flex-wrap">
-                      <span className="whitespace-nowrap mr-1">
-                        Địa chỉ giao hàng:
-                      </span>
-                      <span className="font-semibold text-gray-900 break-words">
-                        {selectedAddress?.address || "Chưa có địa chỉ"}
-                      </span>
+                    <span className="flex flex-wrap w-full">
+                      <span>Địa chỉ giao hàng: &nbsp;</span>{" "}
+                      {/* Nếu đang edit địa chỉ (GPS bị từ chối) thì hiện input */}
+                      {isEditing || !selectedAddress.address ? (
+                        <Input
+                          name="address"
+                          value={formData.address}
+                          onChange={handleInputChange}
+                          placeholder="Nhập địa chỉ giao hàng"
+                          className="font-semibold text-gray-900 break-words"
+                        />
+                      ) : (
+                        <span className="font-semibold text-gray-900 break-words">
+                          {" "}
+                          {selectedAddress?.address || "Chưa có địa chỉ"}
+                        </span>
+                      )}
                     </span>
                   </p>
+
                   {/* 📝 Ghi chú giao hàng */}
-                  <div className="w-full">
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Ghi chú giao hàng
-                    </label>
+                  <div className="w-full space-y-2">
+                    <p className="flex items-center gap-2 text-sm text-gray-500">
+                      <Edit3 className="w-4 h-4 text-accent mt-0.5 flex-shrink-0" />
+                      <span>Ghi chú giao hàng: </span>
+                    </p>
                     <Textarea
                       placeholder="Nhập ghi chú cho đơn hàng (VD: Giao buổi sáng, gọi trước khi tới...)"
                       value={formData.note} // ✅ bind trực tiếp với formData
@@ -265,9 +424,9 @@ useEffect(() => {
                         setSelectedAddress((prev) => ({
                           ...prev,
                           note: e.target.value,
-                        })); // nếu muốn đồng bộ với selectedAddress
+                        }));
                       }}
-                      className="w-full min-h-[90px] text-gray-800"
+                      className="w-full min-h-[90px] font-semibold text-gray-500 break-words resize-none"
                     />
                   </div>
 
@@ -519,7 +678,7 @@ useEffect(() => {
 
           <div className="flex space-x-3">
             <Button
-              //   onClick={handleSubmit}
+              onClick={handleSaveOnCheckout}
               className="flex-1 bg-orange-500 hover:bg-orange-600"
               size="lg"
               //   disabled={!selectedPaymentMethod}
@@ -536,6 +695,122 @@ useEffect(() => {
             </Button>
           </div>
         </div>
+        {showConfirmPopup && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center">
+            {/* Overlay mờ nền */}
+            <div className="absolute inset-0 bg-black/50"></div>
+
+            {/* Popup chính */}
+            <div className="relative bg-white p-6 rounded-lg text-center z-10 max-w-md w-full mx-4 shadow-lg">
+              {/* Countdown */}
+              <div className="relative w-32 h-32 mx-auto">
+                {/* Vòng tròn gradient xoay */}
+                <div className="absolute inset-0 rounded-full border-8 border-gray-300 border-t-transparent border-r-transparent border-b-orange-400 border-l-orange-600 animate-spin"></div>
+
+                {/* Đuôi sáng nhỏ dạng comet */}
+                {/* <div className="absolute top-1 left-1/2 w-2 h-8 bg-gradient-to-b from-orange-500 to-transparent rounded-full transform -translate-x-1/2 animate-spin"></div> */}
+
+                {/* Glow effect */}
+                <div className="absolute inset-0 rounded-full shadow-[0_0_25px_rgba(255,165,0,0.8)]"></div>
+
+                {/* Countdown ở giữa */}
+                <p className="absolute inset-0 flex items-center justify-center text-[32px] font-bold text-red-500 drop-shadow-lg">
+                  ({countdown}s)
+                </p>
+              </div>
+
+              {/* Tiêu đề */}
+              <p className="text-lg font-semibold mb-4">Xác nhận đặt đơn</p>
+
+              {/* Nội dung */}
+              <p className="text-gray-700 mb-4">
+                Bạn ơi, hãy kiểm tra thông tin lần nữa nhé!
+              </p>
+
+              {/* Thông tin địa chỉ */}
+              <div className="flex flex-col gap-4 text-gray-700">
+                {/* Thẻ địa chỉ */}
+                <div className="flex items-start gap-3 p-3 bg-gray-50 rounded-lg shadow-sm border border-gray-200">
+                  <MapPin className="w-5 h-5 text-orange-500 flex-shrink-0 mt-0.5" />
+                  <div className="flex flex-col w-full">
+                    <span className="font-semibold text-gray-900 break-words">
+                      {selectedAddress?.address || "Chưa có địa chỉ"}
+                    </span>
+                    <p className="text-gray-600 text-sm mt-1">
+                      {selectedAddress?.full_name} | {selectedAddress?.phone}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Thời gian dự kiến */}
+                {selectedAddress?.estimatedTime &&
+                  new Date(selectedAddress.estimatedTime) > new Date() && (
+                    <div className="flex items-center gap-2 p-2 bg-yellow-50 rounded-lg border border-yellow-200">
+                      <Clock className="w-4 h-4 text-yellow-500 flex-shrink-0" />
+                      <span className="font-semibold text-yellow-700">
+                        Dự kiến giao lúc:{" "}
+                        {new Date(
+                          selectedAddress.estimatedTime
+                        ).toLocaleTimeString("vi-VN", {
+                          hour: "2-digit",
+                          minute: "2-digit",
+                        })}
+                      </span>
+                    </div>
+                  )}
+
+                {/* Danh sách món */}
+                <div className="flex flex-col gap-3">
+                  {state.items.map((item, index) => (
+                    <div
+                      key={index}
+                      className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg shadow-sm border border-gray-200"
+                    >
+                      <FileText className="w-5 h-5 text-orange-500 flex-shrink-0" />
+                      <ImageWithFallback
+                        src={item.menuItem.image}
+                        alt={item.menuItem.name}
+                        className="object-cover w-12 h-12 rounded-lg flex-shrink-0"
+                      />
+                      <div className="flex flex-col truncate">
+                        <span className="font-semibold text-gray-900 truncate">
+                          {item.menuItem.name}
+                        </span>
+                        <span className="text-sm text-gray-500 truncate">
+                          {item.quantity} món |{" "}
+                          {item.menuItem.price.toLocaleString("vi-VN")}đ | Tiền
+                          mặt
+                        </span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+              <div className="flex items-center justify-end gap-3 mt-4">
+                <Button
+                  variant="outline"
+                  className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition"
+                  onClick={() => {
+                    // Xử lý khi bấm chỉnh sửa
+                    console.log("Chỉnh sửa");
+                  }}
+                >
+                  Chỉnh sửa
+                </Button>
+                <Button
+                  variant="default"
+                  className="px-4 py-2 w-[120px] bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition"
+                  onClick={() => {
+                    // Xử lý khi bấm xác nhận
+                    console.log("Xác nhận");
+                  }}
+                >
+                  Xác nhận
+                </Button>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Order Summary */}
         <div className="lg:col-span-1">

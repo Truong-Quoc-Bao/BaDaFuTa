@@ -414,3 +414,333 @@ export const CartProvider = ({ children }) => {
     </CartContext.Provider>
   );
 };
+
+
+
+
+
+
+
+
+  
+useEffect(() => {
+  if (!user) return;
+
+  // ✅ Kiểm tra localStorage trước
+ const savedAddress = JSON.parse(
+   localStorage.getItem(`selectedAddress_${user?.id}`)
+ );
+
+
+  if (savedAddress) {
+    setAddressList([savedAddress]);
+    setSelectedAddress(savedAddress);
+    setFormData(savedAddress);
+    return;
+  }
+
+  const defaultAddress = {
+    id: 1,
+    full_name: user?.full_name ?? "Người dùng",
+    phone: user?.phone ?? "",
+    address: "", // để trống nếu user từ chối GPS
+    note: user?.note ?? "",
+  };
+
+  setAddressList([defaultAddress]);
+  setSelectedAddress(defaultAddress);
+  setFormData((prev) => ({ ...prev, address: defaultAddress.address }));
+
+  // Hàm fetch địa chỉ từ lat/lon
+  const fetchAddress = async (lat, lon) => {
+    try {
+      const res = await fetch(
+        `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lon}&format=json`
+      );
+      const data = await res.json();
+      const fullAddress = data.display_name || defaultAddress.address;
+
+      setFormData((prev) => ({ ...prev, address: fullAddress }));
+      setSelectedAddress((prev) => ({ ...prev, address: fullAddress }));
+    } catch (err) {
+      console.log("Reverse geocode error:", err);
+    }
+  };
+
+  // Lấy GPS nếu trình duyệt hỗ trợ
+  if ("geolocation" in navigator) {
+    navigator.geolocation.getCurrentPosition(
+      (pos) => fetchAddress(pos.coords.latitude, pos.coords.longitude),
+      (err) => {
+        // console.warn("GPS fail, fallback IP:", err.message);
+        // fetchAddressByIP();
+        console.warn("GPS bị từ chối:", err.message);
+        // hiển thị input trực tiếp
+        setIsEditing(true);
+        setFormData(defaultAddress); // input trống để user nhập
+      },
+      { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+    );
+  } else {
+    console.warn("Geolocation không hỗ trợ");
+    setIsEditing(true); // bật nhập thủ công
+    setIsAdding(false);
+    setFormData(defaultAddress);
+    setIsDialogOpen(true);
+
+    // console.warn("Geolocation not supported, fallback IP");
+    // fetchAddressByIP();
+  }
+}, [user]); //cái cũ
+
+
+
+
+// ////////
+useEffect(() => {
+  if (!user) return;
+
+  // Lấy danh sách địa chỉ đã lưu trước đó
+  const savedAddresses = JSON.parse(
+    localStorage.getItem(`addressList_${user?.id}`) || "[]"
+  );
+
+  if (savedAddresses.length > 0) {
+    setAddressList(savedAddresses);
+    setSelectedAddress(savedAddresses[0]);
+    setFormData(savedAddresses[0]);
+  }
+
+  const defaultAddress = {
+    id: Date.now(),
+    full_name: user?.full_name ?? "Người dùng",
+    phone: user?.phone ?? "",
+    address: "",
+    note: user?.note ?? "",
+  };
+
+  // Lấy GPS nếu trình duyệt hỗ trợ
+  if ("geolocation" in navigator) {
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        fetchAddress(pos.coords.latitude, pos.coords.longitude);
+      },
+      (err) => {
+        console.warn("GPS bị từ chối:", err.message);
+        setIsEditing(true);
+        setFormData(defaultAddress);
+      },
+      { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+    );
+  } else {
+    console.warn("Geolocation không hỗ trợ");
+    setIsEditing(true);
+    setFormData(defaultAddress);
+  }
+
+  // Hàm fetch địa chỉ từ lat/lon
+  const fetchAddress = async (lat, lon) => {
+    try {
+      const res = await fetch(
+        `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lon}&format=json`
+      );
+      const data = await res.json();
+      const fullAddress = data.display_name || defaultAddress.address;
+
+      setFormData((prev) => ({ ...prev, address: fullAddress }));
+      // Không overwrite selectedAddress cũ trong localStorage
+    } catch (err) {
+      console.log("Reverse geocode error:", err);
+    }
+  };
+}, [user]);
+
+
+
+
+// Thêm địa chỉ mới
+const handleSaveAdd = () => {
+  const newAddress = { ...formData, id: Date.now() };
+  setAddressList((prev) => {
+    const updated = [...prev, newAddress];
+    localStorage.setItem(`addressList_${user?.id}`, JSON.stringify(updated));
+    return updated;
+  });
+  setSelectedAddress(newAddress);
+  setIsAdding(false);
+  alert("✅ Đã thêm địa chỉ mới!");
+};
+
+// Lưu khi chỉnh sửa
+const handleSaveEdit = () => {
+  setAddressList((prev) => {
+    const updated = prev.map((addr) =>
+      addr.id === selectedAddress.id ? { ...formData, id: addr.id } : addr
+    );
+    localStorage.setItem(`addressList_${user?.id}`, JSON.stringify(updated));
+    return updated;
+  });
+  setSelectedAddress(formData);
+  setIsEditing(false);
+  alert("✅ Đã cập nhật địa chỉ!");
+};
+
+
+
+{addressList.map((addr) => (
+  <div
+    key={addr.id}
+    className={`flex justify-between items-start border rounded-lg p-3 cursor-pointer ${
+      selectedAddress?.id === addr.id ? "border-orange-500 bg-orange-50" : "border-gray-200"
+    }`}
+    onClick={() => handleSelectAddress(addr)}
+  >
+    <div>
+      {addr.isDefault && <p className="text-sm text-orange-500 font-medium mb-1">Mặc định</p>}
+      <p className="font-semibold">{addr.full_name}</p>
+      <p className="text-sm text-gray-500">{addr.phone}</p>
+      <p className="text-sm text-gray-500">{addr.address || "Chưa có địa chỉ"}</p>
+      {addr.note && <p className="text-sm text-gray-400 italic">Ghi chú: {addr.note}</p>}
+    </div>
+    <Button variant="outline" size="sm" onClick={() => handleEditAddress(addr)}>
+      <Edit className="w-4 h-4 mr-1" /> Sửa
+    </Button>
+  </div>
+))}
+
+
+
+
+
+
+
+
+
+
+
+
+if (!isExisting) {
+  // Lưu địa chỉ mới
+  const updatedList = [...addressList, newAddress];
+  setAddressList(updatedList);
+  localStorage.setItem(
+    `addressList_${user.id}`,
+    JSON.stringify(updatedList)
+  );
+  // Thêm estimatedTime
+  setSelectedAddress({
+    ...newAddress,
+    estimatedTime,
+  });
+  alert("✅ Địa chỉ mới đã được lưu vào danh sách địa chỉ cũ!");
+} else {
+  // Dùng lại địa chỉ cũ
+  const existingAddress = addressList.find(
+    (addr) =>
+      addr.full_name === newAddress.full_name &&
+      addr.phone === newAddress.phone &&
+      addr.address === newAddress.address
+  );
+  // Thêm estimatedTime
+  setSelectedAddress({
+    ...existingAddress,
+    estimatedTime,
+  });
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ const handleSaveOnCheckout = () => {
+   const newAddress = { ...formData, id: Date.now() };
+
+   // Tính thời gian dự kiến giao hàng: 35-40 phút
+   const now = new Date();
+   const minutesToAdd = Math.floor(Math.random() * 6) + 35;
+   const estimatedTime = new Date(now.getTime() + minutesToAdd * 60000);
+
+   // Gán estimatedTime ngay vào address
+   const finalAddress = { ...newAddress, estimatedTime };
+
+   const isExisting = addressList.some(
+     (addr) =>
+       addr.full_name === newAddress.full_name &&
+       addr.phone === newAddress.phone &&
+       addr.address === newAddress.address
+   );
+
+   // Hiển thị popup xác nhận
+   setSelectedAddress(finalAddress); // ✅ gán ngay để popup show thời gian
+   setShowConfirmPopup(true);
+   setCountdown(20);
+
+   // Timer countdown 20s
+   const timer = setInterval(() => {
+     setCountdown((prev) => {
+       if (prev <= 1) {
+         clearInterval(timer);
+         setShowConfirmPopup(false);
+
+         if (!isExisting) {
+           // Lưu địa chỉ mới
+           const updatedList = [...addressList, finalAddress];
+           setAddressList(updatedList);
+           localStorage.setItem(
+             `addressList_${user.id}`,
+             JSON.stringify(updatedList)
+           );
+           alert("✅ Địa chỉ mới đã được lưu vào danh sách địa chỉ cũ!");
+         } else {
+           // Dùng lại địa chỉ cũ nhưng vẫn giữ estimatedTime
+           const existingAddr = addressList.find(
+             (addr) =>
+               addr.full_name === newAddress.full_name &&
+               addr.phone === newAddress.phone &&
+               addr.address === newAddress.address
+           );
+           setSelectedAddress({ ...existingAddr, estimatedTime });
+           // alert("✅ Đang sử dụng địa chỉ cũ, không lưu trùng!");
+         }
+
+         return 0;
+       }
+       return prev - 1;
+     });
+   }, 1000);
+ };

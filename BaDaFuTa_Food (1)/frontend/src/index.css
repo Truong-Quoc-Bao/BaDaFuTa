@@ -1,24 +1,4 @@
 @import "tailwindcss";
-@import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700&family=Poppins:wght@400;500;600&family=Quicksand:wght@400;600;700&display=swap');
-
-
-/* @layer base {
-  @media (max-width: 640px) {
-    html {
-      font-size: 14px; /* toàn trang nhỏ lại (mặc định 16px) */
-    /* }
-
-    button, input, select, textarea {
-      font-size: 0.875rem; /* = 14px */
-      /* padding: 0.4rem 0.6rem; nút nhỏ gọn hơn */
-    /* }
-
-    img {
-      max-width: 90%;
-      height: auto;
-    }
-  }
-} */ 
 @import "tailwindcss";
 
 @layer base {
@@ -78,4 +58,19 @@
       padding: 0.35rem 0.5rem;
     }
   }
+}
+
+@keyframes spin-slow {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.animate-spin-slow {
+  animation: spin-slow 3s linear infinite;
+}
+
+.text-gradient {
+  background: linear-gradient(90deg, #ff4500, #ffcc00, #ff4500);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
 }
