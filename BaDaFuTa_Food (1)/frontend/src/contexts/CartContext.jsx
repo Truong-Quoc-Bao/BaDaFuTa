@@ -240,6 +240,7 @@ export const CartProvider = ({ children }) => {
 
   const hydratedRef = useRef({}); // track per user
   const [state, dispatch] = useReducer(cartReducer, { items: [], total: 0 });
+  const [isInitialized, setIsInitialized] = React.useState(false); // ✅ thêm
 
   // Hydrate cart
   // useEffect(() => {
@@ -285,8 +286,11 @@ export const CartProvider = ({ children }) => {
 
   useEffect(() => {
     if (authState?.isLoading) return;
-    if (hydratedRef.current[userId]) return;
-
+    // if (hydratedRef.current[userId]) return;
+    if (hydratedRef.current[userId]) {
+      setIsInitialized(true); // ✅ Nếu đã hydrate thì đánh dấu load xong
+      return;
+    }
     let userCart = getInitialState(userId);
 
     if (userId !== "guest") {
@@ -326,6 +330,7 @@ export const CartProvider = ({ children }) => {
 
         dispatch({ type: "HYDRATE", payload: merged });
         hydratedRef.current[userId] = true;
+        setIsInitialized(true); // ✅ đánh dấu đã load xong
 
         if (showToast) {
           // ✅ Delay toast tới khi component mount xong
@@ -344,6 +349,7 @@ export const CartProvider = ({ children }) => {
 
     dispatch({ type: "HYDRATE", payload: userCart });
     hydratedRef.current[userId] = true;
+    setIsInitialized(true); // ✅ ở cuối luôn
   }, [authState?.isLoading, userId]);
 
   // Persist cart
@@ -408,6 +414,7 @@ export const CartProvider = ({ children }) => {
         removeItem,
         updateQuantity,
         clearCart,
+        isInitialized, // ✅ export ra context
       }}
     >
       {children}

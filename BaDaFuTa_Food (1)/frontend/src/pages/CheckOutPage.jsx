@@ -75,74 +75,7 @@ export default function CheckOutPage () {
     console.log("📝 Ghi chú đã xác nhận:", noteRef.current);
   };
 
-  // useEffect(() => {
-  //   if (!user) return;
-
-  //   // ✅ Kiểm tra localStorage trước
-  //  const savedAddress = JSON.parse(
-  //    localStorage.getItem(`selectedAddress_${user?.id}`)
-  //  );
-
-  //   if (savedAddress) {
-  //     setAddressList([savedAddress]);
-  //     setSelectedAddress(savedAddress);
-  //     setFormData(savedAddress);
-  //     return;
-  //   }
-
-  //   const defaultAddress = {
-  //     id: 1,
-  //     full_name: user?.full_name ?? "Người dùng",
-  //     phone: user?.phone ?? "",
-  //     address: "", // để trống nếu user từ chối GPS
-  //     note: user?.note ?? "",
-  //   };
-
-  //   setAddressList([defaultAddress]);
-  //   setSelectedAddress(defaultAddress);
-  //   setFormData((prev) => ({ ...prev, address: defaultAddress.address }));
-
-  //   // Hàm fetch địa chỉ từ lat/lon
-  //   const fetchAddress = async (lat, lon) => {
-  //     try {
-  //       const res = await fetch(
-  //         `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lon}&format=json`
-  //       );
-  //       const data = await res.json();
-  //       const fullAddress = data.display_name || defaultAddress.address;
-
-  //       setFormData((prev) => ({ ...prev, address: fullAddress }));
-  //       setSelectedAddress((prev) => ({ ...prev, address: fullAddress }));
-  //     } catch (err) {
-  //       console.log("Reverse geocode error:", err);
-  //     }
-  //   };
-
-  //   // Lấy GPS nếu trình duyệt hỗ trợ
-  //   if ("geolocation" in navigator) {
-  //     navigator.geolocation.getCurrentPosition(
-  //       (pos) => fetchAddress(pos.coords.latitude, pos.coords.longitude),
-  //       (err) => {
-  //         // console.warn("GPS fail, fallback IP:", err.message);
-  //         // fetchAddressByIP();
-  //         console.warn("GPS bị từ chối:", err.message);
-  //         // hiển thị input trực tiếp
-  //         setIsEditing(true);
-  //         setFormData(defaultAddress); // input trống để user nhập
-  //       },
-  //       { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
-  //     );
-  //   } else {
-  //     console.warn("Geolocation không hỗ trợ");
-  //     setIsEditing(true); // bật nhập thủ công
-  //     setIsAdding(false);
-  //     setFormData(defaultAddress);
-  //     setIsDialogOpen(true);
-
-  //     // console.warn("Geolocation not supported, fallback IP");
-  //     // fetchAddressByIP();
-  //   }
-  // }, [user]);
+ 
 
   useEffect(() => {
     if (!user) return;
@@ -203,8 +136,8 @@ export default function CheckOutPage () {
   }, [user]);
 
 
-const [showConfirmPopup, setShowConfirmPopup] = useState(false);
-const [countdown, setCountdown] = useState(20);
+  const [showConfirmPopup, setShowConfirmPopup] = useState(false);
+  const [countdown, setCountdown] = useState(20);
 
   const handleSaveOnCheckout = () => {
     const newAddress = { ...formData, id: Date.now() };
@@ -226,7 +159,7 @@ const [countdown, setCountdown] = useState(20);
     // Hiển thị popup xác nhận
     setSelectedAddress(finalAddress); // ✅ gán ngay để popup show thời gian
     setShowConfirmPopup(true);
-    setCountdown(20); // reset countdown
+    setCountdown(10); // reset countdown
 
     const timer = setInterval(() => {
       setCountdown((prev) => {
@@ -245,16 +178,6 @@ const [countdown, setCountdown] = useState(20);
             setSelectedAddress(newAddress);
             alert("✅ Địa chỉ mới đã được lưu vào danh sách địa chỉ cũ!");
           } else {
-            // Dùng lại địa chỉ cũ
-            // setSelectedAddress(
-            //   addressList.find(
-            //     (addr) =>
-            //       addr.full_name === newAddress.full_name &&
-            //       addr.phone === newAddress.phone &&
-            //       addr.address === newAddress.address
-            //   )
-            // );
-            // alert("✅ Đang sử dụng địa chỉ cũ, không lưu trùng!");
             const existingAddr = addressList.find(
               (addr) =>
                 addr.full_name === newAddress.full_name &&
@@ -265,7 +188,12 @@ const [countdown, setCountdown] = useState(20);
             // alert("✅ Đang sử dụng địa chỉ cũ, không lưu trùng!");
           }
 
-          return 0;
+          // alert("✅ Đơn hàng đã được tự động xác nhận sau 20 giây!");
+
+          // await placeOrderAPI(state.items); // thanh toán
+          localStorage.setItem("orderConfirmed", "true");
+          navigate("/cart/checkout/ordersuccess");
+          clearCart(); // ✅ clear cart sau khi navigate
         }
         return prev - 1;
       });
@@ -332,6 +260,23 @@ const [countdown, setCountdown] = useState(20);
     alert("✅ Đã thêm địa chỉ mới!");
   };
 
+  useEffect(() => {
+  // 🔹 Nạp lại user từ localStorage nếu AuthContext chưa có
+  if (!user) {
+    const savedUser = JSON.parse(localStorage.getItem("auth_user"));
+    if (savedUser) authState.user = savedUser;
+  }
+
+  // 🔹 Nạp lại địa chỉ đã chọn trước đó
+  if (user) {
+    const savedSelected = JSON.parse(localStorage.getItem(`selectedAddress_${user.id}`));
+    if (savedSelected) {
+      setSelectedAddress(savedSelected);
+      setFormData(savedSelected);
+    }
+  }
+}, [user]);
+
   if (!user) return <p>Đang tải thông tin người dùng...</p>;
   if (!selectedAddress) return <p>Đang tải địa chỉ giao hàng...</p>;
 
@@ -367,7 +312,7 @@ const [countdown, setCountdown] = useState(20);
                 <div className="space-y-2 w-full">
                   <p className="text-base font-semibold text-gray-800 flex items-center gap-2">
                     <MapPin className="w-5 h-5 text-accent" />
-                    <span>Địa chỉ giao hàng mặc định</span>
+                    <span>Địa chỉ giao hàng mặt định</span>
                   </p>
                   <p className="flex items-center gap-2 text-sm text-gray-500">
                     <User className="w-4 h-4 text-accent" />
@@ -683,7 +628,7 @@ const [countdown, setCountdown] = useState(20);
               size="lg"
               //   disabled={!selectedPaymentMethod}
             >
-              đặt hàng
+              Đặt hàng
               {/* {selectedPaymentMethod?.type === 'cash' ? 'Đặt hàng' : 'Tiếp tục thanh toán'} */}
             </Button>
             <Button
@@ -703,9 +648,9 @@ const [countdown, setCountdown] = useState(20);
             {/* Popup chính */}
             <div className="relative bg-white p-6 rounded-lg text-center z-10 max-w-md w-full mx-4 shadow-lg">
               {/* Countdown */}
-              <div className="relative w-32 h-32 mx-auto">
+              <div className="relative w-23 h-23 mx-auto">
                 {/* Vòng tròn gradient xoay */}
-                <div className="absolute inset-0 rounded-full border-8 border-gray-300 border-t-transparent border-r-transparent border-b-orange-400 border-l-orange-600 animate-spin"></div>
+                <div className="absolute inset-0 rounded-full border-6 border-gray-300 border-t-transparent border-r-transparent border-b-orange-400 border-l-orange-600 animate-spin"></div>
 
                 {/* Đuôi sáng nhỏ dạng comet */}
                 {/* <div className="absolute top-1 left-1/2 w-2 h-8 bg-gradient-to-b from-orange-500 to-transparent rounded-full transform -translate-x-1/2 animate-spin"></div> */}
@@ -715,9 +660,10 @@ const [countdown, setCountdown] = useState(20);
 
                 {/* Countdown ở giữa */}
                 <p className="absolute inset-0 flex items-center justify-center text-[32px] font-bold text-red-500 drop-shadow-lg">
-                  ({countdown}s)
+                  {countdown}s
                 </p>
               </div>
+              <br></br>
 
               {/* Tiêu đề */}
               <p className="text-lg font-semibold mb-4">Xác nhận đặt đơn</p>
@@ -791,8 +737,8 @@ const [countdown, setCountdown] = useState(20);
                   variant="outline"
                   className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition"
                   onClick={() => {
-                    // Xử lý khi bấm chỉnh sửa
-                    console.log("Chỉnh sửa");
+                    // Chuyển về trang checkout
+                    setShowConfirmPopup(false);
                   }}
                 >
                   Chỉnh sửa
@@ -801,8 +747,9 @@ const [countdown, setCountdown] = useState(20);
                   variant="default"
                   className="px-4 py-2 w-[120px] bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition"
                   onClick={() => {
-                    // Xử lý khi bấm xác nhận
-                    console.log("Xác nhận");
+                    localStorage.setItem("orderConfirmed", "true");
+                    navigate("/cart/checkout/ordersuccess");
+                    clearCart();
                   }}
                 >
                   Xác nhận
