@@ -208,3 +208,23 @@ function App() {
 }
 
 export default App;
+
+
+// trong component Header:
+const { state: cartState } = useCart();
+const { state: authState, logout } = useAuth();
+const cartIconRef = useRef(null);
+
+const navigate = useNavigate();
+const location = useLocation();
+const [menuOpen, setMenuOpen] = useState(false);
+
+// Lấy user từ AuthContext
+const user = authState.user;
+
+if (!cartState || !authState) {
+  return null; // render null lúc provider chưa mount hoặc chưa init
+}
+
+const isLoggedIn = authState.isAuthenticated; 
+const totalItems = cartState.items.reduce((sum, item) => sum + item.quantity, 0);

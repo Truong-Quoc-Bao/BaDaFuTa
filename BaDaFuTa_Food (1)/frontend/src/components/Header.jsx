@@ -20,18 +20,11 @@ import toast, { Toaster } from "react-hot-toast";
 
 export const Header = () => {
   // trong component Header:
-  const cartContext = useCart?.(); // optional chaining
-  const state = cartContext?.state || { items: [] };
-
-  // AuthContext
-  const { state: authState, logout } = useAuth() || {
-    state: { user: null, isAuthenticated: false },
-    logout: () => {},
-  };
-
+  const { state: cartState } = useCart();
+  const { state: authState, logout } = useAuth();
   const cartIconRef = useRef(null);
   //lấy thoong tin
-  // const { state } = useCart();
+  const { state } = useCart();
   // const { state: authState, logout } = useAuth();
  
   const navigate = useNavigate();
@@ -40,7 +33,11 @@ export const Header = () => {
   // Lấy user từ AuthContext
   const user = authState.user;
 
-  if (!state || !authState) {
+  // if (!state || !authState) {
+  //   return null; // render null lúc provider chưa mount hoặc chưa init
+  // }
+
+  if (!cartState || !authState) {
     return null; // render null lúc provider chưa mount hoặc chưa init
   }
   const isLoggedIn = authState.isAuthenticated; 
