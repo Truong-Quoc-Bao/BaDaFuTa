@@ -20,16 +20,30 @@ import toast, { Toaster } from "react-hot-toast";
 
 export const Header = () => {
   // trong component Header:
+  const cartContext = useCart?.(); // optional chaining
+  const state = cartContext?.state || { items: [] };
+
+  // AuthContext
+  const { state: authState, logout } = useAuth() || {
+    state: { user: null, isAuthenticated: false },
+    logout: () => {},
+  };
+
   const cartIconRef = useRef(null);
   //lấy thoong tin
-  const { state } = useCart();
-  const { state: authState, logout } = useAuth();
-  const isLoggedIn = authState.isAuthenticated; 
+  // const { state } = useCart();
+  // const { state: authState, logout } = useAuth();
+ 
   const navigate = useNavigate();
   const location = useLocation();
   const [menuOpen, setMenuOpen] = useState(false);
   // Lấy user từ AuthContext
   const user = authState.user;
+
+  if (!state || !authState) {
+    return null; // render null lúc provider chưa mount hoặc chưa init
+  }
+  const isLoggedIn = authState.isAuthenticated; 
 
   const totalItems = state.items.reduce((sum, item) => sum + item.quantity, 0);
 
@@ -145,7 +159,10 @@ export const Header = () => {
                     <Avatar className="w-6 h-6">
                       <AvatarImage src={authState.user.avatar} />
                       <AvatarFallback className="text-xs">
-                        {getInitials(authState.user.full_name)}
+                        {/* {getInitials(authState.user.full_name)} */}
+                        {authState.user.full_name
+                          ? getInitials(authState.user.full_name)
+                          : "??"}
                       </AvatarFallback>
                     </Avatar>
                     <span className="hidden sm:inline">
@@ -154,7 +171,7 @@ export const Header = () => {
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="w-56">
-                  <div className="p-2">
+                  <div className="p-2 break-words">
                     <p className="font-medium">{authState.user.full_name}</p>
                     <p className="text-sm text-gray-500">
                       {authState.user.email}
@@ -266,7 +283,7 @@ export const Header = () => {
                       if (isLoggedIn) {
                         toast.error("Phải đăng xuất mới có thể đăng ký !"); // ✅ dùng toast
                       } else {
-                        navigate("/register");
+                        navigate("/phone-otp");
                       }
                     }}
                   >

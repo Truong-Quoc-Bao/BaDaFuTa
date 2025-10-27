@@ -103,7 +103,7 @@ export const ProfilePage = () => {
 
   if (!state.user) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className=" bg-gray-50 flex items-center justify-center">
         <Card className="w-full max-w-md hover:scale-100">
           <CardContent className="p-6 text-center">
             <p>Vui lòng đăng nhập để xem thông tin cá nhân</p>
@@ -117,13 +117,13 @@ export const ProfilePage = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 py-8">
+    <div className=" bg-gray-50 py-8">
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Back button */}
         <Button
-          variant="ghost"
+          variant="outline"
           onClick={() => navigate(-1)}
-          className="mb-6 text-gray-600 hover:text-gray-900"
+          className="mb-6 bg-white"
         >
           <ArrowLeft className="w-4 h-4 mr-2" />
           Quay lại

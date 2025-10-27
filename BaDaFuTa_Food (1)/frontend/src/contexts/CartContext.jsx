@@ -236,6 +236,7 @@ const getInitialState = (userId = "guest") => {
 // ===== Provider =====
 export const CartProvider = ({ children }) => {
   const { state: authState } = useAuth();
+  // const auth = useAuth(); // ✅ đúng, trong function component
   const userId = authState?.user?.id ?? authState?.user?._id ?? "guest";
 
   const hydratedRef = useRef({}); // track per user

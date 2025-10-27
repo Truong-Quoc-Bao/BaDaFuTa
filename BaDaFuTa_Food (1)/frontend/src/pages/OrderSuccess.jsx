@@ -21,7 +21,7 @@ export default function OrderSuccessPage() {
 
     const timer = setTimeout(() => {
       localStorage.removeItem("orderConfirmed");
-    }, 100000);
+    }, 10000);
 
     return () => clearTimeout(timer);
   }, [navigate]);

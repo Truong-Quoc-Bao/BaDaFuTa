@@ -238,7 +238,7 @@ export default function MenuItemDetailPage() {
       </Button>
       {/* Layout responsive */}
       <div
-        className="grid grid-cols-1 lg:grid-cols-2 min-h-screen bg-white overflow-hidden
+        className="grid grid-cols-1 lg:grid-cols-2  bg-white overflow-hidden
         max-w-7xl mx-auto my-8 rounded-2xl transition-all duration-500"
       >
         {/* LEFT: Ảnh món ăn */}
@@ -334,7 +334,7 @@ export default function MenuItemDetailPage() {
             </p>
 
             <div className="flex items-center gap-3">
-              <div className="text-4xl font-bold text-orange-600">
+              <div className="text-2xl font-bold text-orange-600">
                 {currencyVN(item.price)}
               </div>
               {discounted && (
@@ -405,7 +405,7 @@ export default function MenuItemDetailPage() {
               <span className="text-gray-700 font-medium text-xl">
                 Tổng cộng:
               </span>
-              <span className="text-3xl font-bold text-orange-600">
+              <span className="text-2xl font-bold text-orange-600">
                 {currencyVN(item.price * qty)}
               </span>
             </div>
