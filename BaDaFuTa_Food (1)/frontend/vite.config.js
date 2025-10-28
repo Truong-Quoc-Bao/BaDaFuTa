@@ -17,6 +17,7 @@ export default defineConfig({
     allowedHosts: [
       "localhost",
       "127.0.0.1",
+      "172.20.10.3",
       "192.168.100.124",
       "unnibbed-unthrilled-averi.ngrok-free.dev", // thêm host ngrok
     ],
