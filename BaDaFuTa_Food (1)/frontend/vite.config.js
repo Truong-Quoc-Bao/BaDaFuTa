@@ -7,6 +7,10 @@ export default defineConfig({
   plugins: [react(), tailwindcss()],
 
   server: {
+    watch: {
+      usePolling: true,
+      interval: 2000, // giảm tần suất check
+    },
     host: true,
     port: 5173,
     // ✅ Cho phép ngrok host truy cập
@@ -40,8 +44,6 @@ export default defineConfig({
     },
   },
 });
-
-
 
 
 // import { defineConfig } from "vite";

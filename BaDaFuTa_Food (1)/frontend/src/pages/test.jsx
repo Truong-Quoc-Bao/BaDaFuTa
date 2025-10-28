@@ -22,7 +22,6 @@
 // // import { ToastContainer } from "react-toastify";
 // // import "react-toastify/dist/ReactToastify.css";
 
-
 // function App() {
 //   const location = useLocation(); // ✅ lấy location hiện tại
 //   const hideHeaderFooter = ["/login", "/register", "/merchantlogin", "/phone-otp"].includes(location.pathname);
@@ -48,7 +47,7 @@
 //             pauseOnFocusLoss: false,
 //             pauseOnHover: false,
 //           }}
-         
+
 //         /> */}
 //         <Routes>
 //           <Route path="/" element={<HomePage />} />
@@ -209,7 +208,6 @@ function App() {
 
 export default App;
 
-
 // trong component Header:
 const { state: cartState } = useCart();
 const { state: authState, logout } = useAuth();
@@ -226,5 +224,24 @@ if (!cartState || !authState) {
   return null; // render null lúc provider chưa mount hoặc chưa init
 }
 
-const isLoggedIn = authState.isAuthenticated; 
-const totalItems = cartState.items.reduce((sum, item) => sum + item.quantity, 0);
+const isLoggedIn = authState.isAuthenticated;
+const totalItems = cartState.items.reduce(
+  (sum, item) => sum + item.quantity,
+  0
+);
+
+{
+  /* Search Bar */
+}
+<div className="max-w-md mx-auto relative">
+  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+  <Input
+    type="text"
+    placeholder="Tìm kiếm nhà hàng hoặc món ăn..."
+    value={searchQuery} // thêm mới
+    onChange={(e) => setSearchQuery(e.target.value)}
+    className="pl-10 pr-4 py-3 w-full"
+  />
+</div>;
+
+
