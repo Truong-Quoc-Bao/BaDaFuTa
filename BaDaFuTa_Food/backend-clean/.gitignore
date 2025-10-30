@@ -39,5 +39,5 @@ Thumbs.db
 .vscode/
 *.swp
 *.swo
-node_modules/
+# node_modules/
 
