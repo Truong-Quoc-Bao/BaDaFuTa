@@ -32,34 +32,79 @@ export const paymentController = {
     }
   },
 
-  /** 🔹 Xử lý callback từ VNPAY */
-  async callback(req: Request, res: Response) {
-    try {
-      const result = await paymentService.handleVnpayCallback(req.query);
+  // /** 🔹 Xử lý callback từ VNPAY */
+  // async callback(req: Request, res: Response) {
+  //   console.log("📥 VNPay callback query full:", req.query);
 
-      if (result.status === "success") {
-        return res.json({
-          success: true,
-          message: "Thanh toán thành công",
-          code: result.code,
-          order_status: "completed",
-          payment_status: "paid",
-        });
-      } else {
-        return res.json({
-          success: false,
-          message: "Thanh toán thất bại hoặc bị hủy",
-          code: result.code,
-          order_status: "cancelled",
-          payment_status: "unpaid",
-        });
-      }
-    } catch (err: any) {
-      console.error("callback error:", err);
-      return res.status(500).json({
-        success: false,
-        message: err.message || "Lỗi xử lý callback VNPAY",
-      });
+  //   // console.log("📥 VNPay callback query:", req.query);
+
+  //   try {
+  //     const result = await paymentService.handleVnpayCallback(req.query);
+  //     console.log("📤 Parsed result:", result);
+
+     
+  //     if (result.status === "success") {
+  //       return res.redirect(
+  //         `http://localhost:5173/cart/checkout?status=success&code=${result.code}`
+  //       );
+  //     } else if (result.status === "canceled") {
+  //       return res.redirect(
+  //         `http://localhost:5173/cart/pending?status=canceled&code=${result.code}`
+  //       );
+  //     } else {
+  //       return res.redirect(
+  //         `http://localhost:5173/cart/checkout?status=failed&code=${result.code}`
+  //       );
+  //     }
+
+
+
+  //   } catch (err: any) {
+  //     console.error("callback error:", err);
+  //     return res.redirect(
+  //       `http://localhost:5173/cart/checkout/orderfailed?status=error&message=${encodeURIComponent(
+  //         err.message
+  //       )}`
+  //     );
+  //   }
+
+
+/** 🔹 Xử lý callback từ VNPAY (debug & fix huỷ) */
+async callback(req: Request, res: Response) {
+  console.log("📥 VNPay callback query full:", req.query);
+
+  try {
+    const result = await paymentService.handleVnpayCallback(req.query);
+    console.log("📤 Parsed result:", result);
+
+    // Debug: log URL redirect
+    let redirectUrl = "";
+
+    switch (result.status) {
+      case "success":
+        redirectUrl = `http://localhost:5173/cart/checkout?status=success&code=${result.code}`;
+        break;
+
+      case "canceled":
+        redirectUrl = `http://localhost:5173/cart/pending?status=canceled&code=${result.code}`;
+        break;
+
+      default:
+        redirectUrl = `http://localhost:5173/cart/checkout?status=failed&code=${result.code}`;
+        break;
     }
+
+    console.log("➡ Redirecting to:", redirectUrl);
+    return res.redirect(redirectUrl);
+
+  } catch (err: any) {
+    console.error("callback error:", err);
+    const errorRedirect = `http://localhost:5173/cart/checkout/orderfailed?status=error&message=${encodeURIComponent(
+      err.message
+    )}`;
+    console.log("➡ Redirecting to (error):", errorRedirect);
+    return res.redirect(errorRedirect);
+  }
+
   },
 };
