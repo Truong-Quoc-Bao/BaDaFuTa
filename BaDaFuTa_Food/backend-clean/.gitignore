@@ -11,7 +11,7 @@ package-lock.json
 # ==========================================================
 # Environment variables
 # ==========================================================
-# .env
+.env
 .env.local
 .env.production
 .env.development
@@ -41,3 +41,5 @@ Thumbs.db
 *.swo
 # node_modules/
 
+# Ignore git lock files
+*.lock
