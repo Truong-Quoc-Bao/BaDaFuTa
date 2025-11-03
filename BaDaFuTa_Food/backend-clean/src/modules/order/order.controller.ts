@@ -1,6 +1,6 @@
 import { Request, Response } from "express";
-import { CreateCODOrderSchema } from "./order.validation";
-import { orderService } from "./order.service";
+import { CreateCODOrderSchema, GetOrderSchema } from "./order.validation";
+import { orderService, getOrderService } from "./order.service";
 
 export const createCODOrder = async (req: Request, res: Response) => {
   try {
@@ -24,6 +24,7 @@ export const createCODOrder = async (req: Request, res: Response) => {
     console.error("Create COD Order Error:", err);
 
     if (err.name === "ZodError") {
+      console.log("");
       return res.status(400).json({
         success: false,
         message: "Dữ liệu không hợp lệ",
@@ -44,3 +45,15 @@ export const createCODOrder = async (req: Request, res: Response) => {
     });
   }
 };
+export async function getOrder(req: Request, res: Response) {
+  try {
+    // Validate body
+    const filters = GetOrderSchema.parse(req.body);
+
+    const orders = await getOrderService(filters);
+    return res.status(200).json(orders);
+  } catch (err: any) {
+    console.error("❌ GetOrder Error:", err);
+    return res.status(400).json({ error: err.errors ?? err.message });
+  }
+}
