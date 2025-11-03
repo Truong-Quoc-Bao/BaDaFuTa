@@ -11,6 +11,15 @@ function vnpEncode(v: string) {
 export const paymentService = {
   /** 🔹 Tạo order + transaction + trả link VNPAY */
   async initiateVNPAY(data: any) {
+    // thêm mới
+    if (!data.payment_method || data.payment_method.toUpperCase() !== "VNPAY") {
+      throw new Error("Phương thức thanh toán không hợp lệ (phải là VNPAY)");
+    }
+    const user = await prisma.users.findUnique({
+      where: { id: data.user_id },
+      select: { full_name: true, phone: true },
+    });
+
     // 1️⃣ Tính tổng tiền
     const total = data.items.reduce(
       (sum: number, i: any) => sum + i.quantity * i.price,
@@ -48,10 +57,10 @@ export const paymentService = {
           paymentRepository.createOrder(tx, {
             ...data,
             total_amount: BigInt(total + data.delivery_fee),
-            status: "pending",
-            status_payment: "unpaid",
+            status: "PENDING",
+            status_payment: "PENDING",
             payment_method: "VNPAY",
-            full_name: "Khách hàng VNPAY",
+            full_name: user?.full_name,
           })
         );
       }
@@ -61,10 +70,10 @@ export const paymentService = {
         paymentRepository.createOrder(tx, {
           ...data,
           total_amount: BigInt(total + data.delivery_fee),
-          status: "pending",
-          status_payment: "unpaid",
+          status: "PENDING",
+          status_payment: "PENDING",
           payment_method: "VNPAY",
-          full_name: "Khách hàng VNPAY",
+          full_name: user?.full_name,
         })
       );
     }
@@ -117,7 +126,6 @@ export const paymentService = {
         amount: order.total_amount,
         payment_method: "VNPAY",
         txn_ref,
-        status: "PENDING",
         raw_payload: data,
       })
     );
@@ -154,20 +162,32 @@ export const paymentService = {
     const txnRef = params["vnp_TxnRef"];
     const transactionNo = params["vnp_TransactionNo"];
 
-    if (isValid && responseCode === "00") {
-      await paymentRepository.updateAfterCallback(txnRef, {
-        status: "success",
-        response_code: responseCode,
-        transaction_no: transactionNo,
-      });
-      return { status: "success", code: responseCode };
-    } else {
-      await paymentRepository.updateAfterCallback(txnRef, {
-        status: "failed",
-        response_code: responseCode ?? "ERR",
-        transaction_no: transactionNo,
-      });
-      return { status: "failed", code: responseCode };
-    }
+   if (isValid && responseCode === "00") {
+     await paymentRepository.updateAfterCallback(txnRef, {
+       status: "success",
+       response_code: responseCode,
+       transaction_no: transactionNo,
+     });
+     return { status: "success", code: responseCode };
+   }
+   // 🟡 Huỷ thanh toán từ phía người dùng
+   else if (isValid && responseCode === "24") {
+     await paymentRepository.updateAfterCallback(txnRef, {
+       status: "canceled",
+       response_code: responseCode,
+       transaction_no: transactionNo,
+     });
+     return { status: "canceled", code: responseCode };
+   }
+   // 🔴 Các lỗi khác
+   else {
+     await paymentRepository.updateAfterCallback(txnRef, {
+       status: "failed",
+       response_code: responseCode ?? "ERR",
+       transaction_no: transactionNo,
+     });
+     return { status: "failed", code: responseCode };
+   }
+
   },
 };
