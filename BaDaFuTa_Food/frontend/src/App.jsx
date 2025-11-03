@@ -142,7 +142,7 @@ import { CartProvider, useCart } from "./contexts/CartContext";
 import ProtectedRoute from "./components/ProtectedRoute";
 import { Layout } from "./components/Layout";
 import MerchantLogin from "./pages/MerchantLoginPage";
-import PhoneVerification from "./pages/PhoneVerification";
+import PhoneVerificationPage from "./pages/PhoneVerificationPage";
 import { Header } from "./components/Header";
 import { Footer } from "./components/Footer";
 import LoginPage from "./pages/LoginPage";
@@ -158,7 +158,9 @@ import CartPage from "./pages/CartPage";
 import CheckOutPage from "./pages/CheckOutPage";
 import { MyOrdersPage } from "./pages/MyOrdersPage";
 import { TrackOrderPage } from "./pages/TrackOrderPage"
-import OrderSuccess from "./pages/OrderSuccess";
+import OrderSuccessPage from "./pages/OrderSuccessPage";
+import OrderPendingPage from "./pages/OrderPendingPage"
+import { LocationProvider } from "./contexts/LocationContext";
 import { Toaster } from "react-hot-toast";
 import "./index.css";
 
@@ -182,7 +184,7 @@ function AppRoutes() {
   return (
     <Routes>
       <Route path="/" element={<HomePage />} />
-      <Route path="/phone-otp" element={<PhoneVerification />} />
+      <Route path="/phone-otp" element={<PhoneVerificationPage />} />
       <Route path="/login" element={<LoginPage />} />
       <Route path="/register" element={<RegisterPage />} />
       <Route path="/merchantlogin" element={<MerchantLogin />} />
@@ -213,10 +215,15 @@ function AppRoutes() {
             condition={localStorage.getItem("orderConfirmed") === "true"}
             redirectTo="/cart"
           >
-            <OrderSuccess />
+            <OrderSuccessPage />
           </ProtectedRoute>
         }
       />
+      <Route
+        path="/cart/pending"
+        element={<OrderPendingPage />}
+      />
+
       <Route path="/my-orders" element={<MyOrdersPage />} />
       <Route path="/track-order" element={<TrackOrderPage />} />
       <Route path="*" element={<Navigate to="/" replace />} />
@@ -263,7 +270,9 @@ function AppInner() {
 function App() {
   return (
     <AuthProvider>
-      <AppInner />
+      <LocationProvider>
+        <AppInner />
+      </LocationProvider>
     </AuthProvider>
   );
 }
