@@ -1,4 +1,10 @@
-import { PrismaClient, Prisma, PaymentStatus } from "@prisma/client";
+import {
+  PrismaClient,
+  Prisma,
+  PaymentStatus,
+  order_status,
+  payment_method,
+} from "@prisma/client";
 
 export const prisma = new PrismaClient();
 
@@ -14,9 +20,9 @@ export const paymentRepository = {
       delivery_fee: bigint;
       note?: string | null;
       total_amount: bigint;
-      status: string;
-      status_payment: string;
-      payment_method: string;
+      status?: order_status;
+      status_payment?: PaymentStatus;
+      payment_method: "VNPAY";
       full_name: string;
       items?: {
         menu_item_id: string;
@@ -28,11 +34,18 @@ export const paymentRepository = {
   ) {
     const { items, ...orderData } = data;
 
-    // 1️⃣ Tạo order chính
-    const order = await tx.order.create({ data: orderData });
+    // ✅ Bổ sung fallback enum an toàn
+    const normalizedOrder = {
+      ...orderData,
+      status: orderData.status ?? order_status.PENDING,
+      status_payment: orderData.status_payment ?? PaymentStatus.PENDING,
+    };
+
+    // 1️⃣ Tạo order chính (dùng normalized)
+    const order = await tx.order.create({ data: normalizedOrder });
 
     // 2️⃣ Nếu có items thì tạo luôn order_item
-    if (items && items.length > 0) {
+    if (items?.length) {
       await tx.order_item.createMany({
         data: items.map((i) => ({
           order_id: order.id,
@@ -55,29 +68,28 @@ export const paymentRepository = {
       merchant_id: string;
       order_id: string;
       amount: bigint;
-      payment_method: string;
+      payment_method: payment_method;
       txn_ref: string;
-      status: "PENDING";
       raw_payload: any;
     }
   ) {
     return tx.payment_transaction.create({
       data: {
         ...data,
-        status: PaymentStatus.PENDING, // ✅ Enum hợp lệ
+        status: PaymentStatus.PENDING,
         raw_payload: data.raw_payload,
       },
     });
   },
 
-  /** 🔹 Tìm đơn hàng đang pending/unpaid (chưa thanh toán) */
+  /** 🔹 Tìm đơn hàng đang pending/unpaid */
   async findPendingOrder(user_id: string, merchant_id: string) {
     return prisma.order.findFirst({
       where: {
         user_id,
         merchant_id,
-        status: "pending",
-        status_payment: "unpaid",
+        status: order_status.PENDING,
+        status_payment: PaymentStatus.PENDING,
       },
       include: { items: true },
     });
@@ -87,7 +99,7 @@ export const paymentRepository = {
   async cancelOrder(order_id: string) {
     return prisma.order.update({
       where: { id: order_id },
-      data: { status: "cancelled" },
+      data: { status: order_status.CANCELED },
     });
   },
 
@@ -95,7 +107,7 @@ export const paymentRepository = {
   async updateAfterCallback(txnRef: string, data: any) {
     // 🧠 Map từ string → Enum PaymentStatus
     let statusEnum: PaymentStatus;
-    switch (data.status) {
+    switch (data.status?.toLowerCase()) {
       case "success":
         statusEnum = PaymentStatus.SUCCESS;
         break;
@@ -127,15 +139,18 @@ export const paymentRepository = {
       if (txn?.order_id) {
         await prisma.order.update({
           where: { id: txn.order_id },
-          data: { status_payment: "paid", status: "completed" },
+          data: {
+            status_payment: PaymentStatus.SUCCESS,
+            status: order_status.COMPLETED,
+          },
         });
       }
     }
 
-    // ❌ Nếu thất bại hoặc bị hủy → giữ order ở trạng thái pending/unpaid
-    if (
-      statusEnum === PaymentStatus.FAILED ||
-      statusEnum === PaymentStatus.CANCELED
+    // ❌ Nếu thất bại hoặc bị hủy → giữ order ở trạng thái pending
+    if (  statusEnum === PaymentStatus.CANCELED ||
+      statusEnum === PaymentStatus.FAILED 
+    
     ) {
       const txn = await prisma.payment_transaction.findFirst({
         where: { txn_ref: txnRef },
@@ -143,7 +158,10 @@ export const paymentRepository = {
       if (txn?.order_id) {
         await prisma.order.update({
           where: { id: txn.order_id },
-          data: { status_payment: "unpaid", status: "pending" },
+          data: {
+            status_payment: PaymentStatus.PENDING,
+            status: order_status.PENDING,
+          },
         });
       }
     }
