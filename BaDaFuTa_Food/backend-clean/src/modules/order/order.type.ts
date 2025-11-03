@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { CreateCODOrderSchema } from "./order.validation";
+import { CreateCODOrderSchema, GetOrderSchema } from "./order.validation";
 
 /**
  * Kiểu dữ liệu đầu vào cho API tạo đơn hàng COD
@@ -42,11 +42,25 @@ export enum PaymentMethod {
 }
 
 export enum PaymentStatus {
-  PENDING = "pending",
-  UNPAID = "unpaid",
-  PAID = "paid",
-  FAILED = "failed",
+  PENDING = "PENDING",
+  UNPAID = "UNPAID",
+  PAID = "PAID",
+  FAILED = "FAIlED",
 }
+export type OrderStatus =
+  | "PENDING"
+  | "PAID"
+  | "CANCELED"
+  | "REFUNDED"
+  | "FAILED";
+
+// 🔹 Dùng cho GET /api/order (lọc / tìm đơn)
+export type GetOrderArgs = {
+  id?: string;
+  user_id?: string;
+  merchant_id?: string;
+  status?: OrderStatus;
+};
 
 /**
  * ✅ Kiểu dữ liệu tổng hợp (nếu bạn muốn truyền giữa service ↔ repository)
@@ -60,3 +74,5 @@ export interface OrderCreateData {
   payment_status?: PaymentStatus;
   items: OrderItemInput[];
 }
+
+export type GetOrderInput = z.infer<typeof GetOrderSchema>;
