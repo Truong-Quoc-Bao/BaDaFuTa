@@ -6,6 +6,7 @@ import { userRoutes } from "../modules/users";
 import { paymentRoute } from "../modules/vnpay";
 import { orderRoute } from "../modules/order";
 import { otpRoute } from "../modules/otp";
+import { momoRoute } from "../modules/momo";
 
 const router = Router();
 
@@ -15,5 +16,6 @@ router.use("/", userRoutes);
 router.use("/payment", paymentRoute);
 router.use("/order", orderRoute);
 router.use("/otp", otpRoute);
+router.use("/momo", momoRoute);
 
 export default router;
