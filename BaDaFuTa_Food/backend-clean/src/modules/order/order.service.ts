@@ -1,6 +1,6 @@
 import { prisma } from "@/libs/prisma";
-import { orderRepository } from "./order.repository";
-import { CreateCODOrderInput } from "./order.type";
+import { postOrder, orderRepository } from "./order.repository";
+import { CreateCODOrderInput, GetOrderInput } from "./order.type";
 
 export const orderService = {
   async createCODOrder(data: CreateCODOrderInput) {
@@ -49,7 +49,7 @@ export const orderService = {
       );
 
       //Tạo Order
-      const order = await orderRepository.createOrder(tx, {
+      const order = await postOrder.createOrder(tx, {
         user_id: data.user_id,
         merchant_id: data.merchant_id,
         full_name: user.full_name ?? "Khách hàng COD",
@@ -58,15 +58,17 @@ export const orderService = {
         delivery_fee: BigInt(data.delivery_fee),
         note: data.note ?? null,
         total_amount: total,
-        status: "pending",
-        status_payment: "unpaid",
-        payment_method: data.payment_method ?? "COD",
+        status: "PENDING",
+        status_payment: "PENDING",
       });
 
       //Tạo order items
-      await orderRepository.createOrderItems(tx, order.id, data.items);
+      await postOrder.createOrderItems(tx, order.id, data.items);
 
       return order;
     });
   },
+};
+export const getOrderService = async (args: GetOrderInput) => {
+  return orderRepository.findMany(args);
 };
