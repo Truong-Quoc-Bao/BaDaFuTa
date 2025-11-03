@@ -1,3 +1,4 @@
+import { payment_method } from "@prisma/client";
 import { z } from "zod";
 
 export const CreateCODOrderSchema = z.object({
@@ -18,4 +19,25 @@ export const CreateCODOrderSchema = z.object({
       })
     )
     .min(1, "Phải có ít nhất 1 món trong đơn hàng"),
+});
+
+export const GetOrderSchema = z.object({
+  id: z.string().uuid().optional(),
+  user_id: z.string().uuid(),
+  merchant_id: z.string().uuid().optional(),
+  phone: z.string().trim().min(8, "Số điện thoại không hợp lệ").optional(),
+  status: z
+    .enum([
+      "PENDING",
+      "CONFIRMED",
+      "PREPARING",
+      "DELIVERING",
+      "COMPLETED",
+      "CANCELED",
+    ])
+    .optional(),
+  status_payment: z
+    .enum(["PENDING", "SUCCESS", "FAILED", "CANCELED", "REFUNDED"])
+    .optional(),
+  payment_method: z.enum(["COD", "VNPAY", "MOMO", "STRIPE"]).optional(),
 });
