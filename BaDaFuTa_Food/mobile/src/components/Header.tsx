@@ -1,5 +1,121 @@
+// import React from "react";
+// import { View, Text, TouchableOpacity, StyleSheet } from "react-native";
+// import { MapPin, ChevronRight, Search } from "lucide-react-native";
+
+// interface HeaderProps {
+//   cartCount: number;
+//   onMenuClick: () => void;
+//   onCartClick: () => void;
+//   onSearchClick?: () => void;
+//   onLocationClick?: () => void;
+// }
+
+// export function Header({ cartCount, onMenuClick, onCartClick, onSearchClick, onLocationClick }: HeaderProps) {
+//   return (
+//     <View style={styles.header}>
+//       <View style={styles.container}>
+//         {/* Top section with location */}
+//         <View style={styles.locationSection}>
+//           <Text style={styles.label}>Giao đến:</Text>
+//           <TouchableOpacity onPress={onLocationClick} style={styles.locationButton}>
+//             <MapPin size={20} color="white" />
+//             <Text style={styles.locationText} numberOfLines={1}>
+//               Chung Cư Mizuki Flora, Số 10.06 Block Mp,...
+//             </Text>
+//             <ChevronRight size={20} color="white" />
+//           </TouchableOpacity>
+//         </View>
+
+//         {/* Search bar */}
+//         <TouchableOpacity onPress={onSearchClick} style={styles.searchButton}>
+//           <Search size={20} color="#FF6900" />
+//           <Text style={styles.searchText} numberOfLines={1}>
+//             Bữa Tối No Nê, Freeship 0Đ
+//           </Text>
+//         </TouchableOpacity>
+//       </View>
+//     </View>
+//   );
+// }
+
+// const styles = StyleSheet.create({
+//   header: {
+//     // position: 'absolute', // để tràn lên trên
+//     top: -50,
+//     width: '100%',
+//     backgroundColor: "#EA580C", // orange-700
+//     paddingTop: 50, // notch
+//     paddingHorizontal: 16,
+//     paddingBottom: 12,
+//     marginBottom: -50,
+//     // zIndex: 50,
+  
+//     // // Shadow iOS
+//     // shadowColor: "#EA580C",
+//     // shadowOffset: { width: 0, height: 10 },
+//     // shadowOpacity: 0.3,
+//     // shadowRadius: 8,
+  
+//     // // Shadow Android
+//     // elevation: 3,
+  
+//     // // Nếu muốn viền mờ đơn giản
+//     // borderBottomColor: 'rgba(200,100,50,0.05)',
+//     // borderBottomWidth: 1,
+//   },
+  
+  
+//   container: {
+//     width: '100%',
+//   },
+//   locationSection: {
+//     marginBottom: 12,
+//   },
+//   label: {
+//     color: "white",
+//     fontSize: 12,
+//     marginBottom: 4,
+//   },
+//   locationButton: {
+//     flexDirection: "row",
+//     alignItems: "center",
+//     gap: 8,
+//     width: "100%",
+//   },
+//   locationText: {
+//     flex: 1,
+//     color: "white",
+//     fontSize: 12,
+//     marginHorizontal: 4,
+//   },
+//   searchButton: {
+//     flexDirection: "row",
+//     alignItems: "center",
+//     gap: 12,
+//     backgroundColor: "white",
+//     borderRadius: 24,
+//     paddingHorizontal: 16,
+//     paddingVertical: 12,
+//   },
+//   searchText: {
+//     flex: 1,
+//     color: "#FF6900",
+//     fontSize: 12,
+//   },
+// });
+
+
+
 import React from "react";
-import { View, Text, TouchableOpacity, StyleSheet } from "react-native";
+import {
+  View,
+  Text,
+  TouchableOpacity,
+  StyleSheet,
+  Dimensions,
+  Platform,
+  StatusBar,
+} from "react-native";
 import { MapPin, ChevronRight, Search } from "lucide-react-native";
 
 interface HeaderProps {
@@ -10,25 +126,34 @@ interface HeaderProps {
   onLocationClick?: () => void;
 }
 
-export function Header({ cartCount, onMenuClick, onCartClick, onSearchClick, onLocationClick }: HeaderProps) {
+const { width: SCREEN_WIDTH } = Dimensions.get("window");
+const normalize = (size: number) => (SCREEN_WIDTH / 375) * size;
+const HEADER_HEIGHT = normalize(120);
+export function Header({
+  cartCount,
+  onMenuClick,
+  onCartClick,
+  onSearchClick,
+  onLocationClick,
+}: HeaderProps) {
   return (
     <View style={styles.header}>
       <View style={styles.container}>
-        {/* Top section with location */}
+        {/* Location section */}
         <View style={styles.locationSection}>
           <Text style={styles.label}>Giao đến:</Text>
           <TouchableOpacity onPress={onLocationClick} style={styles.locationButton}>
-            <MapPin size={20} color="white" />
+            <MapPin size={normalize(20)} color="white" />
             <Text style={styles.locationText} numberOfLines={1}>
               Chung Cư Mizuki Flora, Số 10.06 Block Mp,...
             </Text>
-            <ChevronRight size={20} color="white" />
+            <ChevronRight size={normalize(20)} color="white" />
           </TouchableOpacity>
         </View>
 
         {/* Search bar */}
         <TouchableOpacity onPress={onSearchClick} style={styles.searchButton}>
-          <Search size={20} color="#FF6900" />
+          <Search size={normalize(20)} color="#FF6900" />
           <Text style={styles.searchText} numberOfLines={1}>
             Bữa Tối No Nê, Freeship 0Đ
           </Text>
@@ -37,69 +162,71 @@ export function Header({ cartCount, onMenuClick, onCartClick, onSearchClick, onL
     </View>
   );
 }
+const HEADER_TOP_OFFSET =
+  Platform.OS === "ios"
+    ? -60
+    : -(StatusBar.currentHeight ?? 50);
 
 const styles = StyleSheet.create({
   header: {
-    // position: 'absolute', // để tràn lên trên
-    top: -50,
-    width: '100%',
-    backgroundColor: "#EA580C", // orange-700
-    paddingTop: 50, // notch
-    paddingHorizontal: 16,
-    paddingBottom: 12,
-    marginBottom: -50,
-    // zIndex: 50,
-  
-    // // Shadow iOS
-    // shadowColor: "#EA580C",
-    // shadowOffset: { width: 0, height: 10 },
-    // shadowOpacity: 0.3,
-    // shadowRadius: 8,
-  
-    // // Shadow Android
-    // elevation: 3,
-  
-    // // Nếu muốn viền mờ đơn giản
-    // borderBottomColor: 'rgba(200,100,50,0.05)',
-    // borderBottomWidth: 1,
+    position: "absolute",
+    top: HEADER_TOP_OFFSET,
+    left: 0,
+    width: SCREEN_WIDTH,
+    backgroundColor: "#EA580C",
+    paddingTop: Platform.OS === "ios" ? 44 + 16 : (StatusBar.currentHeight || 20) + 16, // notch + thêm padding
+    paddingHorizontal: normalize(16),
+    paddingBottom: normalize(12),
+    zIndex: 50,
+    marginBottom:100,
+
+    ...Platform.select({
+      ios: {
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 5 },
+        shadowOpacity: 0.3,
+        shadowRadius: 8,
+      },
+      android: {
+        elevation: 4,
+      },
+    }),
   },
-  
-  
   container: {
-    width: '100%',
+    width: "100%",
   },
   locationSection: {
-    marginBottom: 12,
+    marginBottom: normalize(12),
   },
   label: {
     color: "white",
-    fontSize: 12,
-    marginBottom: 4,
+    fontSize: normalize(12),
+    marginBottom: normalize(4),
   },
   locationButton: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 8,
+    gap: normalize(8),
     width: "100%",
   },
   locationText: {
     flex: 1,
     color: "white",
-    fontSize: 12,
-    marginHorizontal: 4,
+    fontSize: normalize(12),
+    marginHorizontal: normalize(4),
   },
   searchButton: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 12,
+    gap: normalize(12),
     backgroundColor: "white",
-    borderRadius: 24,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
+    borderRadius: normalize(24),
+    paddingHorizontal: normalize(16),
+    paddingVertical: normalize(12),
   },
   searchText: {
     flex: 1,
     color: "#FF6900",
-    fontSize: 12,
+    fontSize: normalize(12),
   },
 });
