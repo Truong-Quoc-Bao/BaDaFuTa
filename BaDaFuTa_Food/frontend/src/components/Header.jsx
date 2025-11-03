@@ -11,7 +11,7 @@ import {
   DropdownMenuTrigger,
   DropdownMenuSeparator,
 } from "./ui/dropdown-menu";
-// import { LocationSelector } from "./LocationSelector";
+import { LocationSelector } from "./LocationSelector";
 import { useCart } from "../contexts/CartContext";
 import { useEffect, useState } from "react";
 import { useAuth } from "../contexts/AuthContext";
@@ -101,22 +101,24 @@ export const Header = () => {
             <div className="hidden md:flex items-center space-x-6">
               <button
                 onClick={() => navigate("/about")}
-                className={`text-sm font-medium transition-colors ${
+                className={`text-sm font-medium transition-colors flex ${
                   location.pathname === "/about"
                     ? "text-orange-600"
                     : "text-gray-600 hover:text-orange-600"
                 }`}
               >
+                <Home className="w-4 h-4 mr-1" />
                 Giới thiệu
               </button>
               <button
                 onClick={() => navigate("/support")}
-                className={`text-sm font-medium transition-colors ${
+                className={`text-sm font-medium transition-colors flex ${
                   location.pathname === "/support"
                     ? "text-orange-600"
                     : "text-gray-600 hover:text-orange-600"
                 }`}
               >
+                <HelpCircle className="w-4 h-4 mr-1" />
                 Hỗ trợ
               </button>
             </div>
@@ -125,7 +127,7 @@ export const Header = () => {
           {/* Location & Actions */}
           <div className="flex items-center space-x-4">
             {/* Location Selector */}
-            <div className="hidden md:block">{/* <LocationSelector /> */}</div>
+            <div className="hidden md:block"><LocationSelector /></div>
             {/* Cart */}
             <Button
               ref={cartIconRef}
