@@ -36,6 +36,10 @@ import {
 import { Clock } from "lucide-react";
 
 export default function CheckOutPage() {
+  // 🧩 Lấy user từ AuthContext
+  const { state: authState } = useAuth();
+  const user = authState.user;
+
   const [showCancelDialog, setShowCancelDialog] = useState(false);
   // 🏦 State quản lý phương thức thanh toán
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState(null);
@@ -50,18 +54,24 @@ export default function CheckOutPage() {
     navigate("/order-cancelled");
   };
 
-  // 🧩 Lấy user từ AuthContext
-  const { state: authState } = useAuth();
-  const user = authState.user;
+  // merchant
 
   // 🛒 Lấy giỏ hàng
   const { state, updateQuantity, removeItem, clearCart } = useCart();
+  // const merchant = state.items.length > 0 ? state.items[0].restaurant : null;
+
   const deliveryFee =
     state.items.length > 0
       ? state.items[0].restaurant?.deliveryFee ??
         state.items[0].restaurant?.delivery_fee ??
         0
       : 0;
+
+  // merchant
+  const merchant =
+    state.items.length > 0
+      ? state.items[0].restaurant || state.items[0].merchant
+      : null;
 
   const subtotal = state.total;
   const total = subtotal + deliveryFee;
@@ -160,16 +170,28 @@ export default function CheckOutPage() {
   const [showConfirmPopup, setShowConfirmPopup] = useState(false);
   const [countdown, setCountdown] = useState(20);
 
-  const handleSaveOnCheckout = () => {
+  // ======================
+  // 🧩 Khi bấm "Đặt hàng / Xác nhận"
+  // ======================
+  const handleSaveOnCheckout = async () => {
+    if (!selectedAddress) {
+      alert("Chưa có địa chỉ giao hàng!");
+      return;
+    }
+    if (!selectedPaymentMethod) {
+      alert("Vui lòng chọn phương thức thanh toán!");
+      return;
+    }
+
     const newAddress = { ...formData, id: Date.now() };
 
-    // Tính thời gian dự kiến giao hàng: 35-40 phút
+    // Tính thời gian dự kiến giao hàng: 35–40 phút
     const now = new Date();
     const minutesToAdd = Math.floor(Math.random() * 6) + 35;
     const estimatedTime = new Date(now.getTime() + minutesToAdd * 60000);
-    // Gán estimatedTime ngay vào address
     const finalAddress = { ...newAddress, estimatedTime };
 
+    // Kiểm tra địa chỉ đã tồn tại chưa
     const isExisting = addressList.some(
       (addr) =>
         addr.full_name === newAddress.full_name &&
@@ -177,49 +199,178 @@ export default function CheckOutPage() {
         addr.address === newAddress.address
     );
 
-    // Hiển thị popup xác nhận
-    setSelectedAddress(finalAddress); // ✅ gán ngay để popup show thời gian
-    setShowConfirmPopup(true);
-    setCountdown(10); // reset countdown
+    // Nếu là địa chỉ mới thì lưu vào danh sách
+    if (!isExisting) {
+      const updatedList = [...addressList, finalAddress];
+      setAddressList(updatedList);
+      localStorage.setItem(
+        `addressList_${user.id}`,
+        JSON.stringify(updatedList)
+      );
+      alert("✅ Địa chỉ mới đã được lưu vào danh sách!");
+    }
 
-    const timer = setInterval(() => {
-      setCountdown((prev) => {
-        if (prev <= 1) {
-          clearInterval(timer);
-          setShowConfirmPopup(false);
+    // Gán địa chỉ đã chọn
+    setSelectedAddress(finalAddress);
 
-          if (!isExisting) {
-            // Lưu địa chỉ mới
-            const updatedList = [...addressList, finalAddress];
-            setAddressList(updatedList);
-            localStorage.setItem(
-              `addressList_${user.id}`,
-              JSON.stringify(updatedList)
-            );
-            setSelectedAddress(newAddress);
-            alert("✅ Địa chỉ mới đã được lưu vào danh sách địa chỉ cũ!");
-          } else {
-            const existingAddr = addressList.find(
-              (addr) =>
-                addr.full_name === newAddress.full_name &&
-                addr.phone === newAddress.phone &&
-                addr.address === newAddress.address
-            );
-            setSelectedAddress({ ...existingAddr, estimatedTime });
-            // alert("✅ Đang sử dụng địa chỉ cũ, không lưu trùng!");
-          }
+    // 🔹 Chuẩn hóa method về chữ hoa
+    const method = selectedPaymentMethod.type.toUpperCase();
 
-          // alert("✅ Đơn hàng đã được tự động xác nhận sau 20 giây!");
+    // Tạo body chung cho cả 2 phương thức
+    const orderBody = {
+      user_id: user.id,
+      merchant_id: merchant.id,
+      phone: finalAddress.phone,
+      delivery_address: finalAddress.address,
+      delivery_fee: finalAddress.deliveryFee,
+      payment_method: selectedPaymentMethod.type, // "CASH" hoặc "VNPAY"
+      note: finalAddress?.note,
+      items: state.items.map((i) => ({
+        menu_item_id: i.menu_item_id ?? i.menuItem?.id,
+        quantity: i.quantity,
+        price: i.price ?? i.menuItem?.price,
+      })),
+    };
 
-          // await placeOrderAPI(state.items); // thanh toán
-          localStorage.setItem("orderConfirmed", "true");
-          navigate("/cart/checkout/ordersuccess");
-          clearCart(); // ✅ clear cart sau khi navigate
-        }
-        return prev - 1;
-      });
-    }, 1000);
+    // ----------------------
+    // Tiền mặt (COD)
+    // ----------------------
+    if (method === "COD") {
+      setShowConfirmPopup(true);
+      setCountdown(10);
+    }
+    // ----------------------
+    // VNPay
+    // ----------------------
+    else if (method === "VNPAY") {
+      try {
+        console.log("📤 Sending body to VNPay:", orderBody);
+        const res = await fetch("http://localhost:3000/api/payment/initiate", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(orderBody),
+        });
+
+        const data = await res.json();
+        if (!res.ok) throw new Error(JSON.stringify(data));
+
+        console.log("📦 VNPay payment data:", data);
+
+        // ✅ redirect đúng field backend trả về
+        window.location.href = data.payment_url;
+        // Clear giỏ hàng
+        // clearCart();
+      } catch (err) {
+        console.error("❌ Lỗi tạo đơn VNPay:", err);
+        alert("Không thể chuyển sang VNPay!");
+      }
+    }
   };
+
+  // ======================
+  // ⏱️ Đếm ngược popup tiền mặt
+  // ======================
+  useEffect(() => {
+    if (!showConfirmPopup) return;
+    if (countdown === 0) return;
+
+    const timer = setTimeout(() => {
+      setCountdown((prev) => prev - 1);
+    }, 1000);
+
+    return () => clearTimeout(timer);
+  }, [showConfirmPopup, countdown]);
+
+  // ======================
+  // 🧭 Khi countdown = 0 => tự gọi API tiền mặt
+  // ======================
+  useEffect(() => {
+    if (countdown === 0 && showConfirmPopup) {
+      handleCreateOrder();
+      setShowConfirmPopup(false);
+    }
+  }, [countdown, showConfirmPopup]);
+
+  // ======================
+  // 🚀 Hàm gọi API tạo đơn tiền mặt
+  // ======================
+  const handleCreateOrder = async () => {
+    try {
+      const orderBody = {
+        user_id: user.id,
+        merchant_id: merchant.id,
+        phone: selectedAddress.phone,
+        delivery_address: selectedAddress.address,
+        delivery_fee: selectedAddress.deliveryFee,
+        payment_method: "COD", // ✅ đồng bộ với backend
+        note: selectedAddress?.note,
+        items: state.items.map((i) => ({
+          menu_item_id: i.menu_item_id ?? i.menuItem?.id,
+          quantity: i.quantity,
+          price: i.price ?? i.menuItem?.price,
+        })),
+      };
+
+      const res = await fetch("http://localhost:3000/api/order", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(orderBody),
+      });
+
+      if (!res.ok) throw new Error(await res.text());
+      const data = await res.json();
+
+      console.log("✅ Đơn hàng tạo thành công:", data);
+      localStorage.setItem("orderConfirmed", "true");
+      clearCart();
+      navigate("/cart/checkout/ordersuccess");
+    } catch (err) {
+      console.error("❌ Lỗi tạo đơn:", err);
+      alert("Không thể tạo đơn hàng!");
+    }
+  };
+
+  const [loading, setLoading] = useState(false);
+  // ======================
+  // 🧭 VNPay Callback
+  // ======================
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const status = params.get("status");
+     const code = params.get("code");
+
+    if (!status) return;
+
+    // Hiển thị loading để UX mượt mà hơn
+    setLoading(true);
+
+    // Thêm độ trễ nhỏ để đảm bảo router đã sẵn sàng sau khi VNPay redirect
+    const timer = setTimeout(() => {
+      switch (status) {
+        case "success":
+          localStorage.setItem("orderConfirmed", "true");
+          clearCart();
+          // alert("✅ Thanh toán thành công!");
+          navigate("/cart/checkout/ordersuccess");
+          break;
+
+        case "canceled":
+          navigate("/cart/pending"); // ✅ chuyển đúng với BE redirect mới
+          break;
+
+        default:
+          clearCart();
+          alert("❌ Thanh toán thất bại, vui lòng thử lại!");
+          navigate("/cart/checkout/orderfailed");
+          break;
+      }
+
+      setLoading(false);
+    }, 300);
+
+    // Cleanup timer khi component unmount
+    return () => clearTimeout(timer);
+  }, [location.search, navigate]);
 
   // 🧾 Hàm thay đổi input
   const handleInputChange = (e) => {
@@ -301,9 +452,9 @@ export default function CheckOutPage() {
   // Thanh Toán
   function PaymentMethodSelector({ selectedMethod, onSelect }) {
     const methods = [
-      { type: "cash", label: "Tiền mặt" },
-      { type: "VNP", label: "VNPay" },
-      { type: "momo", label: "Ví Momo" },
+      { type: "COD", label: "Tiền mặt" },
+      { type: "VNPAY", label: "Thanh toán VNPay" },
+      { type: "MOMO", label: "Ví Momo" },
     ];
 
     return (
@@ -662,7 +813,7 @@ export default function CheckOutPage() {
             </p>
 
             <div className="grid gap-3">
-              {["cash", "VNP", "momo"].map((type) => (
+              {["COD", "VNPAY", "MOMO"].map((type) => (
                 <label
                   key={type}
                   className={`flex items-center justify-between p-3 border rounded-lg cursor-pointer transition
@@ -671,11 +822,11 @@ export default function CheckOutPage() {
                         ? "bg-gray-100 border-gray-100 text-black shadow-lg"
                         : "bg-white border-gray-300 text-gray-700 hover:bg-gray-100"
                     }`}
-                   >
+                >
                   <span className="font-medium">
-                    {type === "cash"
+                    {type === "COD"
                       ? "Tiền mặt"
-                      : type === "VNP"
+                      : type === "VNPAY"
                       ? "VNPay"
                       : "Ví Momo"}
                   </span>
@@ -694,6 +845,7 @@ export default function CheckOutPage() {
           <div className="flex space-x-3">
             <Button
               onClick={() => {
+                console.log("🧭 selectedPaymentMethod:", selectedPaymentMethod);
                 if (!selectedPaymentMethod) {
                   alert("Vui lòng chọn phương thức thanh toán!");
                   return;
@@ -703,7 +855,7 @@ export default function CheckOutPage() {
               className="flex-1 bg-orange-500 hover:bg-orange-600"
               size="lg"
             >
-              {selectedPaymentMethod?.type === "cash"
+              {selectedPaymentMethod?.type === "COD"
                 ? "Đặt hàng"
                 : "Tiếp tục thanh toán"}
             </Button>
@@ -824,9 +976,8 @@ export default function CheckOutPage() {
                   variant="default"
                   className="px-4 py-2 w-[120px] bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition"
                   onClick={() => {
-                    localStorage.setItem("orderConfirmed", "true");
-                    navigate("/cart/checkout/ordersuccess");
-                    clearCart();
+                    handleSaveOnCheckout();
+                    handleCreateOrder(); // ✅ Gọi tạo đơn luôn, không cần chờ countdown
                   }}
                 >
                   Xác nhận

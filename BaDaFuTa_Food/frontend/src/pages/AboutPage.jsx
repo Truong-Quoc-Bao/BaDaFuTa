@@ -99,7 +99,7 @@ export const AboutPage = () => {
                   <Button
                     size="lg"
                     variant="default"
-                    className="bg-gradient-to-r w-[160px] from-orange-400 to-orange-600 hover:from-orange-600 hover:to-orange-700 shadow-lg text-lg px-8 py-6 rounded-2xl"
+                    className="bg-gradient-to-r w-max from-orange-400 to-orange-600 hover:from-orange-600 hover:to-orange-700 shadow-lg text-lg  rounded-2xl"
                     onClick={() => (window.location.href = "/")}
                   >
                     Khám phá ngay
@@ -108,7 +108,7 @@ export const AboutPage = () => {
                   <Button
                     size="lg"
                     variant="outline"
-                    className="border-2  w-[160px] border-orange-500 text-orange-600 hover:bg-orange-50 text-lg px-8 py-[18px] rounded-2xl"
+                    className="border-2  w-max border-orange-500 text-orange-600 hover:bg-orange-50 text-lg px-8 py-[18px] rounded-2xl"
                     onClick={() => (window.location.href = "/merchantlogin")}
                   >
                     Đối tác nhà hàng
