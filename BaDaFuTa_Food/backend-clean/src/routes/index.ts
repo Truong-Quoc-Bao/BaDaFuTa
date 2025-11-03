@@ -5,6 +5,7 @@ import menuRouter from "../modules/menu-item/menu-item.route";
 import { userRoutes } from "../modules/users";
 import { paymentRoute } from "../modules/vnpay";
 import { orderRoute } from "../modules/order";
+import { otpRoute } from "../modules/otp";
 
 const router = Router();
 
@@ -13,5 +14,6 @@ router.use("/restaurants/:restaurantId", menuRouter);
 router.use("/", userRoutes);
 router.use("/payment", paymentRoute);
 router.use("/order", orderRoute);
+router.use("/otp", otpRoute);
 
 export default router;
