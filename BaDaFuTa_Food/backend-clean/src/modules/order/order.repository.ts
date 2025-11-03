@@ -1,10 +1,15 @@
-import { PrismaClient, Prisma } from "@prisma/client";
-import { OrderItemInput } from "./order.type";
+import {
+  PrismaClient,
+  Prisma,
+  order_status,
+  PaymentStatus,
+  payment_method,
+} from "@prisma/client";
+import { OrderItemInput, GetOrderInput } from "./order.type";
 
 const prisma = new PrismaClient();
-
-export const orderRepository = {
-  // Tạo order
+export const postOrder = {
+  // 🧾 Tạo order (COD)
   async createOrder(
     tx: Prisma.TransactionClient,
     data: {
@@ -18,13 +23,32 @@ export const orderRepository = {
       total_amount: bigint;
       status?: string;
       status_payment?: string;
-      payment_method?: string;
     }
   ) {
-    return tx.order.create({ data });
+    const normalized = {
+      ...data,
+      status:
+        ((
+          data.status || "PENDING"
+        ).toUpperCase() as keyof typeof order_status) in order_status
+          ? ((data.status || "PENDING").toUpperCase() as order_status)
+          : order_status.PENDING,
+
+      status_payment:
+        ((
+          data.status_payment || "PENDING"
+        ).toUpperCase() as keyof typeof PaymentStatus) in PaymentStatus
+          ? ((data.status_payment || "PENDING").toUpperCase() as PaymentStatus)
+          : PaymentStatus.PENDING,
+
+      // 🔹 Ép cứng payment_method = COD
+      payment_method: "COD" as payment_method,
+    };
+
+    return tx.order.create({ data: normalized });
   },
 
-  /**  Tạo danh sách order_item */
+  /**  🧾 Tạo danh sách order_item */
   async createOrderItems(
     tx: Prisma.TransactionClient,
     order_id: string,
@@ -38,6 +62,45 @@ export const orderRepository = {
         price: BigInt(i.price),
         note: i.note ?? null,
       })),
+    });
+  },
+};
+
+export const orderRepository = {
+  findMany: async (args: GetOrderInput) => {
+    return prisma.order.findMany({
+      where: {
+        ...(args.id && { id: args.id }),
+        ...(args.user_id && { user_id: args.user_id }),
+        ...(args.merchant_id && { merchant_id: args.merchant_id }),
+        ...(args.phone && { phone: args.phone }),
+        ...(args.status && { status: args.status }),
+        ...(args.status_payment && { status_payment: args.status_payment }),
+        ...(args.payment_method && { payment_method: args.payment_method }),
+      },
+      include: {
+        items: {
+          include: {
+            menu_item: true,
+            options: {
+              include: { option_item: true },
+            },
+          },
+        },
+        payments: true,
+        merchant: true,
+        user: true,
+      },
+      orderBy: { created_at: "desc" },
+    });
+  },
+
+  count: async (args: GetOrderInput) => {
+    return prisma.order.count({
+      where: {
+        ...(args.user_id && { user_id: args.user_id }),
+        ...(args.status && { status: args.status }),
+      },
     });
   },
 };
