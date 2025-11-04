@@ -1,16 +1,16 @@
 import { useNavigate } from "react-router-dom";
 import { ArrowLeft, Plus, Minus, Trash2, ShoppingBag } from "lucide-react";
-import { Button } from "../components/ui/button";
+import { Button } from "../../components/ui/button";
 import {
   Card,
   CardContent,
   CardHeader,
   CardTitle,
-} from "../components/ui/card";
-import { Badge } from "../components/ui/badge";
-import { useCart } from "../contexts/CartContext";
-import { ImageWithFallback } from "../components/figma/ImageWithFallback";
-import { useAuth } from "../contexts/AuthContext"; // 🔹 import auth
+} from "../../components/ui/card";
+import { Badge } from "../../components/ui/badge";
+import { useCart } from "../../contexts/CartContext";
+import { ImageWithFallback } from "../../components/figma/ImageWithFallback";
+import { useAuth } from "../../contexts/AuthContext"; // 🔹 import auth
 import { toast } from "sonner";
 
 export default function CartPage() {

@@ -148,9 +148,9 @@ export const paymentRepository = {
     }
 
     // ❌ Nếu thất bại hoặc bị hủy → giữ order ở trạng thái pending
-    if (  statusEnum === PaymentStatus.CANCELED ||
-      statusEnum === PaymentStatus.FAILED 
-    
+    if (
+      statusEnum === PaymentStatus.FAILED ||
+      statusEnum === PaymentStatus.CANCELED
     ) {
       const txn = await prisma.payment_transaction.findFirst({
         where: { txn_ref: txnRef },

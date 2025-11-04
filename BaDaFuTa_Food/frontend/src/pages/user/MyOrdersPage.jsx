@@ -1,17 +1,17 @@
 import { useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
-import { Button } from "../components/ui/button";
-import { Card, CardContent } from "../components/ui/card";
+import { Button } from "../../components/ui/button";
+import { Card, CardContent } from "../../components/ui/card";
 import {
   Tabs,
   TabsContent,
   TabsList,
   TabsTrigger,
-} from "../components/ui/tabs";
-import { OrderHistoryCard } from "../components/OrderHistoryCard";
+} from "../../components/ui/tabs";
+import { OrderHistoryCard } from "../../components/OrderHistoryCard";
 // import { ProtectedRoute } from "../components/ProtectedRoute";
 import { ShoppingBag, Package2, X, Clock } from "lucide-react";
-import { orderHistory as initialOrderHistory } from "../../data/mockData";
+import { orderHistory as initialOrderHistory } from "../../../data/mockData";
 
 export const MyOrdersPage = () => {
   const navigate = useNavigate();

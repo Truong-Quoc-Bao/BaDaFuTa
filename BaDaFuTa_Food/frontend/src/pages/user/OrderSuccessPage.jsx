@@ -1,8 +1,8 @@
 import { CheckCircle } from "lucide-react";
-import { Button } from "../components/ui/button";
+import { Button } from "../../components/ui/button";
 import { useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
-import { useCart } from "../contexts/CartContext"; // 👈 thêm dòng này
+import { useCart } from "../../contexts/CartContext"; // 👈 thêm dòng này
 
 export default function OrderSuccessPage() {
   const navigate = useNavigate();

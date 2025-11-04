@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useAuth } from "../contexts/AuthContext"; // 🔹 import auth
+import { useAuth } from "../../contexts/AuthContext"; // 🔹 import auth
 import { useNavigate } from "react-router-dom";
 import {
   ArrowLeft,
@@ -12,19 +12,19 @@ import {
   Save,
   X,
 } from "lucide-react";
-import { Button } from "../components/ui/button";
+import { Button } from "../../components/ui/button";
 import {
   Card,
   CardContent,
   CardHeader,
   CardTitle,
-} from "../components/ui/card";
-import { Input } from "../components/ui/input";
-import { Label } from "../components/ui/label";
-import { Avatar, AvatarFallback, AvatarImage } from "../components/ui/avartar";
-import { Badge } from "../components/ui/badge";
-import { Separator } from "../components/ui/separator";
-import { Alert, AlertDescription } from "../components/ui/alert";
+} from "../../components/ui/card";
+import { Input } from "../../components/ui/input";
+import { Label } from "../../components/ui/label";
+import { Avatar, AvatarFallback, AvatarImage } from "../../components/ui/avartar";
+import { Badge } from "../../components/ui/badge";
+import { Separator } from "../../components/ui/separator";
+import { Alert, AlertDescription } from "../../components/ui/alert";
 
 export const ProfilePage = () => {
   const { state, updateUser } = useAuth();

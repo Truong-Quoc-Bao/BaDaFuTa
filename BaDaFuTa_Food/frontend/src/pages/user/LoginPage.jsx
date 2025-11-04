@@ -7,15 +7,15 @@ import {
   CardFooter,
   CardHeader,
   CardTitle,
-} from "../components/ui/card";
-import { Logo } from "../components/Logo";
-import { Button } from "../components/ui/button";
-import { Input } from "../components/ui/input";
-import { Label } from "../components/ui/label";
-import { Alert, AlertDescription } from "../components/ui/alert";
-import { Separator } from "../components/ui/separator";
+} from "../../components/ui/card";
+import { Logo } from "../../components/Logo";
+import { Button } from "../../components/ui/button";
+import { Input } from "../../components/ui/input";
+import { Label } from "../../components/ui/label";
+import { Alert, AlertDescription } from "../../components/ui/alert";
+import { Separator } from "../../components/ui/separator";
 import { Eye, EyeOff, Loader2, User, Lock, ArrowLeft } from "lucide-react";
-import { useAuth } from "../contexts/AuthContext";
+import { useAuth } from "../../contexts/AuthContext";
 import {  useEffect } from "react"; // <-- thêm useEffect
 export default function LoginPage() {
   const [formData, setFormData] = useState({

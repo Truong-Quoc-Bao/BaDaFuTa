@@ -16,14 +16,14 @@ import {
   CardFooter,
   CardHeader,
   CardTitle,
-} from "../components/ui/card";
-import { Button } from "../components/ui/button";
-import { Input } from "../components/ui/input";
-import { Label } from "../components/ui/label";
-import { Separator } from "../components/ui/separator";
-import { cn } from "../components/ui/utils";
-import { Logo } from "../components/Logo";
-import { useAuth } from "../contexts/AuthContext";
+} from "../../components/ui/card";
+import { Button } from "../../components/ui/button";
+import { Input } from "../../components/ui/input";
+import { Label } from "../../components/ui/label";
+import { Separator } from "../../components/ui/separator";
+import { cn } from "../../components/ui/utils";
+import { Logo } from "../../components/Logo";
+import { useAuth } from "../../contexts/AuthContext";
 export default function PhoneVerification() {
   const navigate = useNavigate();
   const { state } = useAuth();

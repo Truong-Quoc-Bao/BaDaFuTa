@@ -4,20 +4,20 @@ import { useParams, useNavigate, useLocation } from "react-router-dom";
 import { ArrowLeft, Clock, Users, Star, Plus, Minus, Leaf } from "lucide-react";
 import { useRef } from "react";
 import toast, { Toaster } from "react-hot-toast";
-import { Button } from "../components/ui/button";
-import { Badge } from "../components/ui/badge";
-import { Card } from "../components/ui/card";
-import { ImageWithFallback } from "../components/figma/ImageWithFallback";
-import { useCart } from "../contexts/CartContext";
-import { ToppingSelectionDialog } from "../components/ToppingSelectionDialog";
+import { Button } from "../../components/ui/button";
+import { Badge } from "../../components/ui/badge";
+import { Card } from "../../components/ui/card";
+import { ImageWithFallback } from "../../components/figma/ImageWithFallback";
+import { useCart } from "../../contexts/CartContext";
+import { ToppingSelectionDialog } from "../../components/ToppingSelectionDialog";
 
 import {
   getOptimizedFoodImage,
   optimizeImageUrl,
   hasDiscount,
   calculateDiscountPercentage,
-} from "../utils/imageUtils";
-import { useAuth } from "../contexts/AuthContext";
+} from "../../utils/imageUtils";
+import { useAuth } from "../../contexts/AuthContext";
 const currencyVN = (n) => (Number(n) || 0).toLocaleString("vi-VN") + "đ";
 
 export default function MenuItemDetailPage() {

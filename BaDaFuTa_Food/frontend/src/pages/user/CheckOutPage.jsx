@@ -1,7 +1,7 @@
-import { useAuth } from "../contexts/AuthContext";
+import { useAuth } from "../../contexts/AuthContext";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useRef, useEffect, useState } from "react";
-import { Button } from "../components/ui/button";
+import { Button } from "../../components/ui/button";
 import {
   ArrowLeft,
   CreditCard,
@@ -13,26 +13,26 @@ import {
   Edit3,
   FileText,
 } from "lucide-react";
-import { ImageWithFallback } from "../components/figma/ImageWithFallback";
-import { Textarea } from "../components/ui/textarea";
-import { CancelOrderDialog } from "../components/CancelOrderDialog";
+import { ImageWithFallback } from "../../components/figma/ImageWithFallback";
+import { Textarea } from "../../components/ui/textarea";
+import { CancelOrderDialog } from "../../components/CancelOrderDialog";
 import {
   Card,
   CardContent,
   CardHeader,
   CardTitle,
   CardFooter,
-} from "../components/ui/card";
-import { Input } from "../components/ui/input";
-import { Label } from "../components/ui/label";
-import { useCart } from "../contexts/CartContext";
+} from "../../components/ui/card";
+import { Input } from "../../components/ui/input";
+import { Label } from "../../components/ui/label";
+import { useCart } from "../../contexts/CartContext";
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
   DialogFooter,
-} from "../components/ui/dialog";
+} from "../../components/ui/dialog";
 import { Clock } from "lucide-react";
 
 export default function CheckOutPage() {

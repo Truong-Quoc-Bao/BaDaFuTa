@@ -18,16 +18,16 @@ import {
   Zap,
   Leaf,
 } from "lucide-react";
-import { Logo } from "../components/Logo";
+import { Logo } from "../../components/Logo";
 import {
   Card,
   CardContent,
   CardHeader,
   CardTitle,
-} from "../components/ui/card";
-import { Badge } from "../components/ui/badge";
-import { Button } from "../components/ui/button";
-import { ImageWithFallback } from "../components/figma/ImageWithFallback";
+} from "../../components/ui/card";
+import { Badge } from "../../components/ui/badge";
+import { Button } from "../../components/ui/button";
+import { ImageWithFallback } from "../../components/figma/ImageWithFallback";
 
 export const AboutPage = () => {
   return (

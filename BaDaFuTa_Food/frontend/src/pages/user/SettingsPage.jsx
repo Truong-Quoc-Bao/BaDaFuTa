@@ -12,24 +12,24 @@ import {
   MapPin,
   HelpCircle,
 } from "lucide-react";
-import { Button } from "../components/ui/button";
+import { Button } from "../../components/ui/button";
 import {
   Card,
   CardContent,
   CardHeader,
   CardTitle,
-} from "../components/ui/card";
-import { Switch } from "../components/ui/switch";
-import { Label } from "../components/ui/label";
+} from "../../components/ui/card";
+import { Switch } from "../../components/ui/switch";
+import { Label } from "../../components/ui/label";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "../components/ui/select";
-import { Separator } from "../components/ui/separator";
-import { Badge } from "../components/ui/badge";
+} from "../../components/ui/select";
+import { Separator } from "../../components/ui/separator";
+import { Badge } from "../../components/ui/badge";
 
 export const SettingsPage = () => {
   const navigate = useNavigate();

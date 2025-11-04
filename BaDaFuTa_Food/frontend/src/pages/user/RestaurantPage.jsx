@@ -1,7 +1,7 @@
 import { useNavigate, useParams, Link } from "react-router-dom"; // ✅
 import { useEffect, useState } from "react";
-import OpeningStatus from "../components/OpeningStatus";
-import { useCart } from "../contexts/CartContext";
+import OpeningStatus from "../../components/OpeningStatus";
+import { useCart } from "../../contexts/CartContext";
 // import { toast, Toaster } from "sonner"; // ✅ nếu muốn hiện thông báo đẹp
 import toast, { Toaster } from "react-hot-toast";
 import { useMemo } from "react";
@@ -14,10 +14,10 @@ import {
   Award,
   Users,
 } from "lucide-react";
-import { Button } from "../components/ui/button";
-import { Badge } from "../components/ui/badge";
-import { MenuItemCard } from "../components/MenuItemCard";
-import { ImageWithFallback } from "../components/figma/ImageWithFallback";
+import { Button } from "../../components/ui/button";
+import { Badge } from "../../components/ui/badge";
+import { MenuItemCard } from "../../components/MenuItemCard";
+import { ImageWithFallback } from "../../components/figma/ImageWithFallback";
 
 export const RestaurantPage = () => {
   const navigate = useNavigate();

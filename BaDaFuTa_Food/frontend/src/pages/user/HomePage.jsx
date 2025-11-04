@@ -1,11 +1,11 @@
 import { Search, TrendingUp, MapPin } from "lucide-react";
-import { Input } from "../components/ui/input";
-import { Button } from "../components/ui/button";
-import RestaurantCard from "../components/RestaurantCard";
-import { FeaturedRestaurant } from "../components/FeaturedRestaurant";
-import { PromotionBanner } from "../components/PromotionBanner";
-import { restaurants, featuredRestaurants, promotions } from "../../data/mockData";
-import { useLocation } from "../contexts/LocationContext";
+import { Input } from "../../components/ui/input";
+import { Button } from "../../components/ui/button";
+import RestaurantCard from "../../components/RestaurantCard";
+import { FeaturedRestaurant } from "../../components/FeaturedRestaurant";
+import { PromotionBanner } from "../../components/PromotionBanner";
+import { restaurants, featuredRestaurants, promotions } from "../../../data/mockData";
+import { useLocation } from "../../contexts/LocationContext";
 //import { useState, useMemo } from "react";
 import React, { useEffect, useState } from "react";
 export default function HomePage () {

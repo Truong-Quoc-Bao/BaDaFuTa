@@ -141,25 +141,25 @@ import { AuthProvider } from "./contexts/AuthContext";
 import { CartProvider, useCart } from "./contexts/CartContext";
 import ProtectedRoute from "./components/ProtectedRoute";
 import { Layout } from "./components/Layout";
-import MerchantLogin from "./pages/MerchantLoginPage";
-import PhoneVerificationPage from "./pages/PhoneVerificationPage";
+// import MerchantLogin from "./pages/merchant/MerchantLoginPage";
+import PhoneVerificationPage from "./pages/user/PhoneVerificationPage";
 import { Header } from "./components/Header";
 import { Footer } from "./components/Footer";
-import LoginPage from "./pages/LoginPage";
-import RegisterPage from "./pages/RegisterPage";
-import HomePage from "./pages/HomePage";
-import { AboutPage } from "./pages/AboutPage";
-import { SupportPage } from "./pages/SupportPage";
-import { ProfilePage } from "./pages/ProfilePage";
-import { SettingsPage } from "./pages/SettingsPage";
-import { RestaurantPage } from "./pages/RestaurantPage";
-import MenuItemDetailPage from "./pages/MenuItemDetailPage";
-import CartPage from "./pages/CartPage";
-import CheckOutPage from "./pages/CheckOutPage";
-import { MyOrdersPage } from "./pages/MyOrdersPage";
-import { TrackOrderPage } from "./pages/TrackOrderPage"
-import OrderSuccessPage from "./pages/OrderSuccessPage";
-import OrderPendingPage from "./pages/OrderPendingPage"
+import LoginPage from "./pages/user/LoginPage";
+import RegisterPage from "./pages/user/RegisterPage";
+import HomePage from "./pages/user/HomePage";
+import { AboutPage } from "./pages/user/AboutPage";
+import { SupportPage } from "./pages/user/SupportPage";
+import { ProfilePage } from "./pages/user/ProfilePage";
+import { SettingsPage } from "./pages/user/SettingsPage";
+import { RestaurantPage } from "./pages/user/RestaurantPage";
+import MenuItemDetailPage from "./pages/user/MenuItemDetailPage";
+import CartPage from "./pages/user/CartPage";
+import CheckOutPage from "./pages/user/CheckOutPage";
+import { MyOrdersPage } from "./pages/user/MyOrdersPage";
+import { TrackOrderPage } from "./pages/user/TrackOrderPage"
+import OrderSuccessPage from "./pages/user/OrderSuccessPage";
+import OrderPendingPage from "./pages/user/OrderPendingPage"
 import { LocationProvider } from "./contexts/LocationContext";
 import { Toaster } from "react-hot-toast";
 import "./index.css";
@@ -187,7 +187,7 @@ function AppRoutes() {
       <Route path="/phone-otp" element={<PhoneVerificationPage />} />
       <Route path="/login" element={<LoginPage />} />
       <Route path="/register" element={<RegisterPage />} />
-      <Route path="/merchantlogin" element={<MerchantLogin />} />
+      {/* <Route path="/merchantlogin" element={<MerchantLogin />} /> */}
       <Route path="/about" element={<AboutPage />} />
       <Route path="/support" element={<SupportPage />} />
       <Route path="/profile" element={<ProfilePage />} />
