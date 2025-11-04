@@ -22,19 +22,35 @@ export const createApp = () => {
   app.use(compression());
   app.use(express.json());
 
+  // app.use(
+  //   cors({
+  //     origin: [
+  //       "http://localhost:5173",
+  //       "http://192.168.100.124:5173",
+  //       "http://172.20.10.3:5173",
+  //       "https://unnibbed-unthrilled-averi.ngrok-free.dev",
+  //     ],
+  //     methods: ["GET", "POST", "PUT", "DELETE"],
+  //     credentials: true,
+  //   })
+  // );
+
   app.use(
     cors({
       origin: [
-        "http://localhost:5173",
+        "http://localhost:5173",   // customer
+        "http://localhost:5174",   // ➕ thêm merchant
         "http://192.168.100.124:5173",
+        "http://192.168.100.124:5174", // ➕ nếu merchant chạy cùng mạng LAN
         "http://172.20.10.3:5173",
+        "http://172.20.10.3:5174", // ➕ cho IP khác
         "https://unnibbed-unthrilled-averi.ngrok-free.dev",
       ],
       methods: ["GET", "POST", "PUT", "DELETE"],
       credentials: true,
     })
   );
-
+  
   app.use(
     session({
       secret: process.env.SESSION_SECRET || "abc123",
