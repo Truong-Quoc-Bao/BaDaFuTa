@@ -1,3 +1,4 @@
+import { Outlet } from 'react-router-dom';
 import { useState } from 'react';
 import { Button } from './ui/button';
 import { useNavigate, useLocation } from 'react-router-dom';
@@ -61,7 +62,7 @@ export function MerchantLayout({ children }) {
     <div className="min-h-screen flex w-full bg-gray-50">
       {/* Sidebar */}
       <div className={cn(
-        "bg-white border-r border-gray-200 transition-all duration-300 ease-in-out",
+        "bg-white border-r border-gray-200 transition-all duration-300 ease-in-out  h-screen sticky top-0",
         sidebarOpen ? "w-64" : "w-16"
       )}>
         {/* Header */}
@@ -126,7 +127,7 @@ export function MerchantLayout({ children }) {
             )}
           >
             <LogOut className="w-4 h-4" />
-            {sidebarOpen && <span className="ml-2">Đăng xuất</span>}
+            {sidebarOpen && <span className="ml-2 ">Đăng xuất</span>}
           </Button>
         </div>
       </div>
@@ -134,7 +135,7 @@ export function MerchantLayout({ children }) {
       {/* Main Content */}
       <div className="flex-1 flex flex-col">
         {/* Header */}
-        <header className="bg-white border-b border-gray-200 px-6 py-4">
+        <header className="bg-white border-b border-gray-200 px-6 py-4 sticky top-0 z-10">
           <div className="flex items-center gap-4">
             <Button
               variant="ghost"
@@ -156,8 +157,9 @@ export function MerchantLayout({ children }) {
         </header>
 
         {/* Main Content */}
-        <main className="flex-1 bg-gray-50">
-          {children}
+        <main className="flex-1 bg-gray-50 ">
+          {/* {children} */}
+          <Outlet /> {/* <-- Đây là nơi các route con sẽ hiển thị */}
         </main>
       </div>
     </div>

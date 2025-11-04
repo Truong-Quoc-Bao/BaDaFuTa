@@ -141,7 +141,7 @@ export function MerchantOverviewPage() {
       </div>
 
       {/* Recent Orders */}
-      <Card>
+      <Card className="hover:scale-100">
         <CardHeader>
           <CardTitle>Đơn hàng gần đây</CardTitle>
         </CardHeader>
@@ -151,7 +151,7 @@ export function MerchantOverviewPage() {
               <p className="text-gray-500 text-center py-8">Chưa có đơn hàng nào</p>
             ) : (
               recentOrders.map((order) => (
-                <div key={order.id} className="flex items-center justify-between p-4 border rounded-lg">
+                <div key={order.id} className="flex items-center justify-between p-4 border border-gray-200 rounded-lg">
                   <div className="flex-1">
                     <div className="flex items-center gap-3 mb-2">
                       <p className="font-medium">#{order.id}</p>
@@ -181,27 +181,27 @@ export function MerchantOverviewPage() {
 
       {/* Quick Actions */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <Card>
+        <Card className="hover:scale-100">
           <CardHeader>
             <CardTitle>Hoạt động nhanh</CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
-            <div className="p-3 border rounded-lg cursor-pointer hover:bg-gray-50">
+            <div className="p-3 border border-gray-200 rounded-lg cursor-pointer hover:bg-gray-50">
               <p className="font-medium">Thêm món ăn mới</p>
               <p className="text-sm text-gray-600">Cập nhật thực đơn của bạn</p>
             </div>
-            <div className="p-3 border rounded-lg cursor-pointer hover:bg-gray-50">
+            <div className="p-3 border border-gray-200 rounded-lg cursor-pointer hover:bg-gray-50">
               <p className="font-medium">Tạo nhóm topping</p>
               <p className="text-sm text-gray-600">Quản lý tùy chọn món ăn</p>
             </div>
-            <div className="p-3 border rounded-lg cursor-pointer hover:bg-gray-50">
+            <div className="p-3 border border-gray-200 rounded-lg cursor-pointer hover:bg-gray-50">
               <p className="font-medium">Xem báo cáo</p>
               <p className="text-sm text-gray-600">Phân tích doanh thu</p>
             </div>
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="hover:scale-100">
           <CardHeader>
             <CardTitle>Thông báo</CardTitle>
           </CardHeader>
