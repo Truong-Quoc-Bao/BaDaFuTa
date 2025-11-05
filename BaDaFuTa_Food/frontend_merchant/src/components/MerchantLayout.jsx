@@ -73,7 +73,7 @@ export function MerchantLayout({ children }) {
             </div>
             {sidebarOpen && (
               <div>
-                <h2 className="font-semibold text-gray-900">BaDaFuTa PartNer</h2>
+                <h2 className="font-semibold text-gray-900">BaDaFuTa_Food PartNer</h2>
                 <p className="text-xs text-gray-600">Merchant Portal</p>
               </div>
             )}

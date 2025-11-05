@@ -7,7 +7,7 @@
       className="p-2"
     >
       <PanelLeft className="w-4 h-4" />
-    </Button>
+</Button>
     <div>
       <h1 className="text-base font-semibold text-gray-900">
         {menuItems.find(item => item.path === location.pathname)?.title || 'Dashboard'}
