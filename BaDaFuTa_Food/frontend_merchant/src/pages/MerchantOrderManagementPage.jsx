@@ -99,7 +99,7 @@ export function MerchantOrderManagementPage() {
           <Button
             variant={autoConfirmEnabled ? "default" : "outline"}
             onClick={toggleAutoConfirm}
-            className="whitespace-nowrap"
+            className="whitespace-nowrap w-max"
           >
             {autoConfirmEnabled ? 'Tắt tự động xác nhận' : 'Bật tự động xác nhận'}
           </Button>
@@ -108,7 +108,7 @@ export function MerchantOrderManagementPage() {
 
       {/* Statistics */}
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
-        <Card>
+        <Card className="hover:scale-100">
           <CardContent className="p-4">
             <div className="flex items-center space-x-2">
               <Clock className="h-4 w-4 text-orange-500" />
@@ -120,7 +120,7 @@ export function MerchantOrderManagementPage() {
           </CardContent>
         </Card>
         
-        <Card>
+        <Card className="hover:scale-100">
           <CardContent className="p-4">
             <div className="flex items-center space-x-2">
               <CheckCircle className="h-4 w-4 text-blue-500" />
@@ -132,7 +132,7 @@ export function MerchantOrderManagementPage() {
           </CardContent>
         </Card>
         
-        <Card>
+        <Card className="hover:scale-100">
           <CardContent className="p-4">
             <div className="flex items-center space-x-2">
               <Package className="h-4 w-4 text-yellow-500" />
@@ -144,7 +144,7 @@ export function MerchantOrderManagementPage() {
           </CardContent>
         </Card>
         
-        <Card>
+        <Card className="hover:scale-100">
           <CardContent className="p-4">
             <div className="flex items-center space-x-2">
               <CheckCircle className="h-4 w-4 text-green-500" />
@@ -156,7 +156,7 @@ export function MerchantOrderManagementPage() {
           </CardContent>
         </Card>
         
-        <Card>
+        <Card className="hover:scale-100">
           <CardContent className="p-4">
             <div className="flex items-center space-x-2">
               <CheckCircle className="h-4 w-4 text-green-600" />
@@ -168,7 +168,7 @@ export function MerchantOrderManagementPage() {
           </CardContent>
         </Card>
         
-        <Card>
+        <Card className="hover:scale-100">
           <CardContent className="p-4">
             <div className="flex items-center space-x-2">
               <XCircle className="h-4 w-4 text-red-500" />
@@ -185,7 +185,7 @@ export function MerchantOrderManagementPage() {
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
         <TabsList className="grid w-full grid-cols-3 lg:grid-cols-6">
           <TabsTrigger value="pending" className="flex items-center gap-2">
-            <Clock className="h-4 w-4" />
+            <Clock className="h-4 w-4 text-red-500" />
             <span className="hidden sm:inline">Chờ xác nhận</span>
             <span className="sm:hidden">Chờ</span>
             <Badge variant="secondary" className="ml-1">
@@ -193,7 +193,7 @@ export function MerchantOrderManagementPage() {
             </Badge>
           </TabsTrigger>
           <TabsTrigger value="confirmed" className="flex items-center gap-2">
-            <CheckCircle className="h-4 w-4" />
+            <CheckCircle className="h-4 w-4 text-blue-500" />
             <span className="hidden sm:inline">Đã xác nhận</span>
             <span className="sm:hidden">Xác nhận</span>
             <Badge variant="secondary" className="ml-1">
@@ -201,7 +201,7 @@ export function MerchantOrderManagementPage() {
             </Badge>
           </TabsTrigger>
           <TabsTrigger value="preparing" className="flex items-center gap-2">
-            <Package className="h-4 w-4" />
+            <Package className="h-4 w-4 text-yellow-500" />
             <span className="hidden sm:inline">Đang chuẩn bị</span>
             <span className="sm:hidden">Chuẩn bị</span>
             <Badge variant="secondary" className="ml-1">
@@ -209,7 +209,7 @@ export function MerchantOrderManagementPage() {
             </Badge>
           </TabsTrigger>
           <TabsTrigger value="ready" className="flex items-center gap-2">
-            <CheckCircle className="h-4 w-4" />
+            <CheckCircle className="h-4 w-4 text-green-500" />
             <span className="hidden sm:inline">Sẵn sàng</span>
             <span className="sm:hidden">Sẵn sàng</span>
             <Badge variant="secondary" className="ml-1">
@@ -217,7 +217,7 @@ export function MerchantOrderManagementPage() {
             </Badge>
           </TabsTrigger>
           <TabsTrigger value="completed" className="flex items-center gap-2">
-            <CheckCircle className="h-4 w-4" />
+            <CheckCircle className="h-4 w-4 text-green-600" />
             <span className="hidden sm:inline">Hoàn thành</span>
             <span className="sm:hidden">Xong</span>
             <Badge variant="secondary" className="ml-1">
@@ -225,7 +225,7 @@ export function MerchantOrderManagementPage() {
             </Badge>
           </TabsTrigger>
           <TabsTrigger value="cancelled" className="flex items-center gap-2">
-            <XCircle className="h-4 w-4" />
+            <XCircle className="h-4 w-4  text-red-500" />
             <span className="hidden sm:inline">Đã hủy</span>
             <span className="sm:hidden">Hủy</span>
             <Badge variant="secondary" className="ml-1">
@@ -238,9 +238,24 @@ export function MerchantOrderManagementPage() {
           <TabsContent key={status} value={status} className="mt-6">
             <div className="space-y-4">
               {filteredOrders.length === 0 ? (
-                <Card>
+                <Card className="hover:scale-100">
                   <CardContent className="p-12 text-center">
-                    <Package className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                    <Package className={`h-12 w-12 text-muted-foreground mx-auto mb-4 ${
+                              status === 'pending'
+                                ? 'text-red-500'
+                                : status === 'confirmed'
+                                ? 'text-blue-500'
+                                : status === 'preparing'
+                                ? 'text-yellow-500'
+                                : status === 'ready'
+                                ? 'text-green-500'
+                                : status === 'completed'
+                                ? 'text-green-600'
+                                : status === 'cancelled'
+                                ? 'text-red-500'
+                                : 'text-muted-foreground'
+                            }`}
+                          />
                     <h3 className="text-lg font-semibold mb-2">Không có đơn hàng</h3>
                     <p className="text-muted-foreground">
                       {searchTerm ? 'Không tìm thấy đơn hàng phù hợp với từ khóa tìm kiếm.' : 'Chưa có đơn hàng nào trong trạng thái này.'}

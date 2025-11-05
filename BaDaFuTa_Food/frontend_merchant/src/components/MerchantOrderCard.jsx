@@ -65,7 +65,7 @@ export function MerchantOrderCard({ order, onStatusUpdate }) {
   const statusInfo = getStatusBadge(order.status);
 
   return (
-    <Card className="mb-4">
+    <Card className="mb-4 hover:scale-100">
       <CardHeader className="pb-3">
         <div className="flex justify-between items-start">
           <div>
@@ -115,7 +115,7 @@ export function MerchantOrderCard({ order, onStatusUpdate }) {
         </div>
 
         {/* Thông tin giao hàng */}
-        <div className="mb-4 p-3 bg-muted/50 rounded-lg">
+        <div className="mb-4 p-3 bg-gray-100 rounded-lg">
           <div className="flex items-start gap-2 mb-2">
             <MapPin className="w-4 h-4 mt-0.5 text-muted-foreground" />
             <div>
@@ -135,7 +135,7 @@ export function MerchantOrderCard({ order, onStatusUpdate }) {
         </div>
 
         {/* Tổng tiền */}
-        <div className="flex justify-between items-center mb-4 p-3 bg-primary/5 rounded-lg">
+        <div className="flex justify-between items-center mb-4 p-3  bg-gray-100 rounded-lg">
           <span className="font-semibold">Tổng cộng:</span>
           <span className="font-bold text-primary">{formatCurrency(order.total)}</span>
         </div>
@@ -144,7 +144,7 @@ export function MerchantOrderCard({ order, onStatusUpdate }) {
         <div className="flex gap-2 flex-wrap">
           {order.status === 'pending' && (
             <>
-              <Button onClick={handleConfirmOrder} className="flex-1">
+              <Button variant="default" onClick={handleConfirmOrder} className="">
                 Xác nhận đơn hàng
               </Button>
               <Button variant="destructive" onClick={handleCancelOrder}>
@@ -155,7 +155,7 @@ export function MerchantOrderCard({ order, onStatusUpdate }) {
           
           {order.status === 'confirmed' && (
             <>
-              <Button onClick={handleStartPreparing} className="flex-1">
+              <Button variant="default"  onClick={handleStartPreparing} className="">
                 Bắt đầu chuẩn bị
               </Button>
               <Button variant="destructive" onClick={handleCancelOrder}>
@@ -165,7 +165,7 @@ export function MerchantOrderCard({ order, onStatusUpdate }) {
           )}
           
           {order.status === 'preparing' && (
-            <Button onClick={handleMarkReady} className="flex-1">
+            <Button onClick={handleMarkReady} className="">
               Sẵn sàng giao hàng
             </Button>
           )}
