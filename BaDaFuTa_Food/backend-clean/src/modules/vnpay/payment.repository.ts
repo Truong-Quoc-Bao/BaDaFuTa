@@ -10,6 +10,7 @@ export const prisma = new PrismaClient();
 
 export const paymentRepository = {
   /** 🔹 Tạo order (và các order_item nếu có) */
+  /** 🔹 Tạo order (và các order_item + option nếu có) */
   async createOrder(
     tx: Prisma.TransactionClient,
     data: {
@@ -22,44 +23,67 @@ export const paymentRepository = {
       total_amount: bigint;
       status?: order_status;
       status_payment?: PaymentStatus;
-      payment_method: "VNPAY";
+      payment_method: "VNPAY" | "MOMO" | "COD";
       full_name: string;
       items?: {
         menu_item_id: string;
         quantity: number;
         price: number;
         note?: string | null;
+        selected_option_items?: string[]; // ✅ thêm vào đây
       }[];
     }
   ) {
     const { items, ...orderData } = data;
 
-    // ✅ Bổ sung fallback enum an toàn
     const normalizedOrder = {
       ...orderData,
       status: orderData.status ?? order_status.PENDING,
       status_payment: orderData.status_payment ?? PaymentStatus.PENDING,
     };
 
-    // 1️⃣ Tạo order chính (dùng normalized)
+    // 1️⃣ Tạo order chính
     const order = await tx.order.create({ data: normalizedOrder });
 
-    // 2️⃣ Nếu có items thì tạo luôn order_item
+    // 2️⃣ Nếu có items thì tạo luôn order_item và order_item_option
     if (items?.length) {
-      await tx.order_item.createMany({
-        data: items.map((i) => ({
-          order_id: order.id,
-          menu_item_id: i.menu_item_id,
-          quantity: i.quantity,
-          price: i.price,
-          note: i.note ?? null,
-        })),
-      });
+      for (const item of items) {
+        // 🧾 Tạo order_item
+        const orderItem = await tx.order_item.create({
+          data: {
+            order_id: order.id,
+            menu_item_id: item.menu_item_id,
+            quantity: item.quantity,
+            price: item.price,
+            note: item.note ?? null,
+          },
+        });
+
+        // 🧩 Nếu có selected_option_items → tạo thêm bảng liên kết
+        if (item.selected_option_items?.length) {
+          // ✅ Kiểm tra option tồn tại (bảo vệ)
+          const validOptions = await tx.option_item.findMany({
+            where: { id: { in: item.selected_option_items } },
+            select: { id: true },
+          });
+
+          if (validOptions.length !== item.selected_option_items.length) {
+            throw new Error("Một số option không tồn tại hoặc không hợp lệ");
+          }
+
+          // ✅ Lưu vào order_item_option
+          await tx.order_item_option.createMany({
+            data: validOptions.map((opt) => ({
+              order_item_id: orderItem.id,
+              option_item_id: opt.id,
+            })),
+          });
+        }
+      }
     }
 
     return order;
   },
-
   /** 🔹 Lưu transaction */
   async createTransaction(
     tx: Prisma.TransactionClient,
@@ -141,7 +165,7 @@ export const paymentRepository = {
           where: { id: txn.order_id },
           data: {
             status_payment: PaymentStatus.SUCCESS,
-            status: order_status.COMPLETED,
+            status: order_status.PENDING,
           },
         });
       }

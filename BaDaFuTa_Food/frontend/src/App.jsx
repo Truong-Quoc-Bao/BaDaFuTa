@@ -160,6 +160,7 @@ import { MyOrdersPage } from "./pages/user/MyOrdersPage";
 import { TrackOrderPage } from "./pages/user/TrackOrderPage"
 import OrderSuccessPage from "./pages/user/OrderSuccessPage";
 import OrderPendingPage from "./pages/user/OrderPendingPage"
+import {ChatDriverPage} from "./pages/user/ChatDriverPage"
 import { LocationProvider } from "./contexts/LocationContext";
 import { Toaster } from "react-hot-toast";
 import "./index.css";
@@ -225,7 +226,8 @@ function AppRoutes() {
       />
 
       <Route path="/my-orders" element={<MyOrdersPage />} />
-      <Route path="/track-order" element={<TrackOrderPage />} />
+      <Route path="/track-order/:id" element={<TrackOrderPage />} />
+      <Route path="/chat-driver/:id" element={<ChatDriverPage />} />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );

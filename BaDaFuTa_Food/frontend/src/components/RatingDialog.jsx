@@ -68,7 +68,7 @@ export const RatingDialog = ({ open, onOpenChange, order, onSubmitRating }) => {
               <p className="font-medium">{order.restaurantName}</p>
               <p className="text-sm text-gray-500">Mã đơn: {order.id}</p>
               <p className="text-sm text-gray-500">
-                Tổng tiền: {order.total.toLocaleString("vi-VN")}đ
+                Tổng tiền: {(order?.total || 0).toLocaleString("vi-VN")}đ
               </p>
             </div>
           </div>

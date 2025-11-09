@@ -1,66 +1,87 @@
-import { CheckCircle } from "lucide-react";
-import { Button } from "../../components/ui/button";
-import { useNavigate } from "react-router-dom";
-import { useEffect, useState } from "react";
-import { useCart } from "../../contexts/CartContext"; // 👈 thêm dòng này
+import { CheckCircle } from 'lucide-react';
+import { Button } from '../../components/ui/button';
+import { useNavigate, useLocation } from 'react-router-dom';
+import { useEffect, useState } from 'react';
+import { useCart } from '../../contexts/CartContext'; // 👈 thêm dòng này
 
 export default function OrderSuccessPage() {
   const navigate = useNavigate();
   const { state } = useCart(); // 👈 lấy giỏ hàng từ context
+  const location = useLocation();
   const [validated, setValidated] = useState(false); // ✅ trạng thái kiểm tra xong chưa
+  const { order } = location.state || {}; // nhận toàn bộ order object
+
+  // Lấy orderId từ query param
+  const params = new URLSearchParams(location.search);
+  const { orderId } = location.state || {};
+
+  console.log('Order ID:', orderId); // ✅ kiểm tra xem có lấy được không
 
   // 🔒 Chặn người dùng vào thẳng link khi chưa đặt hàng
   useEffect(() => {
-    const orderConfirmed = localStorage.getItem("orderConfirmed");
+    const orderConfirmed = localStorage.getItem('orderConfirmed');
     if (!orderConfirmed) {
-      navigate("/cart", { replace: true });
+      navigate('/cart', { replace: true });
       return;
     }
 
     setValidated(true);
 
-    const timer = setTimeout(() => {
-      localStorage.removeItem("orderConfirmed");
-    }, 10000);
+    const clearTimer = setTimeout(() => {
+      localStorage.removeItem('orderConfirmed');
+    }, 5000);
 
-    return () => clearTimeout(timer);
-  }, [navigate]);
+    // ✅ Tự động chuyển sang /my-orders sau 5s
+    const redirectTimer = setTimeout(() => {
+      // navigate('/my-orders');
+      // Redirect sang trang TrackOrderPage kèm state orderId
+      navigate(`/track-order/${order.order_id}`, { state: { order } });
+    }, 5000);
 
+    return () => {
+      clearTimeout(clearTimer);
+      clearTimeout(redirectTimer);
+    };
+  }, [navigate, orderId]);
 
   // ⚠️ Nếu chưa xác thực, tạm không render gì (tránh nháy trắng)
   if (!validated) return null;
 
-  const handleReturn = () => navigate("/");
+  const handleReturn = () => navigate('/');
 
   const handleCancelOrder = () => {
-    const confirmCancel = window.confirm(
-      "❗ Bạn có chắc muốn huỷ đơn hàng này không?"
-    );
+    const confirmCancel = window.confirm('❗ Bạn có chắc muốn huỷ đơn hàng này không?');
     if (confirmCancel) {
-      alert("🚫 Đơn hàng đã được huỷ thành công!");
-      navigate("/"); // Quay về trang chủ sau khi huỷ
+      alert('🚫 Đơn hàng đã được huỷ thành công!');
+      navigate('/'); // Quay về trang chủ sau khi huỷ
     }
   };
+  console.log('Order object:', order);
+  console.log('Order ID:', order?.order_id);
 
   return (
     <div className="flex flex-col items-center justify-center h-[500px]  text-center">
       <CheckCircle className="w-24 h-24 text-green-500 mb-4 animate-bounce" />
-      <h1 className="text-2xl font-bold text-gray-800 mb-2">
-        Đặt hàng thành công!
-      </h1>
+      <h1 className="text-2xl font-bold text-gray-800 mb-2">Đặt hàng thành công!</h1>
       <p className="text-gray-500 mb-6">
         Cảm ơn bạn đã đặt hàng. Chúng tôi sẽ giao hàng sớm nhất có thể!
       </p>
+      <p>
+        Mã đơn hàng của bạn: <strong>{orderId}</strong>
+      </p>
 
       <div className="flex space-x-10 flex-col gap-3">
-        <span >
+        <span>
           <Button
             variant="default"
             className="w-max bg-orange-600 hover:bg-orange-700 text-white"
             onClick={handleReturn}
           >
             Quay lại trang chủ
-          </Button>{"        "}{"      "}{"     "}
+          </Button>
+          {'        '}
+          {'      '}
+          {'     '}
           <Button
             variant="destructive"
             className="w-max bg-red-600 hover:bg-red-700 text-white"

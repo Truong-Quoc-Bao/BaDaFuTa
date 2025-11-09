@@ -1,6 +1,15 @@
 import { Request, Response } from "express";
-import { CreateCODOrderSchema, GetOrderSchema } from "./order.validation";
-import { orderService, getOrderService } from "./order.service";
+import {
+  CreateCODOrderSchema,
+  GetOrderSchema,
+  UpdateOrderSchema,
+} from "./order.validation";
+import {
+  orderService,
+  getOrderService,
+  updateOrderService,
+  updateOrderStatus,
+} from "./order.service";
 
 export const createCODOrder = async (req: Request, res: Response) => {
   try {
@@ -19,6 +28,7 @@ export const createCODOrder = async (req: Request, res: Response) => {
       status_payment: order.status_payment,
       total_amount: order.total_amount,
       status: order.status,
+      created_at: order.created_at,
     });
   } catch (err: any) {
     console.error("Create COD Order Error:", err);
@@ -55,5 +65,39 @@ export async function getOrder(req: Request, res: Response) {
   } catch (err: any) {
     console.error("❌ GetOrder Error:", err);
     return res.status(400).json({ error: err.errors ?? err.message });
+  }
+}
+export const updateOrderBody = async (req: Request, res: Response) => {
+  try {
+    const { orderId } = req.params; // đổi từ id -> orderId cho khớp route
+    const data = UpdateOrderSchema.parse(req.body);
+
+    const result = await updateOrderService.updateOrderStatus(
+      orderId,
+      data,
+      req.app.get("io")
+    );
+
+    return res.json(result);
+  } catch (err: any) {
+    console.error("❌ updateOrder error:", err);
+    if (err.errors) {
+      return res.status(400).json({
+        success: false,
+        message: "Dữ liệu không hợp lệ!",
+        errors: err.errors,
+      });
+    }
+    return res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+export async function updateOrder(req: Request, res: Response) {
+  try {
+    const { orderId } = req.params;
+    const result = await updateOrderStatus(orderId);
+    res.json({ success: true, data: result });
+  } catch (err: any) {
+    res.status(400).json({ success: false, error: err.message });
   }
 }

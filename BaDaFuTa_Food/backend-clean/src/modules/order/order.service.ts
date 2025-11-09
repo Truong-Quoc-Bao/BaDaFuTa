@@ -1,6 +1,11 @@
 import { prisma } from "@/libs/prisma";
-import { postOrder, orderRepository } from "./order.repository";
-import { CreateCODOrderInput, GetOrderInput } from "./order.type";
+import {
+  CreateOrder,
+  getOrder,
+  updateOrder,
+  updateOrderBody,
+} from "./order.repository";
+import { CreateCODOrderInput, GetOrderInput, UpdateOrder } from "./order.type";
 
 export const orderService = {
   async createCODOrder(data: CreateCODOrderInput) {
@@ -49,7 +54,7 @@ export const orderService = {
       );
 
       //Tạo Order
-      const order = await postOrder.createOrder(tx, {
+      const order = await CreateOrder.createOrder(tx, {
         user_id: data.user_id,
         merchant_id: data.merchant_id,
         full_name: user.full_name ?? "Khách hàng COD",
@@ -58,17 +63,43 @@ export const orderService = {
         delivery_fee: BigInt(data.delivery_fee),
         note: data.note ?? null,
         total_amount: total,
-        status: "PENDING",
+        // status: "PENDING",
+        status:"DELIVERING",
         status_payment: "PENDING",
       });
 
       //Tạo order items
-      await postOrder.createOrderItems(tx, order.id, data.items);
+      await CreateOrder.createOrderItems(tx, order.id, data.items);
 
       return order;
     });
   },
 };
 export const getOrderService = async (args: GetOrderInput) => {
-  return orderRepository.findMany(args);
+  return getOrder.findMany(args);
 };
+
+export const updateOrderService = {
+  async updateOrderStatus(orderId: string, data: UpdateOrder, io?: any) {
+    const updated = await updateOrderBody.updateStatus(orderId, data);
+
+    if (io) {
+      io.emit("order:statusUpdated", {
+        orderId,
+        ...data,
+        userId: updated.user_id,
+        merchantId: updated.merchant_id,
+      });
+    }
+
+    return {
+      success: true,
+      message: "Cập nhật trạng thái đơn hàng thành công!",
+      data: updated,
+    };
+  },
+};
+
+export async function updateOrderStatus(orderId: string) {
+  return updateOrder.updateStatus(orderId);
+}

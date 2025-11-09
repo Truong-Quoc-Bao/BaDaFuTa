@@ -1,4 +1,3 @@
-// src/modules/menu-item/menu-item.response.ts
 import { prisma } from "@/libs/prisma";
 
 export type MenuItemFindArgs = {
@@ -25,7 +24,7 @@ export const getMenu = async ({
     orderBy: { category_name: "asc" },
   });
 
-  // 3) Lấy menu items theo merchant (lọc theo name_item nếu có)
+  // 3) Lấy menu items (kèm options)
   const items = await prisma.menu_item.findMany({
     where: {
       merchant_id,
@@ -35,10 +34,26 @@ export const getMenu = async ({
         : {}),
     },
     orderBy: { name_item: "asc" },
-    ...(take ? { take } : {}), // nếu undefined thì không giới hạn
+    ...(take ? { take } : {}),
+
+    include: {
+      // 🔹 include option groups và từng option_item
+      menu_item_option: {
+        include: {
+          option: {
+            include: {
+              option_item: {
+                where: { status: true },
+                orderBy: { option_item_name: "asc" },
+              },
+            },
+          },
+        },
+      },
+    },
   });
 
-  // 4) Gom items theo category giống JSON cũ
+  // 4) Gom items theo category và format lại
   const itemsByCategory = new Map<string, typeof items>();
   for (const it of items) {
     const key = String(it.category_id);
@@ -48,14 +63,13 @@ export const getMenu = async ({
 
   const menu = categories.map((c) => {
     const list = itemsByCategory.get(String(c.id)) ?? [];
+
     return {
-      // alias song song để FE nào cũng đọc được
       id: c.id,
       category_id: c.id,
       name: c.category_name,
       category_name: c.category_name,
 
-      // items theo đúng key backend cũ
       items: list.map((mi) => ({
         item_id: mi.id,
         name_item: mi.name_item,
@@ -64,10 +78,23 @@ export const getMenu = async ({
         image_item: mi.image_item ?? null,
         likes: mi.likes ?? 0,
         sold_count: mi.sold_count ?? 0,
+
+        // 🔹 Thêm field options
+        options: mi.menu_item_option.map((mio) => ({
+          option_id: mio.option.id,
+          option_name: mio.option.option_name,
+          multi_select: mio.option.multi_select,
+          require_select: mio.option.require_select,
+          number_select: mio.option.number_select,
+          items: mio.option.option_item.map((oi) => ({
+            option_item_id: oi.id,
+            option_item_name: oi.option_item_name,
+          })),
+        })),
       })),
     };
   });
 
-  // 5) Trả đúng **shape cũ**: { merchant, menu }
+  // 5) Trả đúng shape cũ + options
   return { merchant, menu };
 };

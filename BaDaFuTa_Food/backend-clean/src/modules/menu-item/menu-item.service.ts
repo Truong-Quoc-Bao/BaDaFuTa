@@ -1,6 +1,6 @@
 // src/modules/menu-item/menu-item.service.ts
-import * as MenuResponse from "./menu-item.response";
-import type { MenuItemFindArgs } from "./menu-item.response";
+import * as MenuResponse from "./menu-item.repository";
+import type { MenuItemFindArgs } from "./menu-item.repository";
 
 // Service: giữ nguyên interface, chỉ pass-through & có default nhẹ
 export const getMenuItem = async ({

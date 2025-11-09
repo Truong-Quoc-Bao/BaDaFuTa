@@ -1,5 +1,9 @@
 import { z } from "zod";
-import { CreateCODOrderSchema, GetOrderSchema } from "./order.validation";
+import {
+  CreateCODOrderSchema,
+  GetOrderSchema,
+  UpdateOrderSchema,
+} from "./order.validation";
 
 /**
  * Kiểu dữ liệu đầu vào cho API tạo đơn hàng COD
@@ -16,6 +20,7 @@ export type OrderItemInput = {
   quantity: number;
   price: number;
   note?: string | null;
+  selected_option_items?: string[];
 };
 
 /**
@@ -76,3 +81,5 @@ export interface OrderCreateData {
 }
 
 export type GetOrderInput = z.infer<typeof GetOrderSchema>;
+
+export type UpdateOrder = z.infer<typeof UpdateOrderSchema>;

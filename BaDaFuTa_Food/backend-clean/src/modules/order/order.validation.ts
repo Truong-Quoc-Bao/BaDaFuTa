@@ -16,6 +16,10 @@ export const CreateCODOrderSchema = z.object({
         quantity: z.coerce.number().int().positive({ message: "Số lượng > 0" }),
         price: z.coerce.number().nonnegative(),
         note: z.string().nullable().optional(),
+        selected_option_items: z
+          .array(z.string().uuid())
+          .optional()
+          .default([]),
       })
     )
     .min(1, "Phải có ít nhất 1 món trong đơn hàng"),
@@ -41,3 +45,28 @@ export const GetOrderSchema = z.object({
     .optional(),
   payment_method: z.enum(["COD", "VNPAY", "MOMO", "STRIPE"]).optional(),
 });
+
+export const UpdateOrderSchema = z
+  .object({
+    status: z
+      .enum([
+        "PENDING",
+        "CONFIRMED",
+        "PREPARING",
+        "DELIVERING",
+        "COMPLETED",
+        "CANCELED",
+      ])
+      .optional(),
+    status_payment: z
+      .enum(["PENDING", "SUCCESS", "FAILED", "CANCELED", "REFUNDED"])
+      .optional(),
+  })
+  .refine(
+    (data) => data.status !== undefined || data.status_payment !== undefined,
+    {
+      message:
+        "Yêu cầu phải có ít nhất 1 trong 2 trường: status hoặc status_payment",
+      path: ["status"],
+    }
+  );
