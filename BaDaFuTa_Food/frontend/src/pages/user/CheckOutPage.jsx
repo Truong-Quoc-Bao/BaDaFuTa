@@ -324,44 +324,47 @@ export default function CheckOutPage() {
   // ======================
   useEffect(() => {
     const params = new URLSearchParams(location.search);
+    const dataEncoded = params.get('data');
     const status = params.get('status');
-    const code = params.get('code');
-    const orderId = params.get('order_id'); // Lấy orderId VNPay trả về (nếu có)
-
+  
     if (!status) return;
-
-    // Hiển thị loading để UX mượt mà hơn
-    setLoading(true);
-
-    // Thêm độ trễ nhỏ để đảm bảo router đã sẵn sàng sau khi VNPay redirect
-    const timer = setTimeout(() => {
-      switch (status) {
-        case 'success':
-          localStorage.setItem('orderConfirmed', 'true');
-          clearCart();
-          // alert("✅ Thanh toán thành công!");
-          navigate('/cart/checkout/ordersuccess', { state: { order: data } });
-          // navigate("/cart/checkout/ordersuccess");
-          break;
-
-        case 'canceled':
-          navigate('/cart/pending'); // ✅ chuyển đúng với BE redirect mới
-          break;
-
-        default:
-          clearCart();
-          alert('❌ Thanh toán thất bại, vui lòng thử lại!');
-          navigate('/cart/checkout/orderfailed');
-          break;
+  
+    const processVNPay = async () => {
+      setLoading(true);
+      try {
+        switch (status) {
+          case 'success':
+            if (!dataEncoded) throw new Error('Không có dữ liệu đơn hàng');
+  
+            const decoded = JSON.parse(atob(dataEncoded));
+            console.log('VNPay decoded payload:', decoded);
+  
+            localStorage.setItem('orderConfirmed', 'true');
+            clearCart();
+            navigate('/cart/checkout/ordersuccess', { state: { order: decoded } });
+            break;
+  
+          case 'canceled':
+            navigate('/cart/pending');
+            break;
+  
+          default:
+            clearCart();
+            alert('❌ Thanh toán thất bại, vui lòng thử lại!');
+            navigate('/cart/checkout/orderfailed');
+            break;
+        }
+      } catch (err) {
+        console.error(err);
+        alert('❌ Lỗi xử lý VNPay!');
+      } finally {
+        setLoading(false);
       }
-
-      setLoading(false);
-    }, 300);
-
-    // Cleanup timer khi component unmount
-    return () => clearTimeout(timer);
+    };
+  
+    processVNPay();
   }, [location.search, navigate]);
-
+  
   // 🧾 Hàm thay đổi input
   const handleInputChange = (e) => {
     const { name, value } = e.target;

@@ -161,10 +161,56 @@ export const paymentService = {
     };
   },
 
-  /** 🔹 Callback từ VNPAY */
+  // /** 🔹 Callback từ VNPAY */
+  // async handleVnpayCallback(params: Record<string, any>) {
+  //   const vnpHashSecret = process.env.VNP_HASH_SECRET!;
+
+  //   const input: Record<string, string> = {};
+  //   Object.keys(params).forEach((k) => {
+  //     if (k === "vnp_SecureHash" || k === "vnp_SecureHashType") return;
+  //     const val = params[k];
+  //     if (typeof val === "string") input[k] = val;
+  //     else if (Array.isArray(val)) input[k] = val.join(",");
+  //   });
+
+  //   const signData = Object.keys(input)
+  //     .sort()
+  //     .map((k) => `${k}=${vnpEncode(input[k])}`)
+  //     .join("&");
+
+  //   const calculatedHash = crypto
+  //     .createHmac("sha512", vnpHashSecret)
+  //     .update(signData, "utf-8")
+  //     .digest("hex");
+
+  //   const receivedHash = params["vnp_SecureHash"] as string;
+  //   const isValid = calculatedHash === receivedHash;
+
+  //   const responseCode = params["vnp_ResponseCode"];
+  //   const txnRef = params["vnp_TxnRef"];
+
+  //   if (isValid && responseCode === "00") {
+  //     await paymentRepository.updateAfterCallback(txnRef, {
+  //       status: "success",
+  //       response_code: responseCode,
+  //       transaction_no: params["vnp_TransactionNo"],
+  //     });
+  //     return { status: "success", code: responseCode };
+  //   } else {
+  //     await paymentRepository.updateAfterCallback(txnRef, {
+  //       status: "failed",
+  //       response_code: responseCode,
+  //     });
+  //     return { status: "failed", code: responseCode };
+  //   }
+  // },
+
+
+  /** 🔹 Callback từ VNPAY *//** 🔹 Callback từ VNPAY */
   async handleVnpayCallback(params: Record<string, any>) {
     const vnpHashSecret = process.env.VNP_HASH_SECRET!;
 
+    // 🔧 Gom input trừ 2 field hash
     const input: Record<string, string> = {};
     Object.keys(params).forEach((k) => {
       if (k === "vnp_SecureHash" || k === "vnp_SecureHashType") return;
@@ -173,11 +219,13 @@ export const paymentService = {
       else if (Array.isArray(val)) input[k] = val.join(",");
     });
 
+    // 🔒 Tạo chuỗi ký hash
     const signData = Object.keys(input)
       .sort()
       .map((k) => `${k}=${vnpEncode(input[k])}`)
       .join("&");
 
+    // 🧩 So sánh chữ ký
     const calculatedHash = crypto
       .createHmac("sha512", vnpHashSecret)
       .update(signData, "utf-8")
@@ -189,19 +237,54 @@ export const paymentService = {
     const responseCode = params["vnp_ResponseCode"];
     const txnRef = params["vnp_TxnRef"];
 
+    // 🪶 Log debug để xem txnRef thật sự là gì
+    console.log("🔍 Raw txnRef từ VNPay:", txnRef);
+
+    // ✅ Dùng regex tách đúng UUID thật ra khỏi txnRef
+    const uuidMatch = txnRef?.match(
+      /[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}/
+    );
+    const orderId = uuidMatch ? uuidMatch[0] : null;
+
+    // ✅ Lấy created_at từ DB nếu có orderId hợp lệ
+    let createdAt: Date | null = null;
+    if (orderId) {
+      try {
+        const order = await prisma.order.findUnique({
+          where: { id: orderId },
+          select: { created_at: true },
+        });
+        createdAt = order?.created_at ?? null;
+      } catch (err) {
+        console.warn("⚠️ Không tìm thấy order hoặc UUID không hợp lệ:", err);
+      }
+    }
+    // thành công
     if (isValid && responseCode === "00") {
       await paymentRepository.updateAfterCallback(txnRef, {
         status: "success",
         response_code: responseCode,
         transaction_no: params["vnp_TransactionNo"],
       });
-      return { status: "success", code: responseCode };
-    } else {
-      await paymentRepository.updateAfterCallback(txnRef, {
-        status: "failed",
-        response_code: responseCode,
-      });
-      return { status: "failed", code: responseCode };
+
+      return {
+        status: "success",
+        code: responseCode,
+        order_id: orderId,
+        created_at: createdAt,
+      };
     }
+    // thất bại
+    await paymentRepository.updateAfterCallback(txnRef, {
+      status: "failed",
+      response_code: responseCode,
+    });
+
+    return {
+      status: "failed",
+      code: responseCode,
+      order_id: orderId,
+      created_at: createdAt,
+    };
   },
-};
+}

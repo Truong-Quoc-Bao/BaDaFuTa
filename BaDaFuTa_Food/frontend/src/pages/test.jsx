@@ -674,46 +674,163 @@ useEffect(() => {
 //
 //
 //
-async callback(req: Request, res: Response) {
-  console.log("📥 VNPay callback query full:", req.query);
+useEffect(() => {
+  const params = new URLSearchParams(location.search);
+  const status = params.get('status');
+  const orderId = params.get('order_id');
 
-  try {
-    // Lấy kết quả thanh toán
-    const result = await paymentService.handleVnpayCallback(req.query);
-    console.log("📤 Parsed result:", result);
+  if (!status) return;
 
-    // Lấy orderId từ result (có thể là result.order_id hoặc result.orderId)
-    const orderId = result.order_id ?? result.orderId;
-    if (!orderId) {
-      throw new Error("Không tìm thấy orderId từ VNPay callback");
-    }
+  if (status === 'success' && orderId) {
+    // gọi API fetch order
+    fetch(`http://localhost:3000/api/order/${orderId}`)
+      .then((res) => res.json())
+      .then((order) => {
+        clearCart();
+        navigate('/cart/checkout/ordersuccess', { state: { order } });
+      })
+      .catch(() => {
+        alert('Không thể lấy thông tin đơn hàng!');
+        navigate('/cart/checkout/orderfailed');
+      });
+  } else if (status === 'canceled') {
+    navigate('/cart/pending');
+  } else {
+    clearCart();
+    navigate('/cart/checkout/orderfailed');
+  }
+}, [location.search, navigate]);
 
-    // Tạo URL redirect sang FE, kèm orderId
-    let redirectUrl = "";
 
-    switch (result.status) {
-      case "success":
-        redirectUrl = `http://localhost:5173/cart/checkout?status=success&code=${result.code}&orderId=${orderId}`;
+useEffect(() => {
+  const params = new URLSearchParams(location.search);
+  const status = params.get('status');
+  const data = params.get('data'); // lấy base64 payload từ BE
+
+  if (!status) return;
+
+  setLoading(true);
+
+  const timer = setTimeout(() => {
+    switch (status) {
+      case 'success':
+        if (data) {
+          try {
+            const order = JSON.parse(atob(data)); // decode base64 → object
+            localStorage.setItem('orderConfirmed', 'true');
+            clearCart();
+
+            // ✅ navigate sang ordersuccess kèm state order
+            navigate('/cart/checkout/ordersuccess', { state: { order } });
+          } catch (err) {
+            console.error('❌ Failed to parse order payload:', err);
+            alert('Không thể đọc dữ liệu đơn hàng, vui lòng thử lại!');
+            navigate('/cart/checkout/orderfailed');
+          }
+        } else {
+          alert('Không có dữ liệu đơn hàng!');
+          navigate('/cart/checkout/orderfailed');
+        }
         break;
 
-      case "canceled":
-        redirectUrl = `http://localhost:5173/cart/pending?status=canceled&code=${result.code}`;
+      case 'canceled':
+        navigate('/cart/pending');
         break;
 
       default:
-        redirectUrl = `http://localhost:5173/cart/checkout?status=failed&code=${result.code}&orderId=${orderId}`;
+        clearCart();
+        alert('❌ Thanh toán thất bại, vui lòng thử lại!');
+        navigate('/cart/checkout/orderfailed');
         break;
     }
 
-    console.log("➡ Redirecting to:", redirectUrl);
-    return res.redirect(redirectUrl);
+    setLoading(false);
+  }, 300);
 
-  } catch (err: any) {
-    console.error("callback error:", err);
-    const errorRedirect = `http://localhost:5173/cart/checkout/orderfailed?status=error&message=${encodeURIComponent(
-      err.message
-    )}`;
-    console.log("➡ Redirecting to (error):", errorRedirect);
-    return res.redirect(errorRedirect);
+  return () => clearTimeout(timer);
+}, [location.search, navigate]);
+
+
+const params = new URLSearchParams(location.search);
+const data = params.get('data');
+const order = data ? JSON.parse(atob(data)) : null; // ✅ dùng order từ VNPay
+
+//
+useEffect(() => {
+  if (!order) return;
+
+  // Khởi tạo currentStep & stepStartTime nếu chưa có
+  const savedStep = localStorage.getItem(`order_${order.id}_step`);
+  setCurrentStep(savedStep ? Number(savedStep) : order.currentStep || 1);
+
+  const savedTime = localStorage.getItem(`order_${order.id}_step_start`);
+  setStepStartTime(savedTime ? Number(savedTime) : Date.now());
+}, [order]);
+
+//
+//
+// 1️⃣ Fetch order nếu chưa có
+useEffect(() => {
+  if (!order && id) {
+    fetch(`/apiLocal/order/getOrder/${id}`)
+      .then((res) => res.json())
+      .then((data) => {
+        setOrder(data);
+
+        // Nếu đơn đã COMPLETED, chuyển luôn sang MyOrders
+        if (data.status === 'COMPLETED') {
+          navigate('/my-orders', { state: { activeTab: 'COMPLETED', updatedOrder: data } });
+          return; // quan trọng: không set step nếu COMPLETED
+        }
+
+        // Khởi tạo step từ localStorage hoặc order
+        const savedStep = localStorage.getItem(`order_${data.id}_step`);
+        setCurrentStep(savedStep ? Number(savedStep) : data.currentStep || 1);
+
+        const savedTime = localStorage.getItem(`order_${data.id}_step_start`);
+        setStepStartTime(savedTime ? Number(savedTime) : Date.now());
+
+        setIsAutoTracking(true); // bật timeline
+      })
+      .catch((err) => console.error(err));
   }
-},
+}, [id, order, navigate]);
+
+// 2️⃣ Auto increment timeline
+useEffect(() => {
+  if (!order || !order.id || !isAutoTracking) return;
+
+  const stepDuration = 20000;
+  const elapsed = Date.now() - stepStartTime;
+  const remaining = Math.max(stepDuration - elapsed, 0);
+
+  if (currentStep < timelineSteps.length) {
+    const timer = setTimeout(() => {
+      setCurrentStep((prev) => prev + 1);
+      setStepStartTime(Date.now());
+    }, remaining);
+    return () => clearTimeout(timer);
+  } else {
+    // timeline xong → update order + xoá localStorage
+    fetch(`/apiLocal/order/${order.id}/updateBody`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        status: 'COMPLETED',
+        status_payment: 'SUCCESS',
+        delivered_at: new Date().toISOString(),
+      }),
+    })
+      .then((res) => {
+        if (!res.ok) throw new Error('Update thất bại');
+        return res.json();
+      })
+      .then((data) => {
+        setIsAutoTracking(false);
+        localStorage.removeItem(`order_${order.id}_step`);
+        localStorage.removeItem(`order_${order.id}_step_start`);
+        navigate('/my-orders', { state: { activeTab: 'COMPLETED', updatedOrder: data } });
+      })
+      .catch((err) => console.error('❌ Lỗi updateBody:', err));
+  }
+}, [currentStep, stepStartTime, order, isAutoTracking, navigate]);

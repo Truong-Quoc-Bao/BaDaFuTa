@@ -1,6 +1,6 @@
-import { Request, Response } from 'express';
-import { paymentService } from './payment.service';
-import { CreateCODOrderSchema } from '../order/order.validation';
+import { Request, Response } from "express";
+import { paymentService } from "./payment.service";
+import { CreateCODOrderSchema } from "../order/order.validation";
 
 export const paymentController = {
   /** 🔹 Khởi tạo thanh toán VNPAY (tạo order + transaction + link) */
@@ -8,10 +8,10 @@ export const paymentController = {
     try {
       const parsed = CreateCODOrderSchema.parse(req.body);
 
-      if (parsed.payment_method !== 'VNPAY') {
+      if (parsed.payment_method !== "VNPAY") {
         return res.status(400).json({
           success: false,
-          message: 'Phương thức thanh toán không hợp lệ (phải là VNPAY)',
+          message: "Phương thức thanh toán không hợp lệ (phải là VNPAY)",
         });
       }
 
@@ -19,15 +19,15 @@ export const paymentController = {
 
       return res.json({
         success: true,
-        message: 'Khởi tạo thanh toán VNPAY thành công',
+        message: "Khởi tạo thanh toán VNPAY thành công",
         payment_url: payment.payment_url,
         order_id: payment.order_id,
       });
     } catch (err: any) {
-      console.error('initiatePayment error:', err);
+      console.error("initiatePayment error:", err);
       return res.status(400).json({
         success: false,
-        message: err.message || 'Không thể khởi tạo thanh toán',
+        message: err.message || "Không thể khởi tạo thanh toán",
       });
     }
   },
@@ -57,44 +57,53 @@ export const paymentController = {
   //   }
   // },
 
-  /** 🔹 Xử lý callback từ VNPAY (debug & fix huỷ) */
   async callback(req: Request, res: Response) {
-    console.log('📥 VNPay callback query full:', req.query);
+    console.log("📥 VNPay callback query full:", req.query);
 
     try {
+      // Gọi service xử lý hash + DB
       const result = await paymentService.handleVnpayCallback(req.query);
-      console.log('📤 Parsed result:', result);
+      console.log("📤 Parsed result từ service:", result);
 
-      // Lấy orderId từ result (có thể là result.order_id hoặc result.orderId)
-      const orderId = result.order_id ?? result.orderId;
-      if (!orderId) {
-        throw new Error('Không tìm thấy orderId từ VNPay callback');
-      }
       // Debug: log URL redirect
-      let redirectUrl = '';
+      let redirectUrl = "";
 
       switch (result.status) {
-        case 'success':
-          redirectUrl = `http://localhost:5173/cart/checkout?status=success&code=${result.code}&orderId=${orderId}`;
+        case "success":
+          // ✅ Tạo payload có đủ thông tin
+          const payload = Buffer.from(
+            JSON.stringify({
+              status: result.status,
+              code: result.code,
+              order_id: result.order_id,
+              created_at: result.created_at,
+            })
+          ).toString("base64");
+
+          // ✅ Redirect về FE trang success (giữ đúng format mẹ yêu cầu)
+          redirectUrl = `http://localhost:5173/cart/checkout/ordersuccess?status=success&data=${payload}`;
           break;
 
-        case 'canceled':
+        case "canceled":
           redirectUrl = `http://localhost:5173/cart/pending?status=canceled&code=${result.code}`;
           break;
 
         default:
-          redirectUrl = `http://localhost:5173/cart/checkout?status=failed&code=${result.code}`;
+          redirectUrl = `http://localhost:5173/cart/checkout/orderfailed?status=failed&code=${result.code}`;
           break;
       }
 
-      console.log('➡ Redirecting to:', redirectUrl);
+      console.log("➡ Redirecting to:", redirectUrl);
       return res.redirect(redirectUrl);
     } catch (err: any) {
-      console.error('callback error:', err);
+      console.error("❌ callback error:", err);
+
+      // Nếu có lỗi → redirect về trang thất bại
       const errorRedirect = `http://localhost:5173/cart/checkout/orderfailed?status=error&message=${encodeURIComponent(
-        err.message,
+        err.message
       )}`;
-      console.log('➡ Redirecting to (error):', errorRedirect);
+
+      console.log("➡ Redirecting to (error):", errorRedirect);
       return res.redirect(errorRedirect);
     }
   },
