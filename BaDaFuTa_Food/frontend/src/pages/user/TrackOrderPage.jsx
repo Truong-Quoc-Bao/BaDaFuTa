@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect,useRef, useMemo } from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
 import { Button } from '../../components/ui/button';
@@ -39,27 +39,55 @@ export const TrackOrderPage = () => {
   const location = useLocation();
   const navigate = useNavigate(); // ✅ thêm dòng này
   const { id } = useParams();
-  const { orderId } = location.state || {}; // nhận orderId từ state
-  // ✅ Lấy order từ state
-  const orderFromState = location.state?.order;
+
+  // order có thể đến qua state (navigate) hoặc fetch bằng param id
+  const orderFromState = location.state?.order || null;
+  const cameFrom = location.state?.from || null; // e.g. 'OrderSuccess' (nếu được set)
+
   const [order, setOrder] = useState(orderFromState || null);
   const [isDelivered, setIsDelivered] = useState(false);
 
-  console.log('Received Order ID:', orderId); // kiểm tra
+  // console.log('Received Order ID:', orderId); // kiểm tra
 
-  // ✅ Lưu step & thời gian bắt đầu
+  // --- Helpers: orderKey (dùng để lưu localStorage) và apiId (dùng cho API) ---
+  const orderKey = useMemo(() => {
+    // prefer internal id, then order_id, then route param
+    return (
+      (order && (order.id || order._id || order.order_id)) ||
+      (orderFromState && (orderFromState.id || orderFromState._id || orderFromState.order_id)) ||
+      id ||
+      null
+    );
+  }, [order, orderFromState, id]);
+
+  // --- restore step & start time from localStorage keyed by orderKey ---
   const [currentStep, setCurrentStep] = useState(() => {
-    const savedStep = localStorage.getItem(`order_${id}_step`);
-    return savedStep ? Number(savedStep) : orderFromState?.currentStep || 1;
+    try {
+      const key = id ? `order_${id}_step` : null;
+      const saved = key ? localStorage.getItem(key) : null;
+      return saved ? Number(saved) : orderFromState?.currentStep || 1;
+    } catch (e) {
+      return orderFromState?.currentStep || 1;
+    }
   });
 
   const [stepStartTime, setStepStartTime] = useState(() => {
-    const savedTime = localStorage.getItem(`order_${id}_step_start`);
-    return savedTime ? Number(savedTime) : Date.now();
+    try {
+      const key = id ? `order_${id}_step_start` : null;
+      const saved = key ? localStorage.getItem(key) : null;
+      return saved ? Number(saved) : Date.now();
+    } catch (e) {
+      return Date.now();
+    }
   });
+
+  // cho phép auto tracking theo mặc định; chúng ta sẽ resume từ savedStep nếu có
   const [isAutoTracking, setIsAutoTracking] = useState(true);
 
-  // const [isAutoTracking, setIsAutoTracking] = useState(false);
+  // ref để đảm bảo updateBody chỉ gọi 1 lần
+  const hasUpdatedRef = useRef(false);
+  // ref để giữ timer id
+  const timerRef = useRef(null);
 
   // Tạm set currentStep = 2 để test thấy tài xế luôn
   // const order = {
@@ -73,83 +101,160 @@ export const TrackOrderPage = () => {
   // SĐT: '0399503025', // },
   // created_at: new Date(), // };
 
-  // Fetch order khi reload F5
+  // -------- Fetch order nếu cần (reload trường hợp mất state) --------
   useEffect(() => {
-    if (!orderFromState && id) {
-      fetch(`/apiLocal/order/getOrder/${id}`)
-        .then((res) => res.json())
-        .then((data) => {
-          console.log('✅ Fetched order:', data);
-          setOrder(data);
-        })
-        .catch((err) => console.error(err));
-    } else if (orderFromState) {
+    // If we already have orderFromState, set it (and attempt to restore saved step/time)
+    if (orderFromState) {
       setOrder(orderFromState);
+
+      // restore saved step/start if exists for that order
+      const keyBase =
+        orderFromState.id || orderFromState._id || orderFromState.order_id || id || null;
+      if (keyBase) {
+        const savedStep = localStorage.getItem(`order_${keyBase}_step`);
+        const savedStart = localStorage.getItem(`order_${keyBase}_step_start`);
+        if (savedStep) setCurrentStep(Number(savedStep));
+        if (savedStart) setStepStartTime(Number(savedStart));
+      }
+      return;
     }
-  }, [id, orderFromState]);
 
-  // Lưu step & stepStartTime
-  useEffect(() => {
-    if (!order) return;
-    localStorage.setItem(`order_${order.id}_step`, currentStep);
-    localStorage.setItem(`order_${order.id}_step_start`, stepStartTime);
-  }, [currentStep, stepStartTime, order?.id]);
-
-  // Auto increment step
-  useEffect(() => {
-    if (!order || !isAutoTracking) return;
-
-    const stepDuration = 20000; // 20s
-    const elapsed = Date.now() - stepStartTime;
-    const remaining = Math.max(stepDuration - elapsed, 0);
-
-    if (currentStep < timelineSteps.length) {
-      const timer = setTimeout(() => {
-        setCurrentStep((prev) => prev + 1);
-        setStepStartTime(Date.now());
-      }, remaining);
-      return () => clearTimeout(timer);
-    } else {
-      // ✅ Giao hàng xong → gọi API updateBody
-      fetch(`/apiLocal/order/${order.id}/updateBody`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          status: 'COMPLETED',
-          status_payment: 'SUCCESS',
-          delivered_at: new Date().toISOString(),
-        }),
-      })
+    // else try fetch by route param id (most cases)
+    if (id) {
+      fetch(`/apiLocal/order/getOrder/${id}`)
         .then((res) => {
-          if (!res.ok) throw new Error('Lỗi khi update');
+          if (!res.ok) throw new Error('Fetch order failed');
           return res.json();
         })
         .then((data) => {
-          console.log('✅ Update xong, chuyển sang Order Success');
+          setOrder(data);
+
+          // restore saved step/start for fetched order
+          const keyBase = data.id || data._id || data.order_id || id;
+          const savedStep = localStorage.getItem(`order_${keyBase}_step`);
+          const savedStart = localStorage.getItem(`order_${keyBase}_step_start`);
+          if (savedStep) setCurrentStep(Number(savedStep));
+          if (savedStart) setStepStartTime(Number(savedStart));
+        })
+        .catch((err) => {
+          console.error('❌ Fetch order error:', err);
+        });
+    }
+  }, [id, orderFromState]);
+
+  // -------- Persist currentStep and stepStartTime keyed by the actual orderKey --------
+  useEffect(() => {
+    if (!orderKey) return;
+    try {
+      localStorage.setItem(`order_${orderKey}_step`, String(currentStep));
+      localStorage.setItem(`order_${orderKey}_step_start`, String(stepStartTime));
+    } catch (e) {
+      console.warn('localStorage set error', e);
+    }
+  }, [currentStep, stepStartTime, orderKey]);
+
+  // Clear timer on unmount
+  useEffect(() => {
+    return () => {
+      if (timerRef.current) {
+        clearTimeout(timerRef.current);
+        timerRef.current = null;
+      }
+    };
+  }, []);
+
+  // -------- Auto increment step logic (robust — resumes using saved start time) --------
+  useEffect(() => {
+    if (!order || !isAutoTracking) return;
+
+    // ensure we don't double-update when currentStep already past final
+    if (currentStep > timelineSteps.length) return;
+
+    // compute stepDuration and remaining
+    const stepDuration = 20000; // 20s per step
+    const now = Date.now();
+
+    // If saved start time is in future or not a number, reset to now
+    const start = Number(stepStartTime) || now;
+    // elapsed in current step
+    const elapsed = Math.max(0, now - start);
+    const remaining = Math.max(stepDuration - elapsed, 0);
+
+    // If we're already at final step, run completion flow
+    if (currentStep >= timelineSteps.length) {
+      // completion
+      (async () => {
+        if (hasUpdatedRef.current) return; // already handled
+        hasUpdatedRef.current = true;
+
+        try {
+          // choose api identifier (order.id || order.order_id || id)
+          const apiId = order.id || order._id || order.order_id || id;
+          if (!apiId) {
+            console.error('No order id available for update');
+            return;
+          }
+
+          const res = await fetch(`/apiLocal/order/${apiId}/updateBody`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              status: 'COMPLETED',
+              status_payment: 'SUCCESS',
+              delivered_at: new Date().toISOString(),
+            }),
+          });
+
+          if (!res.ok) throw new Error('Update failed');
+          const data = await res.json();
+
+          // cleanup + navigate
           setIsAutoTracking(false);
           setIsDelivered(true);
-          localStorage.removeItem(`order_${order.id}_step`);
-          localStorage.removeItem(`order_${order.id}_step_start`);
+          localStorage.removeItem(`order_${apiId}_step`);
+          localStorage.removeItem(`order_${apiId}_step_start`);
 
-          // 🔥 Chuyển về MyOrdersPage + active tab COMPLETED
           navigate('/my-orders', {
             state: { activeTab: 'COMPLETED', updatedOrder: data },
           });
-        })
-        .catch((err) => console.error('❌ Lỗi updateBody:', err));
+        } catch (err) {
+          console.error('❌ Error updating order on completion:', err);
+        }
+      })();
+
+      return;
     }
-  }, [currentStep, stepStartTime, order, isAutoTracking]);
+
+    // Otherwise schedule increment after remaining milliseconds
+    timerRef.current = setTimeout(() => {
+      setCurrentStep((prev) => Math.min(prev + 1, timelineSteps.length));
+      setStepStartTime(Date.now());
+    }, remaining);
+
+    return () => {
+      if (timerRef.current) {
+        clearTimeout(timerRef.current);
+        timerRef.current = null;
+      }
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [order, isAutoTracking, currentStep, stepStartTime, id]);
 
   if (!order) return <p className="text-center mt-10">Đang tải đơn hàng...</p>;
 
   const createdAt = new Date(order.created_at);
   const estimatedDelivery = new Date(createdAt.getTime() + 40 * 60 * 1000);
+
   console.log('👉 order.driver:', order.driver);
   console.log('👉 currentStep:', currentStep);
 
   const handleBack = () => {
     navigate('/my-orders');
   };
+
+  // For UI: compute stepProgress for active step using stepStartTime
+  const activeElapsed = Math.min(Math.max(0, Date.now() - stepStartTime), 20000);
+  const activeProgress = Math.min(activeElapsed / 20000, 1);
 
   console.log('Order object received:', order);
   console.log('Order ID:', order?.order_id);

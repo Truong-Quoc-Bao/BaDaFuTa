@@ -35,7 +35,8 @@ export default function OrderSuccessPage() {
     const redirectTimer = setTimeout(() => {
       // navigate('/my-orders');
       // Redirect sang trang TrackOrderPage kèm state orderId
-      navigate(`/track-order/${order.order_id}`, { state: { order } });
+      // navigate(`/track-order/${order.order_id}`, { state: { order } });
+      navigate(`/track-order/${order.order_id}`, { state: { order, from: 'OrderSuccess' } });
     }, 5000);
 
     return () => {
