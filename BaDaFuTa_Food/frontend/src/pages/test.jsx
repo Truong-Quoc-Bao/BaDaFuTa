@@ -749,3 +749,273 @@ export const TrackOrderPage = () => {
 };
 
 export default TrackOrderPage;
+
+
+// ✅ Tự động chuyển sang trang theo dõi đơn sau 5 giây
+setTimeout(() => {
+  navigate(`/track-order/${order.order_id}`, {
+    state: { order, from: "OrderSuccess" }, // 👈 thêm flag này
+  });
+}, 5000);
+
+
+const [isAutoTracking, setIsAutoTracking] = useState(() => {
+  const fromSuccess = location.state?.from === 'OrderSuccess';
+  return fromSuccess || !!orderFromState; // ✅ Cho phép auto nếu từ OrderSuccess
+});
+
+
+useEffect(() => {
+  if (!orderKey) return;
+
+  const savedStep = localStorage.getItem(`order_${orderKey}_step`);
+  const savedStart = localStorage.getItem(`order_${orderKey}_step_start`);
+
+  if (savedStep) setCurrentStep(Number(savedStep));
+  if (savedStart) setStepStartTime(Number(savedStart));
+}, [orderKey]);
+
+
+if (currentStep >= timelineSteps.length) {
+  localStorage.removeItem(`order_${orderKey}_step`);
+  localStorage.removeItem(`order_${orderKey}_step_start`);
+  // ...navigate hoặc update trạng thái
+}
+
+const stepDuration = 20000; // 20s mỗi step
+const now = Date.now();
+const elapsed = now - stepStartTime; // thời gian trôi trong step hiện tại
+const stepProgress = Math.min(elapsed / stepDuration, 1); // 0 -> 1
+
+
+//
+//
+//
+
+//
+import { motion } from 'framer-motion';
+import { Truck } from 'lucide-react';
+import { useState, useEffect, useRef, useMemo } from 'react';
+import { useLocation, useNavigate, useParams } from 'react-router-dom';
+import TruckAnimated from './TruckAnimated'; // component xe chạy
+
+const timelineSteps = [
+  { id: 1, label: 'Đã đặt đơn', icon: Truck },
+  { id: 2, label: 'Tài xế nhận đơn', icon: Truck },
+  { id: 3, label: 'Tới quán', icon: Truck },
+  { id: 4, label: 'Đã lấy đơn', icon: Truck },
+  { id: 5, label: 'Giao thành công', icon: Truck },
+];
+
+export const TrackOrderPage = () => {
+  const location = useLocation();
+  const navigate = useNavigate();
+  const { id } = useParams();
+
+  const orderFromState = location.state?.order || null;
+  const [order, setOrder] = useState(orderFromState || null);
+  const [currentStep, setCurrentStep] = useState(() => {
+    const saved = localStorage.getItem(`order_${id}_step`);
+    return saved ? Number(saved) : 1;
+  });
+  const [stepStartTime, setStepStartTime] = useState(() => {
+    const saved = localStorage.getItem(`order_${id}_step_start`);
+    return saved ? Number(saved) : Date.now();
+  });
+  const [isAutoTracking, setIsAutoTracking] = useState(true);
+  const timerRef = useRef(null);
+
+  const orderKey = useMemo(() => id, [id]);
+
+  // Persist step/time
+  useEffect(() => {
+    localStorage.setItem(`order_${orderKey}_step`, String(currentStep));
+    localStorage.setItem(`order_${orderKey}_step_start`, String(stepStartTime));
+  }, [currentStep, stepStartTime, orderKey]);
+
+  // Auto increment step
+  useEffect(() => {
+    if (!order || !isAutoTracking) return;
+    if (currentStep > timelineSteps.length) return;
+
+    const stepDuration = 20000; // 20s
+    const now = Date.now();
+    const elapsed = Math.max(0, now - stepStartTime);
+    const remaining = Math.max(stepDuration - elapsed, 0);
+
+    if (currentStep >= timelineSteps.length) {
+      // completed
+      localStorage.removeItem(`order_${orderKey}_step`);
+      localStorage.removeItem(`order_${orderKey}_step_start`);
+      setIsAutoTracking(false);
+      return;
+    }
+
+    timerRef.current = setTimeout(() => {
+      setCurrentStep((prev) => Math.min(prev + 1, timelineSteps.length));
+      setStepStartTime(Date.now());
+    }, remaining);
+
+    return () => {
+      if (timerRef.current) clearTimeout(timerRef.current);
+    };
+  }, [order, isAutoTracking, currentStep, stepStartTime, orderKey]);
+
+  if (!order) return <p className="text-center mt-10">Đang tải đơn hàng...</p>;
+
+  return (
+    <div className="flex flex-col md:flex-row md:justify-between items-center gap-6 relative">
+      {timelineSteps.map((step, index) => {
+        const StepIcon = step.icon;
+        const isCompleted = index + 1 < currentStep;
+        const isActive = index + 1 === currentStep;
+
+        const stepDuration = 20000;
+        const now = Date.now();
+        const elapsed = Math.max(0, now - stepStartTime);
+        const stepProgress = Math.min(elapsed / stepDuration, 1);
+
+        return (
+          <div key={step.id} className="flex md:flex-1 flex-col items-center text-center relative">
+            {/* Line between steps */}
+            {index < timelineSteps.length - 1 && (
+              <div className="hidden md:block absolute top-5 left-1/2 transform -translate-x-1/2 h-1 w-full z-0 bg-gray-300 overflow-visible">
+                {/* Thanh màu cam */}
+                <motion.div
+                  key={`progress-${currentStep}`}
+                  className="h-full bg-orange-500 origin-left"
+                  initial={{ scaleX: stepProgress }}
+                  animate={{ scaleX: 1 }}
+                  transition={{
+                    duration: (1 - stepProgress) * stepDuration / 1000,
+                    ease: 'linear',
+                  }}
+                />
+
+                {/* Xe chạy */}
+                {isActive && (
+                  <motion.div
+                    key={`truck-${currentStep}`}
+                    className="absolute top-[-20px] z-10"
+                    initial={{ left: `${stepProgress * 100}%` }}
+                    animate={{ left: '100%' }}
+                    transition={{
+                      duration: (1 - stepProgress) * stepDuration / 1000,
+                      ease: 'linear',
+                    }}
+                  >
+                    <TruckAnimated />
+                  </motion.div>
+                )}
+              </div>
+            )}
+
+            {/* Icon step */}
+            <div
+              className={`w-12 h-12 flex items-center justify-center rounded-full z-10 ${
+                isCompleted || isActive ? 'bg-orange-500 text-white' : 'bg-gray-300 text-gray-500'
+              }`}
+            >
+              <StepIcon size={24} />
+            </div>
+            <span className="mt-2 text-sm">{step.label}</span>
+          </div>
+        );
+      })}
+    </div>
+  );
+};
+
+
+
+
+
+{/* ✅ Driver Info chỉ hiện khi currentStep ≥ 2 */}
+{order.driver && currentStep >= 2 && (
+  <div className="mt-4 text-sm text-gray-700 flex flex-col md:flex-row md:items-center md:space-x-4 bg-gray-50 p-3 rounded-xl shadow-sm">
+    <div className="flex items-center space-x-2 mb-2 md:mb-0">
+      {/* Ảnh tài xế */}
+      <img
+        src={
+          order.driver.avatar ||
+          'https://scontent.fsgn2-10.fna.fbcdn.net/v/t39.30808-6/487326873_1887063878796318_9080709797256676382_n.jpg'
+        }
+        alt="Driver avatar"
+        className="w-10 h-10 md:w-8 md:h-8 rounded-full border border-gray-300"
+      />
+      <div className="flex flex-col">
+        <span className="font-medium">{order.driver.name || 'Tài xế'}</span>
+        <span className="text-gray-500 text-xs md:text-sm flex items-center gap-1">
+          <MotorBike className="w-3 h-3 text-orange-500" /> Biển số: {order.driver.BS || '-'}
+        </span>
+      </div>
+    </div>
+
+    {/* Rating */}
+    <div className="flex items-center gap-0.5 text-yellow-400">
+      {[...Array(5)].map((_, i) => (
+        <Star key={i} className="w-4 h-4" />
+      ))}
+    </div>
+
+    {/* SĐT */}
+    {order.driver.SĐT && (
+      <span className="flex items-center text-gray-500 text-sm md:ml-2 gap-1">
+        <Phone className="w-4 h-4 text-orange-500" /> {order.driver.SĐT}
+      </span>
+    )}
+
+    {/* Icon tin nhắn */}
+    {order.driver.id && (
+      <button
+        onClick={() => navigate(`/chat-driver/${order.driver.id}`)}
+        className="mt-2 md:mt-0 ml-auto flex items-center gap-1 text-orange-500 hover:text-orange-600 transition"
+      >
+        <MessageCircle className="w-5 h-5" />
+        <span className="text-sm md:text-base">Nhắn tin</span>
+      </button>
+    )}
+  </div>
+)}
+
+
+// Test driver info
+const testOrder = {
+  id: 'dummy-123',
+  status: 'DELIVERING',
+  merchant: { merchant_name: 'Nhà hàng Bảo Bến Cảng' },
+  driver: {
+    id: 'driver-001', // thêm id để nút nhắn tin hoạt động
+    name: 'Trương Quốc Bảo',
+    BS: '79-Z1 51770',
+    SĐT: '0399503025',
+    avatar: '', // có thể để avatar rỗng để dùng default
+  },
+  created_at: new Date(),
+};
+
+// Dùng testOrder để render driver info
+{testOrder.driver && currentStep >= 2 && (
+  <DriverInfo driver={testOrder.driver} />
+)}
+
+
+<div className="flex items-center justify-end gap-2 text-gray-500 text-sm">
+  {/* SĐT */}
+  {testOrder.driver?.SĐT && (
+    <span className="flex items-center gap-1">
+      <Phone className="w-4 h-4 text-orange-500" /> {testOrder.driver.SĐT}
+    </span>
+  )}
+
+  {/* Icon tin nhắn */}
+  {testOrder.driver.id && (
+    <button
+      onClick={() => navigate(`/chat-driver/${testOrder.driver?.id}`)}
+      className="flex items-center gap-1 text-orange-500 hover:text-orange-600 transition"
+    >
+      <MessageCircle className="w-4 h-4" />
+      <span>Nhắn tin</span>
+    </button>
+  )}
+</div>

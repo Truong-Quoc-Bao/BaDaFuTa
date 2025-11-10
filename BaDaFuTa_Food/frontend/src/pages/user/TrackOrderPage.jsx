@@ -1,4 +1,4 @@
-import React, { useState, useEffect,useRef, useMemo } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
 import { Button } from '../../components/ui/button';
@@ -84,22 +84,25 @@ export const TrackOrderPage = () => {
   // cho phép auto tracking theo mặc định; chúng ta sẽ resume từ savedStep nếu có
   const [isAutoTracking, setIsAutoTracking] = useState(true);
 
+  // const [isAutoTracking, setIsAutoTracking] = useState(() => {
+  //   const fromSuccess = location.state?.from === 'OrderSuccess';
+  //   return fromSuccess || !!orderFromState; // ✅ Cho phép auto nếu từ OrderSuccess
+  // });
+
   // ref để đảm bảo updateBody chỉ gọi 1 lần
   const hasUpdatedRef = useRef(false);
   // ref để giữ timer id
   const timerRef = useRef(null);
 
   // Tạm set currentStep = 2 để test thấy tài xế luôn
-  // const order = {
-  // id: 'dummy-123',
-  // status: 'DELIVERING',
-  // merchant: {
-  // merchant_name: 'Nhà hàng Bảo Bến Cảng', // },
-  // driver: {
-  // name: 'Trương Quốc Bảo',
-  // BS: '79-Z1 51770',
-  // SĐT: '0399503025', // },
-  // created_at: new Date(), // };
+  const testOrder = {
+    driver: {
+      name: 'Trương Quốc Bảo',
+      BS: '79-Z1 51770',
+      SĐT: '0399503025',
+    },
+    created_at: new Date(),
+  };
 
   // -------- Fetch order nếu cần (reload trường hợp mất state) --------
   useEffect(() => {
@@ -143,15 +146,27 @@ export const TrackOrderPage = () => {
   }, [id, orderFromState]);
 
   // -------- Persist currentStep and stepStartTime keyed by the actual orderKey --------
+  const stepDuration = 20000; // 20s mỗi step
+
   useEffect(() => {
     if (!orderKey) return;
-    try {
-      localStorage.setItem(`order_${orderKey}_step`, String(currentStep));
-      localStorage.setItem(`order_${orderKey}_step_start`, String(stepStartTime));
-    } catch (e) {
-      console.warn('localStorage set error', e);
-    }
-  }, [currentStep, stepStartTime, orderKey]);
+
+    const savedStep = Number(localStorage.getItem(`order_${orderKey}_step`)) || 1;
+    const savedStart = Number(localStorage.getItem(`order_${orderKey}_step_start`)) || Date.now();
+
+    const now = Date.now();
+    const stepsPassed = Math.floor((now - savedStart) / stepDuration);
+    const updatedStep = Math.min(savedStep + stepsPassed, timelineSteps.length);
+
+    setCurrentStep(updatedStep);
+
+    // reset stepStartTime cho step hiện tại
+    setStepStartTime(now - ((now - savedStart) % stepDuration));
+
+    // update localStorage
+    localStorage.setItem(`order_${orderKey}_step`, updatedStep);
+    localStorage.setItem(`order_${orderKey}_step_start`, now - ((now - savedStart) % stepDuration));
+  }, [orderKey]);
 
   // Clear timer on unmount
   useEffect(() => {
@@ -182,6 +197,8 @@ export const TrackOrderPage = () => {
 
     // If we're already at final step, run completion flow
     if (currentStep >= timelineSteps.length) {
+      localStorage.removeItem(`order_${orderKey}_step`);
+      localStorage.removeItem(`order_${orderKey}_step_start`);
       // completion
       (async () => {
         if (hasUpdatedRef.current) return; // already handled
@@ -291,11 +308,16 @@ export const TrackOrderPage = () => {
           const isActive = index + 1 === currentStep;
 
           // Tính progress cho step hiện tại
-          const stepProgress = isActive
-            ? Math.min((Date.now() - stepStartTime) / 20000, 1)
-            : isCompleted
-            ? 1
-            : 0;
+          // const stepProgress = isActive
+          //   ? Math.min((Date.now() - stepStartTime) / 20000, 1)
+          //   : isCompleted
+          //   ? 1
+          //   : 0;
+
+          const stepDuration = 20000;
+          const now = Date.now();
+          const elapsed = Math.max(0, now - stepStartTime);
+          const stepProgress = Math.min(elapsed / stepDuration, 1);
 
           return (
             <div
@@ -310,6 +332,7 @@ export const TrackOrderPage = () => {
                 >
                   {/* Thanh màu cam tải dần */}
                   <motion.div
+                    key={`progress-${currentStep}`}
                     className="h-full bg-orange-500 origin-left"
                     initial={{ scaleX: isCompleted ? 1 : stepProgress }}
                     animate={{ scaleX: isCompleted ? 1 : isActive ? 1 : 0 }}
@@ -391,23 +414,23 @@ export const TrackOrderPage = () => {
         })}
       </div>
       {/* ✅ Driver Info chỉ hiện khi currentStep ≥ 2 */}
-      {order.driver && currentStep >= 2 && (
+      {testOrder.driver && currentStep >= 2 && (
         <div className="mt-4 text-sm text-gray-700 flex items-center space-x-2 bg-gray-50 p-3 rounded-xl shadow-sm">
           <span className="font-medium">Tài xế:</span>
           {/* Ảnh tài xế */}
           <img
             src={
-              order.driver?.avatar ||
+              testOrder.driver?.avatar ||
               'https://scontent.fsgn2-10.fna.fbcdn.net/v/t39.30808-6/487326873_1887063878796318_9080709797256676382_n.jpg?_nc_cat=109&ccb=1-7&_nc_sid=94e2a3&_nc_ohc=treCi7K2T6YQ7kNvwFF10Nh&_nc_oc=AdlUuTytQt-R2TK52H5r46SC9Nau9ZJ6fyIbujyuF5NoIxATLgChqysYBgd7qvsKSrUhietYcqIt_5zpoKol9Mwv&_nc_zt=23&_nc_ht=scontent.fsgn2-10.fna&_nc_gid=exNZjuM-vVhrNERk1uvp-w&oh=00_AfhqOXRDKIUgDydZ8TKCkLNEEfkX0S1GZT9HnZrpt1q0rQ&oe=69137A79'
             }
             alt="Driver avatar"
             className="w-8 h-8 rounded-full border border-gray-300"
           />
           {/* Tên tài xế */}
-          <span>{order.driver?.name} | </span>
+          <span>{testOrder.driver?.name} | </span>
           {/* Biển số xe */}
           <Bike className="w-4 h-4 mr-1 text-orange-500" />{' '}
-          <span className="text-gray-500">Biển số: {order.driver?.BS} | </span>
+          <span className="text-gray-500">Biển số: {testOrder.driver?.BS} | </span>
           {/* Rating */}
           <span className="flex items-center text-yellow-500">
             <Star className="w-4 h-4" />
@@ -417,18 +440,18 @@ export const TrackOrderPage = () => {
             <Star className="w-4 h-4" />
           </span>
           {/* SĐT */}
-          {order.driver?.SĐT && (
+          {testOrder.driver?.SĐT && (
             <span className="flex items-center text-gray-500">
-              | <Phone className="w-4 h-4 mx-1 text-orange-500" /> {order.driver.SĐT}
+              | <Phone className="w-4 h-4 mx-1 text-orange-500" /> {testOrder.driver.SĐT}
             </span>
           )}
           {/* Icon tin nhắn */}
           {/* 💬 Icon tin nhắn */}
           <button
-            onClick={() => navigate(`/chat-driver/${order.driver?.id}`)}
-            className="ml-auto flex items-center gap-1 text-orange-500 hover:text-orange-600 transition"
+            onClick={() => navigate(`/chat-driver/${testOrder.driver?.id}`)}
+            className="ml-auto flex items-center gap-1 text-gray-500 hover:text-orange-600 transition"
           >
-            <MessageCircle className="w-5 h-5" />
+            <MessageCircle className="w-4 h-4 text-orange-500 " />
             <span>Nhắn tin</span>
           </button>
         </div>

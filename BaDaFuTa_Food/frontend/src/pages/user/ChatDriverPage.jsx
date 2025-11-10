@@ -9,47 +9,60 @@ export const ChatDriverPage = () => {
   const [input, setInput] = useState('');
   const messagesEndRef = useRef(null);
   const scrollContainerRef = useRef(null);
-  
 
   const getSmartReply = (message) => {
     const msg = message.toLowerCase();
-  
-    if (msg.includes("đâu") || msg.includes("ở đâu"))
-      return "Dạ, em đang gần tới rồi anh, chắc tầm 1-2 phút nữa ạ!";
-  
-    if (msg.includes("bao lâu") || msg.includes("khi nào"))
-      return "Em đang chạy qua đoạn kẹt xe nhẹ, tầm 5 phút nữa tới nha anh!";
-  
-    if (msg.includes("ok") || msg.includes("cảm ơn"))
-      return "Dạ, em cảm ơn anh Bảo Bến Cảng đẹp trai nhất thế giới luôn nha ❤️";
-  
-    if (msg.includes("giao") || msg.includes("đơn"))
-      return "Em đang giao đơn hàng cho anh nè, anh nhớ kiểm tra kỹ giúp em nha!";
-  
-    if (msg.includes("trễ") || msg.includes("lâu"))
-      return "Em xin lỗi anh, do kẹt xe chút xíu á, em đang cố chạy nhanh tới ạ 😭";
-  
-    if (msg.includes("đang làm gì") || msg.includes("sao lâu vậy"))
-      return "Dạ em đang ghé lấy hàng anh ơi, xong là phi qua liền luôn nè!";
-  
-    if (msg.includes("gấp") || msg.includes("nhanh lên"))
-      return "Dạ hiểu liền anh, em đang đạp ga hết cỡ luôn 😅 anh chờ em xíu nha!";
-  
-    if (msg.includes("tới chưa") || msg.includes("đến chưa"))
-      return "Sắp tới rồi anh ơi, em đang ngay ngã ba phía trước luôn đó 🚗💨";
-  
-    if (msg.includes("hello") || msg.includes("chào"))
-      return "Dạ, em chào anh Bảo Bến Cảng đẹp trai nhất thế giới ạ 😍";
-  
-    if (msg.includes("mấy giờ") || msg.includes("giờ nào"))
-      return "Dạ, khoảng tầm 5 phút nữa là em có mặt chỗ anh liền nha!";
-  
-    if (msg.includes("ngủ chưa") || msg.includes("ăn cơm chưa"))
-      return "Haha, em chưa ngủ đâu, đang chạy đơn của anh đó 😆";
-  
-    return "Dạ, em đang trên đường tới chỗ anh nha, anh chờ em xíu ạ!";
+
+    if (msg.includes('ăn cức') || msg.includes('ăn cứuc') || msg.includes('ăn cứt'))
+      return 'Ê mày, ăn **cứt** thì kệ mày luôn, anh báo em làm gì nữa?!';
+    if (msg.includes('lòn huy') || msg.includes('ăn cứuc') || msg.includes('ăn cứt'))
+      return 'Ông lòn hUy hả anh Bảo em ghét ông lòn đó bỏ mẹ ';
+
+    if (msg.includes('thằng chó') || msg.includes('đồ chó') || msg.includes('con chó'))
+      return 'Thôi đừng lời lẽ vậy, rối quá em chặn luôn nha!';
+
+    if (msg.includes('bom hàng') || msg.includes('bỏ bom') || msg.includes('bôm hàng'))
+      return 'Bom hàng à? Anh báo em rồi!';
+
+    if (msg.includes('đm') || msg.includes('đĩ') || msg.includes('cc') || msg.includes('cứt'))
+      return 'Nói năng vậy thì em xin phép dừng trò chuyện, mong anh suy nghĩ lại.';
+
+    if (msg.includes('đâu') || msg.includes('ở đâu'))
+      return 'Dạ, em đang gần tới rồi anh, chắc tầm 1-2 phút nữa ạ!';
+
+    if (msg.includes('bao lâu') || msg.includes('khi nào'))
+      return 'Em đang chạy qua đoạn kẹt xe nhẹ, tầm 5 phút nữa tới nha anh!';
+
+    if (msg.includes('ok') || msg.includes('cảm ơn'))
+      return 'Dạ, em cảm ơn anh Bảo Bến Cảng đẹp trai nhất thế giới luôn nha ❤️';
+
+    if (msg.includes('giao') || msg.includes('đơn'))
+      return 'Em đang giao đơn hàng cho anh nè, anh nhớ kiểm tra kỹ giúp em nha!';
+
+    if (msg.includes('trễ') || msg.includes('lâu'))
+      return 'Em xin lỗi anh, do kẹt xe chút xíu á, em đang cố chạy nhanh tới ạ 😭';
+
+    if (msg.includes('đang làm gì') || msg.includes('sao lâu vậy'))
+      return 'Dạ em đang ghé lấy hàng anh ơi, xong là phi qua liền luôn nè!';
+
+    if (msg.includes('gấp') || msg.includes('nhanh lên'))
+      return 'Dạ hiểu liền anh, em đang đạp ga hết cỡ luôn 😅 anh chờ em xíu nha!';
+
+    if (msg.includes('tới chưa') || msg.includes('đến chưa'))
+      return 'Sắp tới rồi anh ơi, em đang ngay ngã ba phía trước luôn đó 🚗💨';
+
+    if (msg.includes('hello') || msg.includes('chào'))
+      return 'Dạ, em chào anh Bảo Bến Cảng đẹp trai nhất thế giới ạ 😍';
+
+    if (msg.includes('mấy giờ') || msg.includes('giờ nào'))
+      return 'Dạ, khoảng tầm 5 phút nữa là em có mặt chỗ anh liền nha!';
+
+    if (msg.includes('ngủ chưa') || msg.includes('ăn cơm chưa'))
+      return 'Haha, em chưa ngủ đâu, đang chạy đơn của anh đó 😆';
+
+    return 'Dạ, em đang trên đường tới chỗ anh nha, anh chờ em xíu ạ!';
   };
-  
+
   const sendMessage = () => {
     if (!input.trim()) return;
     const userMsg = input.trim();
@@ -81,11 +94,11 @@ export const ChatDriverPage = () => {
     if (el) {
       el.scrollTo({
         top: el.scrollHeight,
-        behavior: "smooth",
+        behavior: 'smooth',
       });
     }
   }, [messages]);
-  
+
   return (
     <div className="flex flex-col items-center justify-center h-screen bg-gray-100">
       {/* Container */}
