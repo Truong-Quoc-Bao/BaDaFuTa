@@ -416,7 +416,7 @@ export const TrackOrderPage = () => {
       {/* ✅ Driver Info chỉ hiện khi currentStep ≥ 2 */}
       {testOrder.driver && currentStep >= 2 && (
         <div className="mt-4 text-sm text-gray-700 flex items-center space-x-2 bg-gray-50 p-3 rounded-xl shadow-sm">
-          <span className="font-medium">Tài xế:</span>
+          <span className="font-medium ">Tài xế:</span>
           {/* Ảnh tài xế */}
           <img
             src={
@@ -427,7 +427,7 @@ export const TrackOrderPage = () => {
             className="w-8 h-8 rounded-full border border-gray-300"
           />
           {/* Tên tài xế */}
-          <span>{testOrder.driver?.name} | </span>
+          <span className="text-gray-500">{testOrder.driver?.name} | </span>
           {/* Biển số xe */}
           <Bike className="w-4 h-4 mr-1 text-orange-500" />{' '}
           <span className="text-gray-500">Biển số: {testOrder.driver?.BS} | </span>
@@ -458,19 +458,19 @@ export const TrackOrderPage = () => {
       )}
 
       {/* Order info responsive */}
-      <div className="bg-white p-4 md:p-6 rounded-lg shadow-sm space-y-2 text-sm md:text-base">
-        <p className="text-lg font-semibold text-orange-600">Thông tin đơn hàng</p>
+      <div className="bg-white p-4 md:p-6 rounded-lg shadow-sm space-y-2 text-sm text-gray-500 md:text-base">
+        <p className="text-lg">Thông tin đơn hàng</p>
+        <p>Từ: {order?.merchant?.location?.address || 'Đang tải địa chỉ...'}</p>
+
         <p>
           <strong>Thanh toán:</strong> {order.payment_method}
         </p>
         <p>
           <strong>Tổng tiền:</strong> {Number(order.total_amount).toLocaleString('vi-VN')}đ
         </p>
-        {order.note && (
-          <p>
-            <strong>Ghi chú:</strong> {order.note}
-          </p>
-        )}
+        <p>
+          <strong>Ghi chú:</strong> {order.note || 'Không có ghi chú cho món này! '}
+        </p>
       </div>
     </div>
   );
