@@ -89,6 +89,7 @@ export const getMenu = async ({
           items: mio.option.option_item.map((oi) => ({
             option_item_id: oi.id,
             option_item_name: oi.option_item_name,
+            price : oi.price,
           })),
         })),
       })),

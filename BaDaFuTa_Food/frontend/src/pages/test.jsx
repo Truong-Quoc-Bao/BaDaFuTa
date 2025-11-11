@@ -359,6 +359,145 @@
 // };
 
 
+//
+app
+// import { Layout } from "./components/Layout";
+// import { Routes, Route, Navigate, useLocation } from "react-router-dom";
+// import ProtectedRoute from "./components/ProtectedRoute";
+// import { CartProvider, useCart } from "./contexts/CartContext";
+// import { AuthProvider } from "./contexts/AuthContext";
+// import MerchantLogin from "./pages/MerchantLoginPage";
+// import PhoneVerification from "./pages/PhoneVerification";
+// import { Header } from "./components/Header";
+// import { Footer } from "./components/Footer";
+// import LoginPage from "./pages/LoginPage";
+// import RegisterPage from "./pages/RegisterPage";
+// import HomePage from "./pages/HomePage";
+// import { AboutPage } from "./pages/AboutPage";
+// import { SupportPage } from "./pages/SupportPage";
+// import { ProfilePage } from "./pages/ProfilePage";
+// import { SettingsPage } from "./pages/SettingsPage";
+// import { RestaurantPage } from "./pages/RestaurantPage";
+// import MenuItemDetailPage from "./pages/MenuItemDetailPage";
+// import CartPage from "./pages/CartPage";
+// import CheckOutPage from "./pages/CheckOutPage";
+// import { Toaster } from "react-hot-toast";
+// import OrderSuccess from "./pages/OrderSuccess";
+// import "./index.css";
+
+
+// // --------- Protected route wrapper sử dụng CartProvider ---------
+
+// // Protected route wrapper dùng CartProvider
+// function ProtectedRouteWrapper({ children }) {
+//   const { state, isInitialized } = useCart();
+//   if (!isInitialized) {
+//     return (
+//       <div className="flex items-center justify-center min-h-screen text-gray-500">
+//         Đang tải giỏ hàng...
+//       </div>
+//     );
+//   }
+
+//   const cart = state.items || [];
+//   return cart.length > 0 ? children : <Navigate to="/cart" />;
+// }
+
+// function AppRoutes() {
+
+//   return (
+//     <Routes>
+//       <Route path="/" element={<HomePage />} />
+//       <Route path="/phone-otp" element={<PhoneVerification />} />
+//       <Route path="/login" element={<LoginPage />} />
+//       <Route path="/register" element={<RegisterPage />} />
+//       <Route path="/merchantlogin" element={<MerchantLogin />} />
+//       <Route path="/about" element={<AboutPage />} />
+//       <Route path="/support" element={<SupportPage />} />
+//       <Route path="/profile" element={<ProfilePage />} />
+//       <Route path="/settings" element={<SettingsPage />} />
+//       <Route path="/restaurant/:id" element={<RestaurantPage />} />
+//       <Route
+//         path="/restaurant/:id/menu/:itemId"
+//         element={<MenuItemDetailPage />}
+//       />
+//       <Route path="/cart" element={<CartPage />} />
+     
+//       <Route
+//         path="/cart/checkout"
+//         element={
+//           <ProtectedRouteWrapper>
+//             <CheckOutPage />
+//           </ProtectedRouteWrapper>
+//         }
+//       />
+
+//       <Route
+//         path="/cart/checkout/ordersuccess"
+//         element={
+//           <ProtectedRoute
+//             condition={localStorage.getItem("orderConfirmed") === "true"}
+//             redirectTo="/cart"
+//           >
+//             <OrderSuccess />
+//           </ProtectedRoute>
+//         }
+//       />
+//       <Route path="*" element={<Navigate to="/" replace />} />
+//     </Routes>
+//   );
+// }
+
+// // --------- AppInner: gọi useLocation() sau khi providers mount ---------
+// function AppInner() {
+//   const location = useLocation(); // ✅ giờ gọi safe
+//   const hideHeaderFooter = [
+//     "/login",
+//     "/register",
+//     "/merchantlogin",
+//     "/phone-otp",
+//   ].includes(location.pathname);
+
+//   return (
+//     <>
+//       <Toaster
+//         position="top-right"
+//         toastOptions={{
+//           duration: 3000,
+//           style: { pointerEvents: "none" },
+//           pauseOnFocusLoss: false,
+//           pauseOnHover: false,
+//         }}
+//       />
+
+//       <CartProvider>
+//         {hideHeaderFooter ? (
+//           <AppRoutes />
+//         ) : (
+//           <Layout>
+//             <AppRoutes />
+//           </Layout>
+//         )}
+//       </CartProvider>
+//     </>
+//   );
+// }
+
+// // --------- App chính ---------
+// function App() {
+//   return (
+//     <AuthProvider>
+//       <CartProvider>
+//         <AppInner />
+//       </CartProvider>
+//     </AuthProvider>
+//   );
+// }
+
+// export default App;
+
+
+
 
 
 //
@@ -1000,22 +1139,317 @@ const testOrder = {
 )}
 
 
-<div className="flex items-center justify-end gap-2 text-gray-500 text-sm">
-  {/* SĐT */}
-  {testOrder.driver?.SĐT && (
-    <span className="flex items-center gap-1">
-      <Phone className="w-4 h-4 text-orange-500" /> {testOrder.driver.SĐT}
-    </span>
-  )}
 
-  {/* Icon tin nhắn */}
-  {testOrder.driver.id && (
-    <button
-      onClick={() => navigate(`/chat-driver/${testOrder.driver?.id}`)}
-      className="flex items-center gap-1 text-orange-500 hover:text-orange-600 transition"
-    >
-      <MessageCircle className="w-4 h-4" />
-      <span>Nhắn tin</span>
-    </button>
-  )}
+
+
+<div className="flex items-start space-x-2">
+  {/* Chấm trạng thái */}
+  <span className="w-3 h-3 mt-1 rounded-full bg-orange-500 flex-shrink-0"></span>
+
+  <div className="flex flex-col">
+    {/* Hàng chữ "Từ: Tên quán" */}
+    <div className="flex space-x-1 items-center">
+      <span className="text-gray-700 font-semibold">Từ:</span>
+      <span className="text-gray-800 font-medium">
+        {order?.merchant_name || 'Đang tải tên quán...'}
+      </span>
+    </div>
+    {/* Địa chỉ */}
+    <span className="text-gray-500 text-sm">
+      {order?.merchant_address || 'Đang tải địa chỉ...'}
+    </span>
+  </div>
 </div>
+
+
+
+
+export const ToppingSelectionDialog = ({
+  isOpen,
+  onClose,
+  menuItem,
+  restaurant,
+  quantity,
+  imgRef,       // 👈 ref hình món
+  cartIconRef,  // 👈 ref icon giỏ hàng
+  flyToCart,    // 👈 animation function
+}) => {
+  const { addItemWithToppings } = useCart();
+  const [selectedToppings, setSelectedToppings] = useState([]);
+  const [specialInstructions, setSpecialInstructions] = useState('');
+
+  const isAvailable = menuItem.isAvailable !== false;
+
+  const handleToppingChange = (options, checked) => {
+    if (checked) {
+      setSelectedToppings((prev) => [...prev, options]);
+    } else {
+      setSelectedToppings((prev) => prev.filter((t) => t.id !== options.id));
+    }
+  };
+
+  const handleAddToCart = () => {
+    if (!isAvailable) {
+      toast.error('Sản phẩm đã hết hàng/ngừng kinh doanh, vui lòng chọn sản phẩm khác.');
+      return;
+    }
+
+    const requiredToppings = menuItem.options?.filter((t) => t.required) || [];
+    const selectedRequiredToppings = selectedToppings.filter((t) => t.required);
+
+    if (requiredToppings.length > 0 && selectedRequiredToppings.length !== requiredToppings.length) {
+      toast.error('Vui lòng chọn topping/tùy chọn đầy đủ.');
+      return;
+    }
+
+    for (let i = 0; i < quantity; i++) {
+      addItemWithToppings(menuItem, restaurant, selectedToppings, specialInstructions);
+    }
+
+    // 👇 Chạy animation nếu có ref
+    if (imgRef?.current && cartIconRef?.current && flyToCart) {
+      flyToCart();
+    }
+
+    // 👇 Hiển thị toast custom
+    toast.custom((t) => (
+      <div
+        className={`${
+          t.visible ? 'animate-enter' : 'animate-leave'
+        } flex items-center gap-2 bg-white border border-gray-200 w-[50vw] sm:w-[380px] p-3 rounded-lg`}
+      >
+        <div className="w-5 h-5 flex-shrink-0 flex items-center justify-center bg-green-500 rounded-full text-white font-bold">
+          ✓
+        </div>
+        <img
+          src={menuItem.image}
+          alt={menuItem.name}
+          className="w-7 h-7 sm:w-8 sm:h-8 object-cover rounded"
+        />
+        <span className="text-xs sm:text-sm font-medium leading-snug break-words">
+          Đã thêm <span className="font-bold text-black">{quantity} </span> cái{' '}
+          <span className="font-bold text-black">{menuItem.name}</span> vào giỏ hàng!
+        </span>
+      </div>
+    ));
+
+    onClose();
+    setSelectedToppings([]);
+    setSpecialInstructions('');
+  };
+
+  useEffect(() => {
+    if (isOpen) {
+      setSelectedToppings([]);
+      setSpecialInstructions('');
+    }
+  }, [isOpen]);
+
+  return (
+    <Dialog open={isOpen} onOpenChange={onClose}>
+      <DialogContent className="max-w-3xl w-[90vw] max-h-[90vh] overflow-y-auto mx-auto p-4 sm:p-6">
+        {/* ... phần còn lại giữ nguyên ... */}
+        <DialogFooter className="flex-col space-y-2 sm:flex-row sm:space-y-0">
+          <Button variant="outline" onClick={onClose} className="w-full sm:w-auto">
+            Hủy
+          </Button>
+          <Button
+            onClick={handleAddToCart}
+            className="w-full sm:w-auto bg-orange-500 hover:bg-orange-600"
+            disabled={!isAvailable}
+          >
+            {isAvailable ? 'Thêm vào giỏ hàng' : 'Hết hàng'}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+};
+
+if (!isAvailable) {
+  toast.error('Sản phẩm đã hết hàng/ngừng kinh doanh, vui lòng chọn sản phẩm khác.');
+  return;
+}
+
+toast.success(`Đã thêm ${quantity} ${menuItem.name} vào giỏ hàng`);
+//
+//
+{state.items.map((item) => {
+  const optionTotal = item.selectedOptions
+    ? item.selectedOptions.reduce(
+        (sum, opt) =>
+          sum +
+          opt.items.reduce((s, oi) => s + Number(oi.price || 0), 0),
+        0
+      )
+    : 0;
+
+  const itemTotal = (item.menuItem.price + optionTotal) * item.quantity;
+
+  return (
+    <div key={item.id} className="flex justify-between items-center">
+      <ImageWithFallback
+        src={item.menuItem.image}
+        alt={item.menuItem.name}
+        className="object-cover w-[40px] h-[40px] p-1 rounded-lg flex-shrink-0"
+      />
+      <div className="flex-1">
+        <p className="font-medium">{item.menuItem.name}</p>
+
+        {/* Hiển thị option đã chọn */}
+        {item.selectedOptions?.map((opt) => (
+          <p key={opt.option_id} className="text-xs text-gray-500">
+            {opt.option_name}: {opt.items.map((oi) => oi.option_item_name).join(', ')}
+          </p>
+        ))}
+
+        <p className="text-sm text-gray-500">
+          {item.quantity} x {(item.menuItem.price + optionTotal).toLocaleString('vi-VN')}đ
+        </p>
+      </div>
+
+      <span className="font-medium">{itemTotal.toLocaleString('vi-VN')}đ</span>
+    </div>
+  );
+})}
+
+
+{state.items
+  .reduce((total, i) => {
+    const optionTotal = i.selectedOptions
+      ? i.selectedOptions.reduce(
+          (sum, opt) =>
+            sum + opt.items.reduce((s, oi) => s + Number(oi.price || 0), 0),
+          0
+        )
+      : 0;
+    return total + (i.menuItem.price + optionTotal) * i.quantity;
+  }, 0)
+  .toLocaleString('vi-VN')}
+//
+import { getDistanceKm, calculateDeliveryFee } from '../../utils/distanceUtils';
+
+// Lấy lat/lon nhà hàng và địa chỉ
+const restaurantLat = merchant?.lat;
+const restaurantLon = merchant?.lon;
+
+const deliveryLat = selectedAddress?.lat;
+const deliveryLon = selectedAddress?.lon;
+
+// Tính khoảng cách
+const distanceKm = getDistanceKm(restaurantLat, restaurantLon, deliveryLat, deliveryLon);
+
+// Tính phí giao hàng
+const deliveryFee = calculateDeliveryFee(distanceKm);
+
+// Tổng cộng
+const total = subtotal + deliveryFee;
+
+
+import { useDeliveryFee } from "../../hooks/useDeliveryFee";
+import { useLocation } from "../../contexts/LocationContext";
+
+export default function HomePage() {
+  const { state: locationState } = useLocation(); // vị trí người dùng
+  const [restaurants, setRestaurants] = useState([]);
+  const [searchQuery, setSearchQuery] = useState("");
+
+  // fetch restaurants như anh đã làm
+  useEffect(() => { /* ...fetch code... */ }, [searchQuery]);
+
+  return (
+    <div>
+      {restaurants.map((r) => {
+        const fee = useDeliveryFee(
+          r.coordinates,
+          locationState.currentLocation?.coordinates
+        );
+
+        return (
+          <div key={r.id}>
+            <RestaurantCard restaurant={r} />
+            <p className="text-sm text-gray-500">
+              Phí giao hàng: {fee.toLocaleString("vi-VN")}đ
+            </p>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+
+
+
+
+/**
+ * Tính khoảng cách (km) giữa 2 điểm lat/lon theo Haversine formula
+ * @param {number} lat1 
+ * @param {number} lng1 
+ * @param {number} lat2 
+ * @param {number} lng2 
+ * @returns {number} khoảng cách (km)
+ */
+export function getDistanceKm(lat1, lng1, lat2, lng2) {
+  const toRad = (deg) => (deg * Math.PI) / 180;
+
+  const R = 6371; // bán kính Trái Đất (km)
+  const dLat = toRad(lat2 - lat1);
+  const dLon = toRad(lng2 - lng1);
+
+  const a =
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos(toRad(lat1)) *
+      Math.cos(toRad(lat2)) *
+      Math.sin(dLon / 2) *
+      Math.sin(dLon / 2);
+
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  return R * c;
+}
+
+/**
+* Tính phí giao hàng dựa vào khoảng cách
+* @param {number} distanceKm 
+* @returns {number} phí ship (VNĐ)
+*/
+export function calculateDeliveryFee(distanceKm) {
+  if (distanceKm <= 2) return 10000;
+  if (distanceKm <= 5) return 15000;
+  if (distanceKm <= 10) return 20000;
+  return 30000; // >10km
+}
+
+/**
+* Tính thời gian giao hàng dựa vào khoảng cách (km)
+* Giả sử tốc độ trung bình 25 km/h
+* @param {number} distanceKm
+* @returns {number} phút
+*/
+export function estimateDeliveryTime(distanceKm) {
+  const speedKmH = 25;
+  const timeH = distanceKm / speedKmH;
+  return Math.ceil(timeH * 60); // phút
+}
+//
+//
+//
+const userCoords = state.currentLocation?.coordinates;
+const restaurantCoords = restaurant?.coordinates;
+
+let distanceKm = 0;
+let deliveryTime = 0;
+let deliveryFee = 0;
+
+if (userCoords && restaurantCoords) {
+  distanceKm = getDistanceKm(
+    userCoords.lat,
+    userCoords.lng,
+    restaurantCoords.lat,
+    restaurantCoords.lng
+  );
+
+  deliveryFee = calculateDeliveryFee(distanceKm);
+  deliveryTime = estimateDeliveryTime(distanceKm);
+}
+

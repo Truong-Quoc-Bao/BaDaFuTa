@@ -28,16 +28,46 @@ import {
   DialogFooter,
 } from '../../components/ui/dialog';
 import { Clock } from 'lucide-react';
+import { getDistanceKm, calculateDeliveryFee } from '../../utils/distanceUtils';
 
 export default function CheckOutPage() {
   // 🧩 Lấy user từ AuthContext
   const { state: authState } = useAuth();
   const user = authState.user;
-
+  // Cancel
   const [showCancelDialog, setShowCancelDialog] = useState(false);
   // 🏦 State quản lý phương thức thanh toán
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState(null);
+  // 🛒 Lấy giỏ hàng
+  const { state, updateQuantity, removeItem, clearCart } = useCart();
+  // 🧠 STATE QUẢN LÝ
+  const [addressList, setAddressList] = useState([]);
+  const [selectedAddress, setSelectedAddress] = useState(null);
+  const [isEditing, setIsEditing] = useState(false);
+  const [isAdding, setIsAdding] = useState(false);
+  const [error, setError] = useState(null);
+  // merchant
+  const merchant =
+    state.items.length > 0 ? state.items[0].restaurant || state.items[0].merchant : null;
+  // Lấy lat/lon nhà hàng và địa chỉ
+  const restaurantLat = merchant?.lat;
+  const restaurantLon = merchant?.lng;
+  //Tính khoảng cách
+  const deliveryLat = selectedAddress?.lat;
+  const deliveryLon = selectedAddress?.lng;
 
+  let distanceKm = 0;
+  let deliveryFee = 0;
+
+  if (merchant && selectedAddress) {
+    distanceKm = getDistanceKm(
+      merchant.lat,
+      merchant.lng,
+      selectedAddress.lat,
+      selectedAddress.lng,
+    );
+    deliveryFee = calculateDeliveryFee(distanceKm);
+  }
   // 🏦 Handler khi chọn phương thức
   const handlePaymentMethodSelect = (method) => {
     setSelectedPaymentMethod(method);
@@ -50,18 +80,12 @@ export default function CheckOutPage() {
 
   // merchant
 
-  // 🛒 Lấy giỏ hàng
-  const { state, updateQuantity, removeItem, clearCart } = useCart();
   // const merchant = state.items.length > 0 ? state.items[0].restaurant : null;
 
-  const deliveryFee =
-    state.items.length > 0
-      ? state.items[0].restaurant?.deliveryFee ?? state.items[0].restaurant?.delivery_fee ?? 0
-      : 0;
-
-  // merchant
-  const merchant =
-    state.items.length > 0 ? state.items[0].restaurant || state.items[0].merchant : null;
+  // const deliveryFee =
+  //   state.items.length > 0
+  //     ? state.items[0].restaurant?.deliveryFee ?? state.items[0].restaurant?.delivery_fee ?? 0
+  //     : 0;
 
   const subtotal = state.total;
   const total = subtotal + deliveryFee;
@@ -70,13 +94,6 @@ export default function CheckOutPage() {
 
   const navigate = useNavigate();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
-
-  // 🧠 STATE QUẢN LÝ
-  const [addressList, setAddressList] = useState([]);
-  const [selectedAddress, setSelectedAddress] = useState(null);
-  const [isEditing, setIsEditing] = useState(false);
-  const [isAdding, setIsAdding] = useState(false);
-  const [error, setError] = useState(null);
 
   const [formData, setFormData] = useState({
     full_name: '',
@@ -326,28 +343,25 @@ export default function CheckOutPage() {
     const params = new URLSearchParams(location.search);
     const dataEncoded = params.get('data');
     const status = params.get('status');
-  
+
     if (!status) return;
-  
+
     const processVNPay = async () => {
       setLoading(true);
       try {
         switch (status) {
           case 'success':
             if (!dataEncoded) throw new Error('Không có dữ liệu đơn hàng');
-  
-            const decoded = JSON.parse(atob(dataEncoded));
-            console.log('VNPay decoded payload:', decoded);
-  
+
             localStorage.setItem('orderConfirmed', 'true');
             clearCart();
-            navigate('/cart/checkout/ordersuccess', { state: { order: decoded } });
+            navigate('/cart/checkout/ordersuccess');
             break;
-  
+
           case 'canceled':
             navigate('/cart/pending');
             break;
-  
+
           default:
             clearCart();
             alert('❌ Thanh toán thất bại, vui lòng thử lại!');
@@ -361,10 +375,10 @@ export default function CheckOutPage() {
         setLoading(false);
       }
     };
-  
+
     processVNPay();
   }, [location.search, navigate]);
-  
+
   // 🧾 Hàm thay đổi input
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -953,24 +967,43 @@ export default function CheckOutPage() {
             <CardContent className="space-y-4">
               {/* Order Items */}
               <div className="space-y-3">
-                {state.items.map((item) => (
-                  <div key={item.id} className="flex justify-between items-center">
-                    <ImageWithFallback
-                      src={item.menuItem.image}
-                      alt={item.menuItem.name}
-                      className="object-cover w-[40px] h-[40px] p-1  rounded-lg flex-shrink-0"
-                    />
-                    <div className="flex-1">
-                      <p className="font-medium">{item.menuItem.name}</p>
-                      <p className="text-sm text-gray-500">
-                        {item.quantity} x {item.menuItem.price.toLocaleString('vi-VN')}đ
-                      </p>
+                {state.items.map((item) => {
+                  const optionTotal = item.selectedOptions
+                    ? item.selectedOptions.reduce(
+                        (sum, opt) =>
+                          sum + opt.items.reduce((s, oi) => s + Number(oi.price || 0), 0),
+                        0,
+                      )
+                    : 0;
+
+                  const itemTotal = (item.menuItem.price + optionTotal) * item.quantity;
+                  return (
+                    <div key={item.id} className="flex justify-between items-center">
+                      <ImageWithFallback
+                        src={item.menuItem.image}
+                        alt={item.menuItem.name}
+                        className="object-cover w-[40px] h-[40px] p-1  rounded-lg flex-shrink-0"
+                      />
+                      <div className="flex-1">
+                        <p className="font-medium">{item.menuItem.name}</p>
+
+                        {/* Hiển thị option đã chọn */}
+                        {item.selectedOptions?.map((opt) => (
+                          <p key={opt.option_id} className="text-xs text-gray-500">
+                            {opt.option_name}:{' '}
+                            {opt.items.map((oi) => oi.option_item_name).join(', ')}
+                          </p>
+                        ))}
+                        <p className="text-sm text-gray-500">
+                          {item.quantity} x {item.menuItem.price.toLocaleString('vi-VN')}đ
+                        </p>
+                      </div>
+                      <span className="font-medium">
+                        {(item.menuItem.price * item.quantity).toLocaleString('vi-VN')}đ
+                      </span>
                     </div>
-                    <span className="font-medium">
-                      {(item.menuItem.price * item.quantity).toLocaleString('vi-VN')}đ
-                    </span>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
 
               <hr className="border-gray-200" />
@@ -983,8 +1016,12 @@ export default function CheckOutPage() {
               </div>
 
               <div className="flex justify-between">
-                <span>Phí giao hàng</span>
-                <span>{deliveryFee.toLocaleString('vi-VN')}đ</span>
+                <span>Phí giao hàng: </span>
+                <span>
+                  {merchant && selectedAddress
+                    ? deliveryFee.toLocaleString('vi-VN') + 'đ'
+                    : 'Đang tính...'}
+                </span>
               </div>
 
               <hr className="border-gray-200" />
@@ -992,10 +1029,11 @@ export default function CheckOutPage() {
               <div className="flex justify-between font-bold text-lg">
                 <span>Tổng cộng</span>
                 <span className="text-orange-600">
-                  {state.items
+                  {/* {state.items
                     .reduce((total, i) => total + i.menuItem.price * i.quantity, 0)
                     .toLocaleString('vi-VN')}
-                  đ
+                  đ */}
+                  {(subtotal + deliveryFee).toLocaleString('vi-VN')}đ
                 </span>
               </div>
             </CardContent>

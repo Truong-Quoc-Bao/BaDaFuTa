@@ -67,9 +67,9 @@ export default function OrderSuccessPage() {
       <p className="text-gray-500 mb-6">
         Cảm ơn bạn đã đặt hàng. Chúng tôi sẽ giao hàng sớm nhất có thể!
       </p>
-      <p>
-        Mã đơn hàng của bạn: <strong>{orderId}</strong>
-      </p>
+      {/* <p>
+        Mã đơn hàng của bạn: <strong>{order.orderId}</strong>
+      </p> */}
 
       <div className="flex space-x-10 flex-col gap-3">
         <span>

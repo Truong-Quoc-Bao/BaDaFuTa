@@ -1,5 +1,12 @@
-import { useState } from 'react';
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from './ui/dialog';
+import { useState, useEffect } from 'react';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from './ui/dialog';
 import { Button } from './ui/button';
 import { Checkbox } from './ui/checkbox';
 import { Textarea } from './ui/textarea.jsx';
@@ -18,11 +25,11 @@ export const ToppingSelectionDialog = ({ isOpen, onClose, menuItem, restaurant, 
   // Check if item is available
   const isAvailable = menuItem.isAvailable !== false;
 
-  const handleToppingChange = (topping, checked) => {
+  const handleToppingChange = (options, checked) => {
     if (checked) {
-      setSelectedToppings(prev => [...prev, topping]);
+      setSelectedToppings((prev) => [...prev, options]);
     } else {
-      setSelectedToppings(prev => prev.filter(t => t.id !== topping.id));
+      setSelectedToppings((prev) => prev.filter((t) => t.id !== options.id));
     }
   };
 
@@ -34,10 +41,13 @@ export const ToppingSelectionDialog = ({ isOpen, onClose, menuItem, restaurant, 
     }
 
     // E2: Check required toppings
-    const requiredToppings = menuItem.toppings?.filter(t => t.required) || [];
-    const selectedRequiredToppings = selectedToppings.filter(t => t.required);
-    
-    if (requiredToppings.length > 0 && selectedRequiredToppings.length !== requiredToppings.length) {
+    const requiredToppings = menuItem.options?.filter((t) => t.required) || [];
+    const selectedRequiredToppings = selectedToppings.filter((t) => t.required);
+
+    if (
+      requiredToppings.length > 0 &&
+      selectedRequiredToppings.length !== requiredToppings.length
+    ) {
       toast.error('Vui lòng chọn topping/tùy chọn đầy đủ.');
       return;
     }
@@ -53,7 +63,15 @@ export const ToppingSelectionDialog = ({ isOpen, onClose, menuItem, restaurant, 
     setSpecialInstructions('');
   };
 
-  const toppingsTotalPrice = selectedToppings.reduce((sum, topping) => sum + topping.price, 0);
+  // Khi isOpen thay đổi → reset state
+  useEffect(() => {
+    if (isOpen) {
+      setSelectedToppings([]);
+      setSpecialInstructions('');
+    }
+  }, [isOpen]);
+
+  const toppingsTotalPrice = selectedToppings.reduce((sum, options) => sum + options.price, 0);
   const itemTotalPrice = (menuItem.price + toppingsTotalPrice) * quantity;
 
   return (
@@ -68,8 +86,8 @@ export const ToppingSelectionDialog = ({ isOpen, onClose, menuItem, restaurant, 
 
         {/* Product Info */}
         <div className="flex items-start space-x-4 py-4">
-          <ImageWithFallback 
-            src={menuItem.image} 
+          <ImageWithFallback
+            src={menuItem.image}
             alt={menuItem.name}
             className="w-20 h-20 object-cover rounded-lg"
           />
@@ -80,9 +98,7 @@ export const ToppingSelectionDialog = ({ isOpen, onClose, menuItem, restaurant, 
               <span className="font-bold text-orange-600">
                 {menuItem.price.toLocaleString('vi-VN')}đ
               </span>
-              {!isAvailable && (
-                <Badge variant="destructive">Hết hàng</Badge>
-              )}
+              {!isAvailable && <Badge variant="destructive">Hết hàng</Badge>}
             </div>
           </div>
         </div>
@@ -96,31 +112,101 @@ export const ToppingSelectionDialog = ({ isOpen, onClose, menuItem, restaurant, 
         </div>
 
         {/* Toppings Selection */}
-        {menuItem.toppings && menuItem.toppings.length > 0 && (
+        {/* {menuItem.options && menuItem.options.length > 0 && (
           <>
             <Separator />
             <div className="space-y-4">
               <h4 className="font-semibold">Tùy chọn thêm</h4>
-              
-              {menuItem.toppings.map((topping) => (
-                <div key={topping.id} className="flex items-center justify-between">
+
+              {menuItem.options.map((options) => (
+                <div key={options.id} className="flex items-center justify-between">
                   <div className="flex items-center space-x-3">
                     <Checkbox
-                      id={topping.id}
-                      checked={selectedToppings.some(t => t.id === topping.id)}
-                      onCheckedChange={(checked) => handleToppingChange(topping, checked)}
+                      id={options.id}
+                      checked={selectedToppings.some((t) => t.id === options.id)}
+                      onCheckedChange={(checked) => handleToppingChange(options, checked)}
                       disabled={!isAvailable}
                     />
-                    <Label htmlFor={topping.id} className="flex items-center space-x-2">
-                      <span>{topping.name}</span>
-                      {topping.required && (
-                        <Badge variant="outline" className="text-xs">Bắt buộc</Badge>
+                    <Label htmlFor={options.id} className="flex items-center space-x-2">
+                      <span>{options.option_name}</span>
+                      {options.required && (
+                        <Badge variant="outline" className="text-xs">
+                          Bắt buộc
+                        </Badge>
                       )}
                     </Label>
                   </div>
                   <span className="text-sm font-medium">
-                    +{topping.price.toLocaleString('vi-VN')}đ
+                    +{menuItem.options[0].items[0].price.toLocaleString('vi-VN')}đ
                   </span>
+                </div>
+              ))}
+            </div>
+          </>
+        )} */}
+
+        {/* Options Selection */}
+        {menuItem.options && menuItem.options.length > 0 && (
+          <>
+            <Separator />
+            <div className="space-y-4">
+              <h4 className="font-semibold">Tùy chọn thêm</h4>
+
+              {menuItem.options.map((optionGroup) => (
+                <div key={optionGroup.option_id} className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <Label className="font-semibold">{optionGroup.option_name}</Label>
+                    {optionGroup.require_select && (
+                      <Badge variant="outline" className="text-xs">
+                        Bắt buộc
+                      </Badge>
+                    )}
+                  </div>
+
+                  {/* Hiển thị các lựa chọn trong mỗi nhóm */}
+                  {optionGroup.items.map((optItem) => {
+                    const isChecked = selectedToppings.some(
+                      (t) => t.option_item_id === optItem.option_item_id,
+                    );
+
+                    return (
+                      <div
+                        key={optItem.option_item_id}
+                        className="flex items-center justify-between ml-4"
+                      >
+                        <div className="flex items-center space-x-3">
+                          <Checkbox
+                            id={optItem.option_item_id}
+                            checked={isChecked}
+                            onCheckedChange={(checked) => {
+                              if (checked) {
+                                setSelectedToppings((prev) => [
+                                  ...prev,
+                                  {
+                                    option_group_id: optionGroup.option_id,
+                                    option_group_name: optionGroup.option_name,
+                                    ...optItem,
+                                    price: Number(optItem.price || 0),
+                                    required: optionGroup.require_select,
+                                    multi_select: optionGroup.multi_select,
+                                  },
+                                ]);
+                              } else {
+                                setSelectedToppings((prev) =>
+                                  prev.filter((t) => t.option_item_id !== optItem.option_item_id),
+                                );
+                              }
+                            }}
+                            disabled={!isAvailable}
+                          />
+                          <Label htmlFor={optItem.option_item_id}>{optItem.option_item_name}</Label>
+                        </div>
+                        <span className="text-sm font-medium text-gray-700">
+                          +{Number(optItem.price).toLocaleString('vi-VN')}đ
+                        </span>
+                      </div>
+                    );
+                  })}
                 </div>
               ))}
             </div>
@@ -143,19 +229,23 @@ export const ToppingSelectionDialog = ({ isOpen, onClose, menuItem, restaurant, 
         {/* Price Summary */}
         <div className="space-y-2 p-4 bg-gray-50 rounded-lg">
           <div className="flex justify-between">
-            <span>Giá món ăn ({quantity} x {menuItem.price.toLocaleString('vi-VN')}đ)</span>
+            <span>
+              Giá món ăn ({quantity} x {menuItem.price.toLocaleString('vi-VN')}đ)
+            </span>
             <span>{(menuItem.price * quantity).toLocaleString('vi-VN')}đ</span>
           </div>
-          
+
           {selectedToppings.length > 0 && (
             <div className="flex justify-between">
-              <span>Toppings ({quantity} x {toppingsTotalPrice.toLocaleString('vi-VN')}đ)</span>
+              <span>
+                Toppings ({quantity} x {toppingsTotalPrice.toLocaleString('vi-VN')}đ)
+              </span>
               <span>{(toppingsTotalPrice * quantity).toLocaleString('vi-VN')}đ</span>
             </div>
           )}
-          
+
           <Separator />
-          
+
           <div className="flex justify-between font-bold text-lg">
             <span>Tổng cộng</span>
             <span className="text-orange-600">{itemTotalPrice.toLocaleString('vi-VN')}đ</span>
@@ -166,8 +256,8 @@ export const ToppingSelectionDialog = ({ isOpen, onClose, menuItem, restaurant, 
           <Button variant="outline" onClick={onClose} className="w-full sm:w-auto">
             Hủy
           </Button>
-          <Button 
-            onClick={handleAddToCart} 
+          <Button
+            onClick={handleAddToCart}
             className="w-full sm:w-auto bg-orange-500 hover:bg-orange-600"
             disabled={!isAvailable}
           >

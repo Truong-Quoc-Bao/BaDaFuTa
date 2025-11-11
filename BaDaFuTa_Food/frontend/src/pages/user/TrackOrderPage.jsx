@@ -415,41 +415,44 @@ export const TrackOrderPage = () => {
       </div>
       {/* ✅ Driver Info chỉ hiện khi currentStep ≥ 2 */}
       {testOrder.driver && currentStep >= 2 && (
-        <div className="mt-4 text-sm text-gray-700 flex items-center space-x-2 bg-gray-50 p-3 rounded-xl shadow-sm">
+        // <div className="mt-4 text-sm text-gray-700 flex items-center space-x-2 bg-gray-50 p-3 rounded-xl shadow-sm">
+        <div className="mt-4 bg-gray-50 p-4 md:p-3 rounded-xl shadow-sm flex flex-col md:flex-row md:items-center space-y-2 md:space-y-0 md:space-x-3 text-gray-700 text-sm">
           <span className="font-medium ">Tài xế:</span>
-          {/* Ảnh tài xế */}
-          <img
-            src={
-              testOrder.driver?.avatar ||
-              'https://scontent.fsgn2-10.fna.fbcdn.net/v/t39.30808-6/487326873_1887063878796318_9080709797256676382_n.jpg?_nc_cat=109&ccb=1-7&_nc_sid=94e2a3&_nc_ohc=treCi7K2T6YQ7kNvwFF10Nh&_nc_oc=AdlUuTytQt-R2TK52H5r46SC9Nau9ZJ6fyIbujyuF5NoIxATLgChqysYBgd7qvsKSrUhietYcqIt_5zpoKol9Mwv&_nc_zt=23&_nc_ht=scontent.fsgn2-10.fna&_nc_gid=exNZjuM-vVhrNERk1uvp-w&oh=00_AfhqOXRDKIUgDydZ8TKCkLNEEfkX0S1GZT9HnZrpt1q0rQ&oe=69137A79'
-            }
-            alt="Driver avatar"
-            className="w-8 h-8 rounded-full border border-gray-300"
-          />
-          {/* Tên tài xế */}
-          <span className="text-gray-500">{testOrder.driver?.name} | </span>
-          {/* Biển số xe */}
-          <Bike className="w-4 h-4 mr-1 text-orange-500" />{' '}
-          <span className="text-gray-500">Biển số: {testOrder.driver?.BS} | </span>
-          {/* Rating */}
-          <span className="flex items-center text-yellow-500">
-            <Star className="w-4 h-4" />
-            <Star className="w-4 h-4" />
-            <Star className="w-4 h-4" />
-            <Star className="w-4 h-4" />
-            <Star className="w-4 h-4" />
-          </span>
+          {/* Ảnh + thông tin */}
+          <div className="flex items-center space-x-2 md:space-x-3 flex-wrap">
+            <img
+              src={
+                testOrder.driver?.avatar ||
+                'https://scontent.fsgn2-10.fna.fbcdn.net/v/t39.30808-6/487326873_1887063878796318_9080709797256676382_n.jpg?_nc_cat=109&ccb=1-7&_nc_sid=94e2a3&_nc_ohc=treCi7K2T6YQ7kNvwFF10Nh&_nc_oc=AdlUuTytQt-R2TK52H5r46SC9Nau9ZJ6fyIbujyuF5NoIxATLgChqysYBgd7qvsKSrUhietYcqIt_5zpoKol9Mwv&_nc_zt=23&_nc_ht=scontent.fsgn2-10.fna&_nc_gid=exNZjuM-vVhrNERk1uvp-w&oh=00_AfhqOXRDKIUgDydZ8TKCkLNEEfkX0S1GZT9HnZrpt1q0rQ&oe=69137A79'
+              }
+              alt="Driver avatar"
+              className="w-8 h-8 rounded-full border border-gray-300"
+            />
+            <div className="flex flex-col md:flex-row md:items-center md:space-x-4 space-y-1 md:space-y-0">
+              {/* Tên tài xế */}
+              <span className="text-gray-500">{testOrder.driver?.name} |</span>
+              {/* Biển số xe */}
+              <span className="text-gray-500 flex items-center">
+                <Bike className="w-4 h-4 mr-1 text-orange-500" />
+                Biển số: {testOrder.driver?.BS}
+              </span>
+              {/* Rating */}
+              <span className=" text-gray-500">5.0</span>
+              <Star className="w-4 h-4 text-yellow-500" />
+            </div>
+          </div>
+
           {/* SĐT */}
           {testOrder.driver?.SĐT && (
             <span className="flex items-center text-gray-500">
-              | <Phone className="w-4 h-4 mx-1 text-orange-500" /> {testOrder.driver.SĐT}
+              | <Phone className="w-4 h-4 mx-2 text-orange-500" /> {testOrder.driver.SĐT}
             </span>
           )}
           {/* Icon tin nhắn */}
           {/* 💬 Icon tin nhắn */}
           <button
             onClick={() => navigate(`/chat-driver/${testOrder.driver?.id}`)}
-            className="ml-auto flex items-center gap-1 text-gray-500 hover:text-orange-600 transition"
+            className="mt-2 md:mt-0 ml-0 md:ml-auto flex items-center gap-1 text-gray-500 hover:text-orange-600 transition"
           >
             <MessageCircle className="w-4 h-4 text-orange-500 " />
             <span>Nhắn tin</span>
@@ -460,7 +463,55 @@ export const TrackOrderPage = () => {
       {/* Order info responsive */}
       <div className="bg-white p-4 md:p-6 rounded-lg shadow-sm space-y-2 text-sm text-gray-500 md:text-base">
         <p className="text-lg">Thông tin đơn hàng</p>
-        <p>Từ: {order?.merchant?.location?.address || 'Đang tải địa chỉ...'}</p>
+
+        <div className="flex flex-col space-y-4 bg-white p-4 rounded-lg shadow-sm">
+          {/* Từ */}
+          <div className="flex items-start space-x-2">
+            {/* Chấm trạng thái */}
+            <span className="w-3 h-3 mt-1 rounded-full bg-orange-500 flex-shrink-0"></span>
+
+            <div className="flex flex-col">
+              {/* Hàng chữ "Từ: Tên quán" */}
+              <div className="flex space-x-1 items-center">
+                <span className="text-gray-700 font-semibold">Từ:</span>
+                <span className="text-gray-600 font-medium">
+                  {order?.merchant_name || 'Đang tải tên quán...'}
+                </span>
+              </div>
+              {/* Địa chỉ */}
+              <span className="text-gray-500 text-sm">
+                {order?.merchant_address || 'Đang tải địa chỉ...'}
+              </span>
+              <span className="text-gray-500 text-sm">{order?.phone}</span>
+            </div>
+          </div>
+
+          {/* Line nối */}
+          <div className="w-0.5 bg-gray-300 h-6 mx-1 ml-1"></div>
+
+          {/* Đến */}
+          <div className="flex items-start space-x-2">
+            {/* Chấm xanh */}
+            <span className="w-3 h-3 mt-1 rounded-full bg-green-500 flex-shrink-0"></span>
+
+            {/* Nội dung Đến */}
+            <div className="flex flex-col">
+              {/* Hàng chữ "Đến: Địa chỉ" */}
+              <div className="flex items-center space-x-1">
+                <span className="text-gray-700 font-semibold">Đến:</span>
+                <span className="text-gray-600 font-medium">
+                  {order?.delivery_address || 'Đang tải địa chỉ...'}
+                </span>
+              </div>
+
+              {/* Tên + số điện thoại */}
+              <span className="text-gray-500 text-sm mt-1">
+                {order.receiver_name || 'Đang tải tên người nhận...'} |{' '}
+                {order.receiver_phone || 'Đang tải số điện thoại...'}
+              </span>
+            </div>
+          </div>
+        </div>
 
         <p>
           <strong>Thanh toán:</strong> {order.payment_method}

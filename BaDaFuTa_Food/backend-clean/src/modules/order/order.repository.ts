@@ -6,10 +6,12 @@ import {
   payment_method,
 } from "@prisma/client";
 import { OrderItemInput, GetOrderInput } from "./order.type";
+import { create } from "domain";
 
 const prisma = new PrismaClient();
 
 export const CreateOrder = {
+  /** 🧾 Tạo order COD */
   /** 🧾 Tạo order COD */
   async createOrder(
     tx: Prisma.TransactionClient,
@@ -45,7 +47,34 @@ export const CreateOrder = {
       payment_method: "COD" as payment_method,
     };
 
-    return tx.order.create({ data: normalized });
+    const createdOrder = await tx.order.create({
+      data: normalized,
+      include: {
+        merchant: {
+          select: {
+            merchant_name: true,
+            location: true,
+            phone: true,
+          },
+        },
+      },
+    });
+    let merchant_address = "Chưa có địa chỉ";
+    if (
+      typeof createdOrder.merchant?.location === "object" &&
+      createdOrder.merchant.location !== null &&
+      "address" in createdOrder.merchant.location
+    ) {
+      merchant_address = (createdOrder.merchant.location as any).address;
+    }
+    return {
+      ...createdOrder,
+      merchant_name: createdOrder.merchant?.merchant_name ?? "Không xác định",
+      merchant_address,
+      phone: createdOrder.merchant.phone,
+      customer_name: createdOrder.full_name,
+      customer_phone: createdOrder.phone,
+    };
   },
 
   /** 🧩 Tạo các món trong đơn hàng (kèm option) */

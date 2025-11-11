@@ -1,27 +1,18 @@
-import { useNavigate, useParams, Link } from "react-router-dom"; // ✅
-import { useEffect, useState } from "react";
-import OpeningStatus from "../../components/OpeningStatus";
-import { useCart } from "../../contexts/CartContext";
+import { useNavigate, useParams, Link } from 'react-router-dom'; // ✅
+import { useEffect, useState } from 'react';
+import OpeningStatus from '../../components/OpeningStatus';
+import { useCart } from '../../contexts/CartContext';
 // import { toast, Toaster } from "sonner"; // ✅ nếu muốn hiện thông báo đẹp
-import toast, { Toaster } from "react-hot-toast";
-import { useMemo } from "react";
-import {
-  ArrowLeft,
-  Star,
-  Clock,
-  Truck,
-  MapPin,
-  Award,
-  Users,
-} from "lucide-react";
-import { Button } from "../../components/ui/button";
-import { Badge } from "../../components/ui/badge";
-import { MenuItemCard } from "../../components/MenuItemCard";
-import { ImageWithFallback } from "../../components/figma/ImageWithFallback";
+import toast, { Toaster } from 'react-hot-toast';
+import { useMemo } from 'react';
+import { ArrowLeft, Star, Clock, Truck, MapPin, Award, Users } from 'lucide-react';
+import { Button } from '../../components/ui/button';
+import { Badge } from '../../components/ui/badge';
+import { MenuItemCard } from '../../components/MenuItemCard';
+import { ImageWithFallback } from '../../components/figma/ImageWithFallback';
 
 export const RestaurantPage = () => {
   const navigate = useNavigate();
-
 
   const { id } = useParams();
   const { addItem } = useCart();
@@ -29,9 +20,8 @@ export const RestaurantPage = () => {
   const [menu, setMenu] = useState([]);
 
   const [loading, setLoading] = useState(true);
-  const [errMsg, setErrMsg] = useState("");
+  const [errMsg, setErrMsg] = useState('');
 
- 
   //Lấy menu
   // useEffect(() => {
   //   if (!id) return;
@@ -72,46 +62,42 @@ export const RestaurantPage = () => {
   //   return () => ac.abort();
   // }, [id]);
 
-
   useEffect(() => {
     if (!id) return;
 
     const ac = new AbortController();
 
     async function fetchMenu() {
-      
       const hosts = [
         // `/api192/restaurants/${encodeURIComponent(id)}/menu`,
         `/apiLocal/restaurants/${encodeURIComponent(id)}/menu`,
         // `/api172/restaurants/${encodeURIComponent(id)}/menu`,
       ];
       setLoading(true);
-      setErrMsg("");
+      setErrMsg('');
 
       for (const url of hosts) {
         try {
           const res = await fetch(url, { signal: ac.signal });
           if (!res.ok) {
-            const t = await res.text().catch(() => "");
+            const t = await res.text().catch(() => '');
             throw new Error(t || `Không tìm thấy nhà hàng tại ${url}`);
           }
 
           const data = await res.json();
           setRestaurant(data.merchant ?? null);
           setMenu(Array.isArray(data.menu) ? data.menu : []);
-          console.log("Lấy dữ liệu menu từ:", url);
+          console.log('Lấy dữ liệu menu từ:', url);
           return; // thành công thì thoát loop
         } catch (e) {
-          if (e.name !== "AbortError") {
+          if (e.name !== 'AbortError') {
             console.warn(e.message);
             // tiếp tục thử host tiếp theo
           }
         }
       }
 
-      setErrMsg(
-        "Không tải được dữ liệu nhà hàng từ bất kỳ host nào. Vui lòng thử lại."
-      );
+      setErrMsg('Không tải được dữ liệu nhà hàng từ bất kỳ host nào. Vui lòng thử lại.');
       setRestaurant(null);
       setMenu([]);
     }
@@ -120,7 +106,6 @@ export const RestaurantPage = () => {
     return () => ac.abort();
   }, [id]);
 
-
   //Thêm vào giỏ hàng
   const handleAddToCart = () => {
     addItem(menuItem, restaurant, selectedToppings, specialInstructions);
@@ -128,11 +113,13 @@ export const RestaurantPage = () => {
     onClose(); // đóng dialog
   };
 
+  console.log(menu);
+  console.log(menu[0]?.items[0]?.options);
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       {/* Back Button */}
-      <Button variant="outline" onClick={() => navigate("/")} className="mb-6">
+      <Button variant="outline" onClick={() => navigate('/')} className="mb-6">
         <ArrowLeft className="w-4 h-4 mr-2" />
         Quay lại
       </Button>
@@ -143,7 +130,7 @@ export const RestaurantPage = () => {
         <div className="relative lg:col-span-4 h-[28vh] lg:h-[300px] overflow-hidden w-full flex items-center justify-center">
           <ImageWithFallback
             src={restaurant?.cover_image?.url}
-            alt={restaurant?.merchant_name || "Restaurant cover"}
+            alt={restaurant?.merchant_name || 'Restaurant cover'}
             className="w-full h-full object-cover"
           />
           {/* Overlay gradient (nhẹ) để ảnh hòa với nền đen */}
@@ -173,13 +160,8 @@ export const RestaurantPage = () => {
               <Award className="w-6 h-6 text-yellow-400" />
             </div>
             <div className="flex items-center gap-3">
-              <Badge className="bg-orange-500 text-white border-0 px-3 py-1">
-                Việt Nam
-              </Badge>
-              <Badge
-                variant="outline"
-                className="bg-gray-600 border-gray-500 text-white px-3 py-1"
-              >
+              <Badge className="bg-orange-500 text-white border-0 px-3 py-1">Việt Nam</Badge>
+              <Badge variant="outline" className="bg-gray-600 border-gray-500 text-white px-3 py-1">
                 Cao cấp
               </Badge>
             </div>
@@ -193,9 +175,7 @@ export const RestaurantPage = () => {
                   <Star className="w-3 h-3 text-white fill-current" />
                 </div>
                 <div>
-                  <div className="text-white font-bold text-sm">
-                    {restaurant?.rating ?? "4.8"}
-                  </div>
+                  <div className="text-white font-bold text-sm">{restaurant?.rating ?? '4.8'}</div>
                   <div className="text-xs text-gray-300">Đánh giá</div>
                 </div>
               </div>
@@ -208,7 +188,7 @@ export const RestaurantPage = () => {
                 </div>
                 <div>
                   <div className="text-white font-bold text-sm">
-                    {restaurant?.delivery_time ?? "25-35 phút"}
+                    {restaurant?.delivery_time ?? '25-35 phút'}
                   </div>
                   <div className="text-xs text-gray-300">Giao hàng</div>
                 </div>
@@ -223,8 +203,8 @@ export const RestaurantPage = () => {
                 <div>
                   <div className="text-white font-bold text-sm">
                     {restaurant?.delivery_fee
-                      ? `${restaurant.delivery_fee.toLocaleString("vi-VN")}đ`
-                      : "Miễn phí"}
+                      ? `${restaurant.delivery_fee.toLocaleString('vi-VN')}đ`
+                      : 'Miễn phí'}
                   </div>
                   <div className="text-xs text-gray-300">Phí ship</div>
                 </div>
@@ -238,7 +218,7 @@ export const RestaurantPage = () => {
                 </div>
                 <div>
                   <div className="text-white font-bold text-sm">
-                    {restaurant?.customers ?? "1000+"}
+                    {restaurant?.customers ?? '1000+'}
                   </div>
                   <div className="text-xs text-gray-300">Khách hàng</div>
                 </div>
@@ -254,9 +234,7 @@ export const RestaurantPage = () => {
           {/* Restaurant Description */}
           <div className="mb-6">
             <h3 className="font-bold text-gray-900 mb-3">Về nhà hàng</h3>
-            <p className="text-gray-600 leading-relaxed mb-4">
-              {/* {restaurant.description} */}
-            </p>
+            <p className="text-gray-600 leading-relaxed mb-4">{/* {restaurant.description} */}</p>
             <div className="flex items-center space-x-2 text-gray-500">
               <MapPin className="w-4 h-4 text-orange-500" />
               <span className="text-sm">{restaurant?.location.address}</span>
@@ -271,9 +249,7 @@ export const RestaurantPage = () => {
                 <div className="absolute top-2 right-2 bg-white/20 rounded px-2 py-1 text-xs font-medium">
                   WELCOME50
                 </div>
-                <div className="font-bold text-sm mb-1">
-                  Giảm 50% đơn đầu tiên
-                </div>
+                <div className="font-bold text-sm mb-1">Giảm 50% đơn đầu tiên</div>
                 <div className="text-xs opacity-90">
                   Áp dụng cho khách hàng mới, tối đa 100.000đ
                 </div>
@@ -284,21 +260,15 @@ export const RestaurantPage = () => {
                   FREESHIP
                 </div>
                 <div className="font-bold text-sm mb-1">Miễn phí giao hàng</div>
-                <div className="text-xs opacity-90">
-                  Đơn từ 200.000đ trở lên
-                </div>
+                <div className="text-xs opacity-90">Đơn từ 200.000đ trở lên</div>
               </div>
 
               <div className="bg-gradient-to-r from-orange-400 to-red-500 rounded-lg p-4 text-white relative overflow-hidden">
                 <div className="absolute top-2 right-2 bg-white/20 rounded px-2 py-1 text-xs font-medium">
                   WEEKEND30
                 </div>
-                <div className="font-bold text-sm mb-1">
-                  Combo ưu đãi cuối tuần
-                </div>
-                <div className="text-xs opacity-90">
-                  Giảm 30% các combo, chỉ áp dụng T7-CN
-                </div>
+                <div className="font-bold text-sm mb-1">Combo ưu đãi cuối tuần</div>
+                <div className="text-xs opacity-90">Giảm 30% các combo, chỉ áp dụng T7-CN</div>
               </div>
 
               <div className="bg-gradient-to-r from-orange-400 to-red-500 rounded-lg p-4 text-white relative overflow-hidden">
@@ -306,9 +276,7 @@ export const RestaurantPage = () => {
                   COFFEE25
                 </div>
                 <div className="font-bold text-sm mb-1">Happy Hour Coffee</div>
-                <div className="text-xs opacity-90">
-                  Giảm 25% đồ uống từ 14h-16h
-                </div>
+                <div className="text-xs opacity-90">Giảm 25% đồ uống từ 14h-16h</div>
               </div>
             </div>
           </div>
@@ -349,9 +317,7 @@ export const RestaurantPage = () => {
       {Array.isArray(menu) && menu.length > 0 ? (
         menu.map((category) => (
           <section key={category.category_id ?? category.id} className="mb-8">
-            <h2 className="text-2xl font-semibold mb-4">
-              {category.category_name}
-            </h2>
+            <h2 className="text-2xl font-semibold mb-4">{category.category_name}</h2>
 
             {/* 1 cột (mobile) → 2 (sm) → 3 (md) → 4 (lg) */}
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
@@ -360,12 +326,20 @@ export const RestaurantPage = () => {
                   const item = {
                     id: rawItem.id ?? rawItem.item_id,
                     name: rawItem.name ?? rawItem.name_item,
-                    description: rawItem.description ?? "",
+                    description: rawItem.description ?? '',
                     price: Number(rawItem.price) || 0,
                     image: rawItem.image ?? rawItem.image_item?.url ?? null,
-                    toppings: rawItem.toppings ?? [],
+                    // toppings: rawItem.toppings ?? [],
+                    options: rawItem.options ?? [],
                     isAvailable: rawItem.isAvailable !== false,
                     originalPrice: rawItem.originalPrice ?? rawItem.price,
+                    // Thêm
+                    categoryId: category.id ?? category.category_id,
+                    restaurantId: restaurant?.id,
+                    sku: rawItem.sku ?? null,
+                    tags: rawItem.tags ?? [],
+                    nutrition: rawItem.nutrition ?? {},
+                    extraInfo: rawItem.extraInfo ?? {},
                   };
 
                   return (
@@ -381,16 +355,14 @@ export const RestaurantPage = () => {
                   );
                 })
               ) : (
-                <p className="text-gray-500 italic">
-                  Chưa có món nào trong mục này.
-                </p>
+                <p className="text-gray-500 italic">Chưa có món nào trong mục này.</p>
               )}
             </div>
             <Toaster
               position="top-right"
               toastOptions={{
                 duration: 1000, // 1 giây tự tắt
-                style: { pointerEvents: "none" }, // tránh bị touch giữ
+                style: { pointerEvents: 'none' }, // tránh bị touch giữ
                 pauseOnFocusLoss: false,
                 pauseOnHover: false,
               }}

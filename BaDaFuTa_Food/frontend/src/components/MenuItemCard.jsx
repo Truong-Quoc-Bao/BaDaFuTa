@@ -33,7 +33,8 @@ export const MenuItemCard = ({ menuItem, restaurant, layout = "vertical" }) => {
   const isAvailable = menuItem.isAvailable !== false;
 
   // Check if item has toppings or required options
-  const hasToppings = menuItem.toppings && menuItem.toppings.length > 0;
+  // const hasToppings = menuItem.toppings && menuItem.toppings.length > 0;
+  const hasToppings = menuItem.options && menuItem.options.length > 0;
 
   const handleQuickAdd = (e) => {
     e.stopPropagation(); // Prevent opening detail dialog
