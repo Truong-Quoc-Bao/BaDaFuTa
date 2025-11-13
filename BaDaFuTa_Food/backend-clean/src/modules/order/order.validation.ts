@@ -1,4 +1,3 @@
-import { payment_method } from "@prisma/client";
 import { z } from "zod";
 
 export const CreateCODOrderSchema = z.object({
@@ -17,7 +16,12 @@ export const CreateCODOrderSchema = z.object({
         price: z.coerce.number().nonnegative(),
         note: z.string().nullable().optional(),
         selected_option_items: z
-          .array(z.string().uuid())
+          .array(
+            z.object({
+              option_item_id: z.string().uuid(),
+              price: z.coerce.number().nonnegative(),
+            })
+          )
           .optional()
           .default([]),
       })
