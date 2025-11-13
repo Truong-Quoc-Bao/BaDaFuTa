@@ -6,12 +6,10 @@ import {
   payment_method,
 } from "@prisma/client";
 import { OrderItemInput, GetOrderInput } from "./order.type";
-import { create } from "domain";
 
 const prisma = new PrismaClient();
 
 export const CreateOrder = {
-  /** 🧾 Tạo order COD */
   /** 🧾 Tạo order COD */
   async createOrder(
     tx: Prisma.TransactionClient,
@@ -71,7 +69,7 @@ export const CreateOrder = {
       ...createdOrder,
       merchant_name: createdOrder.merchant?.merchant_name ?? "Không xác định",
       merchant_address,
-      phone: createdOrder.merchant.phone,
+      merchant_phone: createdOrder.merchant.phone,
       customer_name: createdOrder.full_name,
       customer_phone: createdOrder.phone,
     };
@@ -85,7 +83,7 @@ export const CreateOrder = {
     items: OrderItemInput[]
   ) {
     for (const i of items) {
-      // 1️⃣ Tạo từng món trong đơn
+      // Tạo từng item của order
       const orderItem = await tx.order_item.create({
         data: {
           order_id,
@@ -96,36 +94,37 @@ export const CreateOrder = {
         },
       });
 
-      // 2️⃣ Nếu có option được chọn
+      // Nếu có topping / option được chọn
       if (i.selected_option_items && i.selected_option_items.length > 0) {
-        console.log("👉 Option gửi lên:", i.selected_option_items);
+        console.log("👉 FE gửi option:", i.selected_option_items);
 
-        // ✅ Kiểm tra option có tồn tại không
+        // FE gửi dạng object → lấy mảng ID
+        const optionIds = i.selected_option_items.map(
+          (opt) => opt.option_item_id
+        );
+
+        // Lấy option hợp lệ từ DB
         const validOptionItems = await tx.option_item.findMany({
-          where: { id: { in: i.selected_option_items } },
+          where: { id: { in: optionIds } },
           select: { id: true },
         });
 
-        console.log("✅ Option hợp lệ:", validOptionItems);
-
         if (validOptionItems.length === 0) {
-          console.warn(
-            `⚠️ Không tìm thấy option nào hợp lệ cho món ${i.menu_item_id}`
-          );
+          console.warn(`⚠️ Không có option hợp lệ cho món ${i.menu_item_id}`);
           continue;
         }
 
-        // ✅ Lưu từng option thủ công (fix Prisma không cho createMany composite key)
-        for (const opt of validOptionItems) {
+        // Lưu từng option_item kèm giá topping
+        for (const opt of i.selected_option_items) {
           await tx.order_item_option.create({
             data: {
               order_item_id: orderItem.id,
-              option_item_id: opt.id,
+              option_item_id: opt.option_item_id,
             },
           });
         }
 
-        console.log("💾 Đã lưu option cho món:", i.menu_item_id);
+        console.log("💾 Đã lưu option cho:", i.menu_item_id);
       } else {
         console.log("ℹ️ Món không có option:", i.menu_item_id);
       }
@@ -215,6 +214,7 @@ export const getOrder = {
         delivery_address: order.delivery_address,
         payment_method: order.payment_method,
         status_payment: order.status_payment,
+        delivery_fee: order.delivery_fee,
         total_amount: order.total_amount.toString(),
         status: order.status,
         created_at: order.created_at,
@@ -238,6 +238,7 @@ export const getOrder = {
     });
   },
 };
+
 export const updateOrderBody = {
   async updateStatus(
     orderId: string,

@@ -27,12 +27,17 @@ export const orderService = {
 
       //Kiểm tra các món thuộc merchant
       const itemIds = data.items.map((i) => i.menu_item_id);
+
+      // Lấy các id không trùng
+      const uniqueIds = [...new Set(itemIds)];
+
       const itemsFromDB = await tx.menu_item.findMany({
-        where: { id: { in: itemIds } },
+        where: { id: { in: uniqueIds } },
         select: { id: true, merchant_id: true, name_item: true },
       });
 
-      if (itemsFromDB.length !== itemIds.length) {
+      // Kiểm tra tồn tại
+      if (itemsFromDB.length !== uniqueIds.length) {
         throw new Error("món không tồn tại");
       }
 
@@ -48,10 +53,18 @@ export const orderService = {
       }
 
       // Tổng tiền
-      const total = BigInt(
-        data.items.reduce((sum, i) => sum + i.price * i.quantity, 0) +
-          data.delivery_fee
-      );
+      const totalItems = data.items.reduce((sum, item) => {
+        const toppingTotal = (item.selected_option_items ?? []).reduce(
+          (acc, top) => acc + (top.price ?? 0),
+          0
+        );
+
+        const itemTotal = (item.price + toppingTotal) * item.quantity;
+
+        return sum + itemTotal;
+      }, 0);
+
+      const total = BigInt(totalItems + data.delivery_fee);
 
       //Tạo Order
       const order = await CreateOrder.createOrder(tx, {
@@ -63,8 +76,7 @@ export const orderService = {
         delivery_fee: BigInt(data.delivery_fee),
         note: data.note ?? null,
         total_amount: total,
-        // status: "PENDING",
-        status:"DELIVERING",
+        status: "PENDING",
         status_payment: "PENDING",
       });
 

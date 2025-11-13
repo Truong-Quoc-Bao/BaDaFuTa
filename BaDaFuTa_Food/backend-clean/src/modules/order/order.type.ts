@@ -20,7 +20,10 @@ export type OrderItemInput = {
   quantity: number;
   price: number;
   note?: string | null;
-  selected_option_items?: string[];
+  selected_option_items: {
+    option_item_id: string;
+    price: number;
+  }[];
 };
 
 /**
