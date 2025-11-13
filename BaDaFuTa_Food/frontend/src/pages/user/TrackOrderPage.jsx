@@ -482,7 +482,7 @@ export const TrackOrderPage = () => {
               <span className="text-gray-500 text-sm">
                 {order?.merchant_address || 'Đang tải địa chỉ...'}
               </span>
-              <span className="text-gray-500 text-sm">{order?.phone}</span>
+              <span className="text-gray-500 text-sm">{order?.merchant_phone}</span>
             </div>
           </div>
 
