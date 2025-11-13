@@ -512,7 +512,6 @@ export const TrackOrderPage = () => {
             </div>
           </div>
         </div>
-
         <p>
           <strong>Thanh toán:</strong> {order.payment_method}
         </p>

@@ -62,7 +62,7 @@ export const CreateOrder = {
       ...createdOrder,
       merchant_name: createdOrder.merchant?.merchant_name ?? 'Không xác định',
       merchant_address,
-      phone: createdOrder.merchant.phone,
+      merchant_phone: createdOrder.merchant.phone,
       customer_name: createdOrder.full_name,
       customer_phone: createdOrder.phone,
     };
@@ -195,7 +195,7 @@ export const getOrder = {
         order_id: order.id,
         merchant_name: order.merchant?.merchant_name ?? 'Không xác định',
         merchant_address,
-        merchant_image: order.merchant?.profile_image,
+        merchant_image: order.merchant.profile_image,
         merchant_phone: order.merchant?.phone ?? null,
         receiver_name: order.user?.full_name ?? 'Không xác định',
         receiver_phone: order.user?.phone ?? null,

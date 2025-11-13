@@ -23,7 +23,7 @@ export const createCODOrder = async (req: Request, res: Response) => {
       order_id: order.id,
       merchant_name: order.merchant_name,
       merchant_address: order.merchant_address,
-      phone: order.merchant.phone,
+      merchant_phone: order.merchant.phone,
       receiver_name: order.customer_name,
       receiver_phone: order.customer_phone,
       delivery_address: order.delivery_address,
