@@ -234,12 +234,13 @@ export default function CheckOutPage() {
         quantity: i.quantity,
         price: i.price ?? i.menuItem?.price,
 
-        // ⭐ LẤY OPTION TỪ CART
-        selected_option_items:
-          (i.selected_option_items ?? []).map((opt) => ({
-            option_item_id: opt.option_item_id,
-            price: opt.price,
-          })) || [],
+        selected_option_items: (i.selectedOptions ?? []).flatMap((opt) =>
+          opt.items.map((oi) => ({
+            option_item_id: oi.option_item_id,
+            option_item_name: oi.option_item_name,
+            price: oi.price,
+          })),
+        ),
       })),
     };
 
@@ -335,12 +336,13 @@ export default function CheckOutPage() {
           quantity: i.quantity,
           price: i.price ?? i.menuItem?.price,
 
-          // ⭐ LẤY OPTION TỪ CART
-          selected_option_items:
-            (i.selected_option_items ?? []).map((opt) => ({
-              option_item_id: opt.option_item_id,
-              price: opt.price,
-            })) || [],
+          selected_option_items: (i.selectedOptions ?? []).flatMap((opt) =>
+            opt.items.map((oi) => ({
+              option_item_id: oi.option_item_id,
+              option_item_name: oi.option_item_name,
+              price: oi.price,
+            })),
+          ),
         })),
       };
 

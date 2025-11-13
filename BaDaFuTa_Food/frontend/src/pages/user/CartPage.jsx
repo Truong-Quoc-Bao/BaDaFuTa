@@ -1,17 +1,13 @@
-import { useNavigate } from "react-router-dom";
-import { ArrowLeft, Plus, Minus, Trash2, ShoppingBag } from "lucide-react";
-import { Button } from "../../components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "../../components/ui/card";
-import { Badge } from "../../components/ui/badge";
-import { useCart } from "../../contexts/CartContext";
-import { ImageWithFallback } from "../../components/figma/ImageWithFallback";
-import { useAuth } from "../../contexts/AuthContext"; // 🔹 import auth
-import { toast } from "sonner";
+import { useNavigate } from 'react-router-dom';
+import { ArrowLeft, Plus, Minus, Trash2, ShoppingBag } from 'lucide-react';
+import { Button } from '../../components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card';
+import { Badge } from '../../components/ui/badge';
+import { useCart } from '../../contexts/CartContext';
+import { ImageWithFallback } from '../../components/figma/ImageWithFallback';
+import { useAuth } from '../../contexts/AuthContext'; // 🔹 import auth
+import { toast } from 'sonner';
+import React, { useEffect } from 'react'; 
 
 export default function CartPage() {
   const navigate = useNavigate();
@@ -23,9 +19,7 @@ export default function CartPage() {
   const { state, updateQuantity, removeItem, clearCart } = useCart();
   const deliveryFee =
     state.items.length > 0
-      ? state.items[0].restaurant?.deliveryFee ??
-        state.items[0].restaurant?.delivery_fee ??
-        0
+      ? state.items[0].restaurant?.deliveryFee ?? state.items[0].restaurant?.delivery_fee ?? 0
       : 0;
   const subtotal = state.total;
   const total = subtotal + deliveryFee;
@@ -33,17 +27,33 @@ export default function CartPage() {
   const handleCheckout = () => {
     // E3: Check if cart is empty
     if (!state.items || state.items.length === 0) {
-      toast.error("Giỏ hàng rỗng, hãy thêm sản phẩm.");
+      toast.error('Giỏ hàng rỗng, hãy thêm sản phẩm.');
       return;
     } else {
       if (!authState.isAuthenticated) {
-        localStorage.setItem("redirectAfterLogin", "/cart/checkout");
-        navigate("/login");
+        localStorage.setItem('redirectAfterLogin', '/cart/checkout');
+        navigate('/login');
         return;
       }
-      navigate("/cart/checkout");
+      navigate('/cart/checkout');
     }
   };
+  
+  useEffect(() => {
+    if (state.items.length === 0) return;
+    state.items.forEach(item => {
+      console.log("Món:", item.menuItem.name);
+      console.log("- Topping:", item.selectedToppings?.map(t => t.name).join(", ") || "Không có topping");
+      const toppingsTotal = (item.selectedToppings || []).reduce((sum, t) => sum + t.price, 0);
+      const itemPrice = item.menuItem.price + toppingsTotal;
+      console.log("- Giá món:", item.menuItem.price.toLocaleString('vi-VN') + " đ");
+      console.log("- Giá topping:", toppingsTotal.toLocaleString('vi-VN') + " đ");
+      console.log("- Tổng 1 món:", itemPrice.toLocaleString('vi-VN') + " đ");
+      console.log("- Số lượng:", item.quantity);
+      console.log("- Giá tổng cả món:", (itemPrice * item.quantity).toLocaleString('vi-VN') + " đ");
+      console.log("------");
+    });
+  }, [state.items]);
   
 
   if (state.items.length === 0) {
@@ -51,7 +61,7 @@ export default function CartPage() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8  ">
         <Button
           variant="outline"
-          onClick={() => navigate("/")}
+          onClick={() => navigate('/')}
           className="mb-6 bg-white border border-gray-300"
         >
           <ArrowLeft className="w-4 h-4 mr-2" />
@@ -60,15 +70,11 @@ export default function CartPage() {
 
         <div className="text-center py-12">
           <ShoppingBag className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-          <h2 className="text-2xl font-bold text-gray-900 mb-2">
-            Giỏ hàng trống
-          </h2>
-          <p className="text-gray-500 mb-6">
-            Hãy thêm một số món ăn vào giỏ hàng của bạn
-          </p>
+          <h2 className="text-2xl font-bold text-gray-900 mb-2">Giỏ hàng trống</h2>
+          <p className="text-gray-500 mb-6">Hãy thêm một số món ăn vào giỏ hàng của bạn</p>
           <Button
             variant="default"
-            onClick={() => navigate("/")}
+            onClick={() => navigate('/')}
             className="bg-orange-500 hover:bg-orange-600 w-[180px] h-[40px] rounded-lg"
           >
             Khám phá nhà hàng
@@ -80,11 +86,7 @@ export default function CartPage() {
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 ">
-      <Button
-        variant="outline"
-        onClick={() => navigate("/")}
-        className="mb-6 bg-white"
-      >
+      <Button variant="outline" onClick={() => navigate('/')} className="mb-6 bg-white">
         <ArrowLeft className="w-4 h-4 mr-2" />
         Quay lại
       </Button>
@@ -108,7 +110,7 @@ export default function CartPage() {
             {state.items.map((item) => {
               const toppingsTotal = (item.selectedToppings || []).reduce(
                 (sum, t) => sum + t.price,
-                0
+                0,
               );
               const itemPrice = item.menuItem.price + toppingsTotal;
 
@@ -129,24 +131,16 @@ export default function CartPage() {
                         </p>
 
                         {/* Display selected toppings */}
-                        {item.selectedToppings &&
-                          item.selectedToppings.length > 0 && (
-                            <div className="mt-2 flex flex-wrap gap-1">
-                              {item.selectedToppings.map((topping) => (
-                                <Badge
-                                  key={topping.id}
-                                  variant="outline"
-                                  className="text-xs"
-                                >
-                                  {topping.name}{" "}
-                                  {topping.price > 0 &&
-                                    `+${topping.price.toLocaleString(
-                                      "vi-VN"
-                                    )}đ`}
-                                </Badge>
-                              ))}
-                            </div>
-                          )}
+                        {item.selectedToppings && item.selectedToppings.length > 0 && (
+                          <div className="mt-2 flex flex-wrap gap-1">
+                            {item.selectedToppings.map((topping) => (
+                              <Badge key={topping.id} variant="outline" className="text-xs">
+                                {topping.name}{' '}
+                                {topping.price > 0 && `+${topping.price.toLocaleString('vi-VN')}đ`}
+                              </Badge>
+                            ))}
+                          </div>
+                        )}
 
                         {/* Display special instructions */}
                         {item.specialInstructions && (
@@ -158,12 +152,11 @@ export default function CartPage() {
                         <div className="mt-2">
                           <div className="flex flex-col">
                             <span className="font-bold text-orange-600">
-                              {item.menuItem.price.toLocaleString("vi-VN")}đ
+                              {item.menuItem.price.toLocaleString('vi-VN')}đ
                             </span>
                             {toppingsTotal > 0 && (
                               <span className="text-sm text-gray-600">
-                                + toppings:{" "}
-                                {toppingsTotal.toLocaleString("vi-VN")}đ
+                                + toppings: {toppingsTotal.toLocaleString('vi-VN')}đ
                               </span>
                             )}
                             {/* <span className="text-sm font-semibold text-gray-800">
@@ -179,22 +172,16 @@ export default function CartPage() {
                           <Button
                             variant="outline"
                             size="sm"
-                            onClick={() =>
-                              updateQuantity(item.id, item.quantity - 1)
-                            }
+                            onClick={() => updateQuantity(item.id, item.quantity - 1)}
                             className="w-8 h-8 p-0"
                           >
                             <Minus className="w-4 h-4" />
                           </Button>
-                          <span className="font-medium w-8 text-center">
-                            {item.quantity}
-                          </span>
+                          <span className="font-medium w-8 text-center">{item.quantity}</span>
                           <Button
                             variant="outline"
                             size="sm"
-                            onClick={() =>
-                              updateQuantity(item.id, item.quantity + 1)
-                            }
+                            onClick={() => updateQuantity(item.id, item.quantity + 1)}
                             className="w-8 h-8 p-0"
                           >
                             <Plus className="w-4 h-4" />
@@ -204,10 +191,7 @@ export default function CartPage() {
                         {/* Item total */}
                         <div className="text-right">
                           <p className="font-bold text-orange-600">
-                            {(itemPrice * item.quantity).toLocaleString(
-                              "vi-VN"
-                            )}
-                            đ
+                            {(itemPrice * item.quantity).toLocaleString('vi-VN')}đ
                           </p>
                         </div>
 
@@ -238,25 +222,21 @@ export default function CartPage() {
             <CardContent className="space-y-4">
               <div className="flex justify-between">
                 <span>
-                  Tạm tính (
-                  {state.items.reduce((sum, item) => sum + item.quantity, 0)}{" "}
-                  món)
+                  Tạm tính ({state.items.reduce((sum, item) => sum + item.quantity, 0)} món)
                 </span>
-                <span>{subtotal.toLocaleString("vi-VN")}đ</span>
+                <span>{subtotal.toLocaleString('vi-VN')}đ</span>
               </div>
 
               <div className="flex justify-between">
                 <span>Phí giao hàng</span>
-                <span>{deliveryFee.toLocaleString("vi-VN")}đ</span>
+                <span>{deliveryFee.toLocaleString('vi-VN')}đ</span>
               </div>
 
               <hr className="border-t border-gray-200 my-4" />
 
               <div className="flex justify-between font-bold text-lg">
                 <span>Tổng cộng</span>
-                <span className="text-orange-600">
-                  {total.toLocaleString("vi-VN")}đ
-                </span>
+                <span className="text-orange-600">{total.toLocaleString('vi-VN')}đ</span>
               </div>
 
               {/* Step 11-12 from Use Case: Checkout button */}
@@ -278,4 +258,4 @@ export default function CartPage() {
       </div>
     </div>
   );
-};
+}
