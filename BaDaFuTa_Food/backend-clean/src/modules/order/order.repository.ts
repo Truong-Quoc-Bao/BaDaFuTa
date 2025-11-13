@@ -29,16 +29,13 @@ export const CreateOrder = {
     const normalized = {
       ...data,
       status:
-        ((
-          data.status || "PENDING"
-        ).toUpperCase() as keyof typeof order_status) in order_status
+        ((data.status || "PENDING").toUpperCase() as keyof typeof order_status) in order_status
           ? ((data.status || "PENDING").toUpperCase() as order_status)
           : order_status.PENDING,
 
       status_payment:
-        ((
-          data.status_payment || "PENDING"
-        ).toUpperCase() as keyof typeof PaymentStatus) in PaymentStatus
+        ((data.status_payment || "PENDING").toUpperCase() as keyof typeof PaymentStatus) in
+        PaymentStatus
           ? ((data.status_payment || "PENDING").toUpperCase() as PaymentStatus)
           : PaymentStatus.PENDING,
 
@@ -57,6 +54,7 @@ export const CreateOrder = {
         },
       },
     });
+
     let merchant_address = "Chưa có địa chỉ";
     if (
       typeof createdOrder.merchant?.location === "object" &&
@@ -65,6 +63,7 @@ export const CreateOrder = {
     ) {
       merchant_address = (createdOrder.merchant.location as any).address;
     }
+
     return {
       ...createdOrder,
       merchant_name: createdOrder.merchant?.merchant_name ?? "Không xác định",
@@ -75,15 +74,14 @@ export const CreateOrder = {
     };
   },
 
-  /** 🧩 Tạo các món trong đơn hàng (kèm option) */
-  /** 🧩 Tạo các món trong đơn hàng (kèm option) */
+  /** 🧩 Tạo món + option trong order */
   async createOrderItems(
     tx: Prisma.TransactionClient,
     order_id: string,
     items: OrderItemInput[]
   ) {
     for (const i of items) {
-      // Tạo từng item của order
+      // 1️⃣ Tạo item trong order
       const orderItem = await tx.order_item.create({
         data: {
           order_id,
@@ -94,18 +92,16 @@ export const CreateOrder = {
         },
       });
 
-      // Nếu có topping / option được chọn
+      // 2️⃣ Nếu có option / topping
       if (i.selected_option_items && i.selected_option_items.length > 0) {
         console.log("👉 FE gửi option:", i.selected_option_items);
 
-        // FE gửi dạng object → lấy mảng ID
-        const optionIds = i.selected_option_items.map(
-          (opt) => opt.option_item_id
-        );
+        // ⭐ FE gửi dạng object — map để lấy ID cho Prisma
+        const optionIds = i.selected_option_items.map((opt) => opt.option_item_id);
 
-        // Lấy option hợp lệ từ DB
+        // ⭐ Kiểm tra option hợp lệ trong DB
         const validOptionItems = await tx.option_item.findMany({
-          where: { id: { in: optionIds } },
+where: { id: { in: optionIds } },
           select: { id: true },
         });
 
@@ -114,12 +110,12 @@ export const CreateOrder = {
           continue;
         }
 
-        // Lưu từng option_item kèm giá topping
-        for (const opt of i.selected_option_items) {
+        // ⭐ Lưu option_item ID (không lưu price)
+        for (const opt of validOptionItems) {
           await tx.order_item_option.create({
             data: {
               order_item_id: orderItem.id,
-              option_item_id: opt.option_item_id,
+              option_item_id: opt.id,
             },
           });
         }
@@ -151,6 +147,7 @@ export const getOrder = {
             merchant_name: true,
             phone: true,
             location: true,
+            profile_image: true,
           },
         },
         user: {
@@ -191,7 +188,6 @@ export const getOrder = {
       orderBy: { created_at: "desc" },
     });
 
-    // ✅ Chuẩn hóa JSON trả về
     return orders.map((order) => {
       let merchant_address = "Chưa có địa chỉ";
       if (
@@ -208,7 +204,8 @@ export const getOrder = {
         order_id: order.id,
         merchant_name: order.merchant?.merchant_name ?? "Không xác định",
         merchant_address,
-        merchant_phone: order.merchant?.phone ?? null,
+        merchant_image: order.merchant.profile_image,
+merchant_phone: order.merchant?.phone ?? null,
         receiver_name: order.user?.full_name ?? "Không xác định",
         receiver_phone: order.user?.phone ?? null,
         delivery_address: order.delivery_address,
@@ -246,7 +243,7 @@ export const updateOrderBody = {
   ) {
     return prisma.order.update({
       where: { id: orderId },
-      data, // ✅ truyền nguyên object, có thể chứa cả status_payment
+      data,
       include: { merchant: true },
     });
   },

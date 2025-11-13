@@ -304,7 +304,7 @@ export default function CheckOutPage() {
         merchant_id: merchant.id,
         phone: selectedAddress.phone,
         delivery_address: selectedAddress.address,
-        delivery_fee: selectedAddress.deliveryFee,
+        delivery_fee: deliveryFee,
         payment_method: 'COD', // ✅ đồng bộ với backend
         note: selectedAddress?.note,
         items: state.items.map((i) => ({

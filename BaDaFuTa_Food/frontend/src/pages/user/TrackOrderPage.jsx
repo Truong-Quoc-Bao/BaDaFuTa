@@ -471,7 +471,7 @@ export const TrackOrderPage = () => {
             <span className="w-3 h-3 mt-1 rounded-full bg-orange-500 flex-shrink-0"></span>
 
             <div className="flex flex-col">
-              {/* Hàng chữ "Từ: Tên quán" */}
+              {/* Từ: Tên quán" */}
               <div className="flex space-x-1 items-center">
                 <span className="text-gray-700 font-semibold">Từ:</span>
                 <span className="text-gray-600 font-medium">
@@ -482,7 +482,7 @@ export const TrackOrderPage = () => {
               <span className="text-gray-500 text-sm">
                 {order?.merchant_address || 'Đang tải địa chỉ...'}
               </span>
-              <span className="text-gray-500 text-sm">{order?.phone}</span>
+              <span className="text-gray-500 text-sm">{order?.merchant_phone}</span>
             </div>
           </div>
 
@@ -512,7 +512,6 @@ export const TrackOrderPage = () => {
             </div>
           </div>
         </div>
-
         <p>
           <strong>Thanh toán:</strong> {order.payment_method}
         </p>
