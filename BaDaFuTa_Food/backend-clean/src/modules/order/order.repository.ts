@@ -149,11 +149,15 @@ export const getOrder = {
       include: {
         merchant: {
           select: {
-            id: true,
             merchant_name: true,
-            location: true,
             phone: true,
-            profile_image: true,
+            location: true,
+          },
+        },
+        user: {
+          select: {
+            full_name: true,
+            phone: true,
           },
         },
         items: {
@@ -188,21 +192,50 @@ export const getOrder = {
       orderBy: { created_at: "desc" },
     });
 
-    // ✅ Biến đổi kết quả để có cấu trúc bạn muốn
-    return orders.map((order) => ({
-      ...order,
-      items: order.items.map((item) => ({
-        ...item,
-        options: item.options.map((opt) => ({
-          id: opt.option_item.option.id,
-          option_name: opt.option_item.option.option_name,
-          option_item: {
-            id: opt.option_item.id,
-            option_item_name: opt.option_item.option_item_name,
-          },
+    // ✅ Chuẩn hóa JSON trả về
+    return orders.map((order) => {
+      let merchant_address = "Chưa có địa chỉ";
+      if (
+        typeof order.merchant?.location === "object" &&
+        order.merchant.location !== null &&
+        "address" in order.merchant.location
+      ) {
+        merchant_address = (order.merchant.location as any).address;
+      }
+
+      return {
+        success: true,
+        message: "Lấy thông tin đơn hàng thành công",
+        order_id: order.id,
+        merchant_name: order.merchant?.merchant_name ?? "Không xác định",
+        merchant_address,
+        merchant_phone: order.merchant?.phone ?? null,
+        receiver_name: order.user?.full_name ?? "Không xác định",
+        receiver_phone: order.user?.phone ?? null,
+        delivery_address: order.delivery_address,
+        payment_method: order.payment_method,
+        status_payment: order.status_payment,
+        total_amount: order.total_amount.toString(),
+        status: order.status,
+        created_at: order.created_at,
+        items: order.items.map((item) => ({
+          id: item.id,
+          menu_item_id: item.menu_item_id,
+          name_item: item.menu_item?.name_item,
+          image_item: item.menu_item?.image_item,
+          quantity: item.quantity,
+          price: item.price.toString(),
+          note: item.note,
+          options:
+            item.options?.map((opt) => ({
+              option_id: opt.option_item.option.id,
+              option_name: opt.option_item.option.option_name,
+              option_item_id: opt.option_item.id,
+              option_item_name: opt.option_item.option_item_name,
+            })) ?? [],
         })),
-      })),
-    }));
+      };
+    });
   },
 };
 export const updateOrderBody = {
