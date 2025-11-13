@@ -22,7 +22,7 @@ import { useCart } from '../contexts/CartContext';
 import { useNavigate } from 'react-router-dom';
 
 export const OrderHistoryCard = ({ order, onRatingSubmit }) => {
-  const [showDetails, setShowDetails] = useState(false); // <-- state để bật/tắt chi tiết
+  const [showDetails, setShowDetails] = useState(false);
   const [showRatingDialog, setShowRatingDialog] = useState(false);
   const { dispatch } = useCart();
   const navigate = useNavigate();
@@ -111,14 +111,14 @@ export const OrderHistoryCard = ({ order, onRatingSubmit }) => {
           <div className="flex items-start justify-between mb-4">
             <div className="flex items-center space-x-3">
               <img
-                src={order.merchant.profile_image.url}
-                alt={order.merchant.merchant_name}
+                src={order.merchant_image.url}
+                alt={order.merchant_name}
                 className="w-12 h-12 rounded-lg object-cover"
               />
               <div>
                 <span className="flex items-center space-x-1">
                   <h3 className="font-semibold text-gray-800">Nhà hàng:</h3>
-                  <h3 className="text-gray-700">{order.merchant.merchant_name}</h3>
+                  <h3 className="text-gray-700">{order.merchant_name}</h3>
                 </span>
 
                 <p className="text-sm text-gray-500">Mã đơn: {order.id}</p>
@@ -139,14 +139,16 @@ export const OrderHistoryCard = ({ order, onRatingSubmit }) => {
                   >
                     <div className="flex items-center space-x-3">
                       <img
-                        src={item.menu_item.image_item.url}
-                        alt={item.menu_item.name_item}
+                        src={item.image_item.url}
+                        alt={item.name_item}
                         className="w-12 h-12 rounded-lg object-cover"
                       />
                       <span className="font-semibold">
-                        {item.quantity} x {item.menu_item.name_item}
+                        {item.quantity} x {item.name_item}
                       </span>
-                      <p> Option: {" "}
+                      <p>
+                        {' '}
+                        Option:{' '}
                         {item.options.length > 0
                           ? item.options
                               .map(
@@ -157,7 +159,7 @@ export const OrderHistoryCard = ({ order, onRatingSubmit }) => {
                       </p>
                     </div>
 
-                    <span>{(item.menu_item.price * item.quantity).toLocaleString('vi-VN')}đ</span>
+                    <span>{(item.price * item.quantity).toLocaleString('vi-VN')}đ</span>
                   </div>
                 ))}
                 {/* Phí giao hàng */}

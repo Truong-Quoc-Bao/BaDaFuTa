@@ -1142,25 +1142,6 @@ const testOrder = {
 
 
 
-<div className="flex items-start space-x-2">
-  {/* Chấm trạng thái */}
-  <span className="w-3 h-3 mt-1 rounded-full bg-orange-500 flex-shrink-0"></span>
-
-  <div className="flex flex-col">
-    {/* Hàng chữ "Từ: Tên quán" */}
-    <div className="flex space-x-1 items-center">
-      <span className="text-gray-700 font-semibold">Từ:</span>
-      <span className="text-gray-800 font-medium">
-        {order?.merchant_name || 'Đang tải tên quán...'}
-      </span>
-    </div>
-    {/* Địa chỉ */}
-    <span className="text-gray-500 text-sm">
-      {order?.merchant_address || 'Đang tải địa chỉ...'}
-    </span>
-  </div>
-</div>
-
 
 
 
