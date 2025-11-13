@@ -225,13 +225,21 @@ export default function CheckOutPage() {
       merchant_id: merchant.id,
       phone: finalAddress.phone,
       delivery_address: finalAddress.address,
-      delivery_fee: finalAddress.deliveryFee,
-      payment_method: selectedPaymentMethod.type, // "CASH" hoặc "VNPAY"
+      delivery_fee: deliveryFee,
       note: finalAddress?.note,
+      payment_method: selectedPaymentMethod.type, // COD / VNPAY / MOMO
+
       items: state.items.map((i) => ({
         menu_item_id: i.menu_item_id ?? i.menuItem?.id,
         quantity: i.quantity,
         price: i.price ?? i.menuItem?.price,
+
+        // ⭐ LẤY OPTION TỪ CART
+        selected_option_items:
+          (i.selected_option_items ?? []).map((opt) => ({
+            option_item_id: opt.option_item_id,
+            price: opt.price,
+          })) || [],
       })),
     };
 
@@ -299,6 +307,21 @@ export default function CheckOutPage() {
   // ======================
   const handleCreateOrder = async () => {
     try {
+      // const orderBody = {
+      //   user_id: user.id,
+      //   merchant_id: merchant.id,
+      //   phone: selectedAddress.phone,
+      //   delivery_address: selectedAddress.address,
+      //   delivery_fee: deliveryFee,
+      //   payment_method: 'COD', // ✅ đồng bộ với backend
+      //   note: selectedAddress?.note,
+      //   items: state.items.map((i) => ({
+      //     menu_item_id: i.menu_item_id ?? i.menuItem?.id,
+      //     quantity: i.quantity,
+      //     price: i.price ?? i.menuItem?.price,
+      //   })),
+      // };
+
       const orderBody = {
         user_id: user.id,
         merchant_id: merchant.id,
@@ -311,6 +334,13 @@ export default function CheckOutPage() {
           menu_item_id: i.menu_item_id ?? i.menuItem?.id,
           quantity: i.quantity,
           price: i.price ?? i.menuItem?.price,
+
+          // ⭐ LẤY OPTION TỪ CART
+          selected_option_items:
+            (i.selected_option_items ?? []).map((opt) => ({
+              option_item_id: opt.option_item_id,
+              price: opt.price,
+            })) || [],
         })),
       };
 
