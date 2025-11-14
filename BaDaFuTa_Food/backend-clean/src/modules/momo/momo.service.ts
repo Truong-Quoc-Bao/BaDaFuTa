@@ -10,8 +10,7 @@ const MOMO_CONFIG = {
   secretKey: process.env.MOMO_SECRET_KEY || "K951B6PE1waDMi640xX08PD3vg6EkVlz",
   partnerCode: process.env.MOMO_PARTNER_CODE || "MOMO",
   redirectUrl:
-    process.env.MOMO_RETURN_URL ||
-    "http://localhost:5173/cart/checkout/ordersuccess",
+    process.env.MOMO_RETURN_URL || "http://localhost:3000/api/momo/return",
   ipnUrl: process.env.MOMO_IPN_URL || "http://localhost:3000/api/momo/callback",
   requestType: "payWithMethod",
 };
@@ -35,6 +34,8 @@ export type MomoCallbackResult = {
   status: PaymentStatusType;
   code: number | string;
   message?: string;
+  order_id?: string | null;
+  created_at?: Date | null;
 };
 
 export const momoService = {
@@ -44,25 +45,31 @@ export const momoService = {
       throw new Error("Phương thức thanh toán không hợp lệ (phải là MOMO)");
     }
 
-    // ✅ Transaction để đảm bảo atomic
     const { order, orderId, amount, response } = await prisma.$transaction(
       async (tx) => {
-        // Lấy user
         const user = await tx.users.findUnique({
           where: { id: data.user_id },
           select: { full_name: true, phone: true },
         });
         if (!user) throw new Error("Không tìm thấy user");
 
-        // Tổng tiền
-        const total = data.items.reduce(
-          (sum: number, i: any) => sum + i.quantity * i.price,
-          0
-        );
-        const amount = total + (data.delivery_fee || 0);
+        // ============================
+        // 1) TÍNH TỔNG TIỀN CÓ TOPPING
+        // ============================
+        const totalItems = data.items.reduce((sum: number, item: any) => {
+          const toppingTotal = (item.selected_option_items ?? []).reduce(
+            (acc: number, top: any) => acc + (top.price ?? 0),
+            0
+          );
+          return sum + (item.price + toppingTotal) * item.quantity;
+        }, 0);
 
-        // Tìm hoặc tạo order pending
-        let order = await prisma.order.findFirst({
+        const amount = totalItems + (data.delivery_fee || 0);
+
+        // ============================
+        // 2) TÌM HOẶC TẠO ORDER PENDING
+        // ============================
+        let order = await tx.order.findFirst({
           where: {
             user_id: data.user_id,
             merchant_id: data.merchant_id,
@@ -73,14 +80,17 @@ export const momoService = {
         });
 
         if (order) {
-          // Xóa item cũ
           await tx.order_item.deleteMany({ where: { order_id: order.id } });
+
           order = await tx.order.update({
             where: { id: order.id },
             data: {
               payment_method: "MOMO",
               total_amount: BigInt(amount),
+              delivery_address: data.delivery_address,
+              delivery_fee: BigInt(data.delivery_fee || 0),
               note: data.note ?? order.note,
+              updated_at: new Date(),
             },
           });
         } else {
@@ -88,11 +98,11 @@ export const momoService = {
             data: {
               user_id: data.user_id,
               merchant_id: data.merchant_id,
-              full_name: user?.full_name || "",
-              phone: user?.phone,
+              full_name: user.full_name || "",
+              phone: user.phone,
               delivery_address: data.delivery_address,
-              delivery_fee: data.delivery_fee,
-              note: data.note,
+              delivery_fee: BigInt(data.delivery_fee || 0),
+              note: data.note ?? null,
               total_amount: BigInt(amount),
               status: "PENDING",
               status_payment: "PENDING",
@@ -101,42 +111,54 @@ export const momoService = {
           });
         }
 
-        // ✅ Thêm order_item & order_item_option
+        // ============================
+        // 3) TẠO ORDER ITEMS + OPTIONS
+        // ============================
         for (const item of data.items) {
           const orderItem = await tx.order_item.create({
             data: {
               order_id: order.id,
               menu_item_id: item.menu_item_id,
-              quantity: BigInt(item.quantity),
+              quantity: item.quantity,
               price: BigInt(item.price),
               note: item.note ?? null,
             },
           });
 
-          if (item.selected_option_items?.length) {
+          // FE gửi [{ option_item_id, price }]
+          const optionIds =
+            item.selected_option_items?.map((o: any) => o.option_item_id) ?? [];
+
+          if (optionIds.length > 0) {
             const validOptions = await tx.option_item.findMany({
-              where: { id: { in: item.selected_option_items } },
+              where: { id: { in: optionIds } },
               select: { id: true },
             });
-            await tx.order_item_option.createMany({
-              data: validOptions.map((opt) => ({
-                order_item_id: orderItem.id,
-                option_item_id: opt.id,
-              })),
-            });
+
+            for (const opt of validOptions) {
+              await tx.order_item_option.create({
+                data: {
+                  order_item_id: orderItem.id,
+                  option_item_id: opt.id,
+                },
+              });
+            }
           }
         }
 
-        // Tạo MoMo payload
-        const orderId = MOMO_CONFIG.partnerCode + new Date().getTime();
-        const requestId = orderId;
+        // ============================
+        // 4) TẠO PAYLOAD MOMO
+        // ============================
+        const momoOrderId = MOMO_CONFIG.partnerCode + Date.now();
+        const requestId = momoOrderId;
         const orderInfo = `Thanh toán đơn hàng ${order.id}`;
+
         const rawSignature =
           `accessKey=${MOMO_CONFIG.accessKey}` +
           `&amount=${amount}` +
           `&extraData=` +
           `&ipnUrl=${MOMO_CONFIG.ipnUrl}` +
-          `&orderId=${orderId}` +
+          `&orderId=${momoOrderId}` +
           `&orderInfo=${orderInfo}` +
           `&partnerCode=${MOMO_CONFIG.partnerCode}` +
           `&redirectUrl=${MOMO_CONFIG.redirectUrl}` +
@@ -154,7 +176,7 @@ export const momoService = {
           storeId: "BaDaFuTaStore",
           requestId,
           amount,
-          orderId,
+          orderId: momoOrderId,
           orderInfo,
           redirectUrl: MOMO_CONFIG.redirectUrl,
           ipnUrl: MOMO_CONFIG.ipnUrl,
@@ -179,14 +201,8 @@ export const momoService = {
             },
             (res) => {
               let body = "";
-              res.on("data", (chunk) => (body += chunk));
-              res.on("end", () => {
-                try {
-                  resolve(JSON.parse(body));
-                } catch (err) {
-                  reject(err);
-                }
-              });
+              res.on("data", (c) => (body += c));
+              res.on("end", () => resolve(JSON.parse(body)));
             }
           );
 
@@ -195,7 +211,6 @@ export const momoService = {
           req.end();
         });
 
-        // Tạo transaction
         await tx.payment_transaction.create({
           data: {
             user_id: data.user_id,
@@ -203,13 +218,13 @@ export const momoService = {
             order_id: order.id,
             amount: BigInt(amount),
             payment_method: "MOMO",
-            txn_ref: orderId,
+            txn_ref: momoOrderId,
             raw_payload: data,
             status: "PENDING",
           },
         });
 
-        return { order, orderId, amount, response };
+        return { order, orderId: momoOrderId, amount, response };
       }
     );
 
@@ -240,21 +255,31 @@ export const momoService = {
     return { success: false, status: "failed", orderId: txn?.order_id ?? null };
   },
 
-  /** Callback từ MoMo */
+  /** 🔹 Callback từ MoMo */
   async handleMomoCallback(params: any): Promise<MomoCallbackResult> {
     const { resultCode, orderId, message } = params;
     const code = Number(resultCode);
 
+    // 🔎 Tìm transaction & order liên quan
+    const txn = await prisma.payment_transaction.findFirst({
+      where: { txn_ref: String(orderId) },
+      include: { order: true },
+    });
+
+    if (!txn || !txn.order_id) {
+      console.warn(
+        "❌ Không tìm thấy transaction hợp lệ cho MoMo callback:",
+        orderId
+      );
+      return { status: "failed", code, message };
+    }
+
+    const order = txn.order;
+    const orderIdStr = txn.order_id;
+    const createdAt = order?.created_at ?? null;
+
     if (code === 0) {
-      const txn = await prisma.payment_transaction.findFirst({
-        where: { txn_ref: String(orderId) },
-        include: { order: true },
-      });
-
-      if (!txn || !txn.order_id)
-        throw new Error("Không tìm thấy transaction hợp lệ");
-
-      // Cập nhật transaction thành công
+      // ✅ Thành công
       await prisma.payment_transaction.update({
         where: {
           order_id_txn_ref: {
@@ -265,13 +290,11 @@ export const momoService = {
         data: { status: "SUCCESS" },
       });
 
-      // Cập nhật order: payment thành công
       await prisma.order.update({
         where: { id: txn.order_id },
         data: { status_payment: "SUCCESS", status: "PENDING" },
       });
 
-      //Huỷ các transaction khác cùng order
       await prisma.payment_transaction.updateMany({
         where: {
           order_id: txn.order_id,
@@ -281,17 +304,23 @@ export const momoService = {
         data: { status: "FAILED" },
       });
 
-      // Cập nhật lại transaction
       await momoRepository.updateAfterCallback(String(orderId), {
         status: "success",
         response_code: String(resultCode),
         transaction_no: String(params.transId || orderId),
       });
 
-      return { status: "success", code, message };
+      // 🔁 Trả về dữ liệu chuẩn cho redirect frontend
+      return {
+        status: "success",
+        code,
+        message,
+        order_id: orderIdStr,
+        created_at: createdAt,
+      };
     }
 
-    // Trường hợp thất bại
+    // ❌ Thất bại
     await prisma.payment_transaction.updateMany({
       where: { txn_ref: String(orderId) },
       data: { status: "FAILED" },
@@ -303,6 +332,12 @@ export const momoService = {
       transaction_no: String(params.transId || orderId),
     });
 
-    return { status: "failed", code, message };
+    return {
+      status: "failed",
+      code,
+      message,
+      order_id: orderIdStr,
+      created_at: createdAt,
+    };
   },
 };
