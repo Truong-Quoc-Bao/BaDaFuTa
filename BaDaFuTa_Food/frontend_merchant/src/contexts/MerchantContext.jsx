@@ -1,226 +1,155 @@
-import {
-    createContext,
-    useContext,
-    useState,
-    useEffect,
-    useCallback,
-  } from "react";
-  
-  const MerchantContext = createContext(undefined);
-  
-  export function MerchantProvider({ children }) {
-    // Mock merchant settings - trong thực tế sẽ lấy từ API
-    const [merchantSettings, setMerchantSettings] = useState({
-      restaurantId: "rest-1",
-      autoConfirmOrders: false,
-      maxOrdersPerHour: 20,
-      operatingHours: {
-        open: "08:00",
-        close: "22:00",
-      },
-    });
-  
-    // Merchant auth state
-    const [merchantAuth, setMerchantAuth] = useState(null);
-  
-    
-    // Initialize merchant auth from localStorage on mount
-    useEffect(() => {
-      try {
-        const stored = localStorage.getItem("merchantAuth");
-        if (stored) {
-          setMerchantAuth(JSON.parse(stored));
-        }
-      } catch (error) {
-        console.error("Error loading merchant auth:", error);
-        localStorage.removeItem("merchantAuth");
-      }
-    }, []);
-  
-    // Mock orders - trong thực tế sẽ lấy từ API
-    const [orders, setOrders] = useState([
-      {
-        id: "order-1",
-        items: [
-          {
-            id: "item-1",
-            menuItem: {
-              id: "menu-1",
-              name: "Bánh Mì Thịt Nướng",
-              description: "Bánh mì thịt nướng thơm ngon với rau tươi",
-              price: 35000,
-              image:
-                "https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=300&h=200&fit=crop",
-              category: "Bánh mì",
-              restaurantId: "rest-1",
-            },
-            quantity: 2,
-            restaurant: {
-              id: "rest-1",
-              name: "Bánh Mì Sài Gòn",
-              image:
-                "https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=300&h=200&fit=crop",
-              cuisine: "Việt Nam",
-              rating: 4.5,
-              deliveryTime: "15-25 phút",
-              deliveryFee: 15000,
-              description: "Bánh mì truyền thống Sài Gòn",
-              location: "Quận 1, TP.HCM",
-            },
-          },
-        ],
-        total: 85000,
-        status: "pending",
-        orderTime: new Date(Date.now() - 5 * 60 * 1000),
-        estimatedDelivery: new Date(Date.now() + 25 * 60 * 1000),
-        deliveryAddress: "123 Nguyễn Huệ, Quận 1, TP.HCM",
-        customerName: "Nguyễn Văn A",
-        customerPhone: "0901234567",
-        notes: "Không cay",
-        restaurantId: "rest-1",
-      },
-      {
-        id: "order-2",
-        items: [
-          {
-            id: "item-2",
-            menuItem: {
-              id: "menu-2",
-              name: "Cơm Tấm Sườn Nướng",
-              description: "Cơm tấm sườn nướng đặc biệt",
-              price: 55000,
-              image:
-                "https://images.unsplash.com/photo-1583032328304-c8f4a3a2d5e3?w=300&h=200&fit=crop",
-              category: "Cơm",
-              restaurantId: "rest-1",
-            },
-            quantity: 1,
-            restaurant: {
-              id: "rest-1",
-              name: "Bánh Mì Sài Gòn",
-              image:
-                "https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=300&h=200&fit=crop",
-              cuisine: "Việt Nam",
-              rating: 4.5,
-              deliveryTime: "15-25 phút",
-              deliveryFee: 15000,
-              description: "Bánh mì truyền thống Sài Gòn",
-              location: "Quận 1, TP.HCM",
-            },
-          },
-        ],
-        total: 70000,
-        status: "confirmed",
-        orderTime: new Date(Date.now() - 15 * 60 * 1000),
-        estimatedDelivery: new Date(Date.now() + 15 * 60 * 1000),
-        deliveryAddress: "456 Lê Lợi, Quận 1, TP.HCM",
-        customerName: "Trần Thị B",
-        customerPhone: "0907654321",
-        restaurantId: "rest-1",
-      },
-      {
-        id: "order-3",
-        items: [
-          {
-            id: "item-3",
-            menuItem: {
-              id: "menu-3",
-              name: "Phở Bò Tái",
-              description: "Phở bò tái truyền thống",
-              price: 45000,
-              image:
-                "https://images.unsplash.com/photo-1573225342350-16731dd9bf3d?w=300&h=200&fit=crop",
-              category: "Phở",
-              restaurantId: "rest-1",
-            },
-            quantity: 1,
-            restaurant: {
-              id: "rest-1",
-              name: "Bánh Mì Sài Gòn",
-              image:
-                "https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=300&h=200&fit=crop",
-              cuisine: "Việt Nam",
-              rating: 4.5,
-              deliveryTime: "15-25 phút",
-              deliveryFee: 15000,
-              description: "Bánh mì truyền thống Sài Gòn",
-              location: "Quận 1, TP.HCM",
-            },
-          },
-        ],
-        total: 60000,
-        status: "delivered",
-        orderTime: new Date(Date.now() - 2 * 60 * 60 * 1000),
-        estimatedDelivery: new Date(Date.now() - 1.5 * 60 * 60 * 1000),
-        deliveryAddress: "789 Nguyễn Trãi, Quận 5, TP.HCM",
-        customerName: "Lê Văn C",
-        customerPhone: "0912345678",
-        restaurantId: "rest-1",
-      },
-    ]);
-  
-    const updateMerchantSettings = (newSettings) => {
-      setMerchantSettings((prev) => ({ ...prev, ...newSettings }));
-    };
-  
-    const updateOrderStatus = (orderId, status) => {
-      setOrders((prev) =>
-        prev.map((order) => (order.id === orderId ? { ...order, status } : order))
-      );
-    };
-  
-    const cancelOrder = (orderId, reason) => {
-      setOrders((prev) =>
-        prev.map((order) =>
-          order.id === orderId
-            ? { ...order, status: "cancelled", notes: reason }
-            : order
-        )
-      );
-    };
-  
-    const fetchOrders = useCallback(() => {
-      // Mock fetch - trong thực tế sẽ gọi API
-      console.log("Fetching orders...");
-    }, []);
-  
-    const toggleAutoConfirm = useCallback(() => {
-      setMerchantSettings((prev) => ({
-        ...prev,
-        autoConfirmOrders: !prev.autoConfirmOrders,
-      }));
-    }, []);
-  
-    const logout = useCallback(() => {
-      setMerchantAuth(null);
-      localStorage.removeItem("merchantAuth");
-    }, []);
-  
-    return (
-      <MerchantContext.Provider
-        value={{
-          merchantSettings,
-          updateMerchantSettings,
-          orders,
-          updateOrderStatus,
-          cancelOrder,
-          fetchOrders,
-          autoConfirmEnabled: merchantSettings.autoConfirmOrders,
-          toggleAutoConfirm,
-          merchantAuth,
-          logout,
-        }}
-      >
-        {children}
-      </MerchantContext.Provider>
-    );
-  }
-  
-  export function useMerchant() {
-    const context = useContext(MerchantContext);
-    if (!context) {
-      throw new Error("useMerchant must be used within a MerchantProvider");
+import { createContext, useContext, useState, useEffect, useCallback } from 'react';
+
+const MerchantContext = createContext(undefined);
+
+export function MerchantProvider({ children }) {
+  const [merchantSettings, setMerchantSettings] = useState({
+    restaurantId: 'rest-1',
+    autoConfirmOrders: false,
+    maxOrdersPerHour: 20,
+    operatingHours: {
+      open: '08:00',
+      close: '22:00',
+    },
+  });
+
+  const [merchantAuth, setMerchantAuth] = useState(null);
+  const [orders, setOrders] = useState([]);
+  // Dashboard data state
+  const [dashboardData, setDashboardData] = useState(null);
+
+  // Load merchantAuth
+  useEffect(() => {
+    const stored = localStorage.getItem('merchantAuth');
+    if (stored) setMerchantAuth(JSON.parse(stored));
+  }, []);
+
+  // ✅ Fetch dashboard và lưu vào state
+  const fetchDashboard = useCallback(async () => {
+    try {
+      const response = await fetch('http://localhost:3000/api/merchant/overview', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ user_id: 'b19c6e52-4f60-4097-baad-6ba740af311a' }),
+      });
+      const data = await response.json();
+      setDashboardData(data); // lưu vào state
+      console.log('Dashboard data:', data);
+    } catch (error) {
+      console.error('Error fetching dashboard:', error);
     }
-    return context;
-  }
-  
+  }, []);
+
+  // Gọi fetchDashboard khi Provider mount
+  useEffect(() => {
+    fetchDashboard();
+  }, [fetchDashboard]);
+
+  // ================= WebSocket =================
+  useEffect(() => {
+    if (!merchantAuth) return;
+
+    const ws = new WebSocket('ws://localhost:3000/ws/merchant'); // endpoint WebSocket backend
+
+    ws.onopen = () => {
+      console.log('WebSocket connected for merchant dashboard');
+      // Có thể gửi thông tin nhận dạng nhà hàng
+      ws.send(JSON.stringify({ type: 'subscribe', restaurantId: merchantAuth.restaurantId }));
+    };
+
+    ws.onmessage = (event) => {
+      const message = JSON.parse(event.data);
+      console.log('WS message:', message);
+
+      if (message.type === 'newOrder') {
+        // Cập nhật recentOrders và các stats
+        setDashboardData((prev) => ({
+          ...prev,
+          data: {
+            ...prev.data,
+            todayOrders: prev.data.todayOrders + 1,
+            pendingOrders: prev.data.pendingOrders + 1,
+            totalRevenue: prev.data.totalRevenue + message.data.total_amount,
+            todayRevenue: prev.data.todayRevenue + message.data.total_amount,
+            recentOrders: [message.data, ...prev.data.recentOrders],
+          },
+        }));
+      }
+
+      if (message.type === 'orderUpdated') {
+        // Cập nhật trạng thái đơn
+        setDashboardData((prev) => ({
+          ...prev,
+          data: {
+            ...prev.data,
+            recentOrders: prev.data.recentOrders.map((o) =>
+              o.id === message.data.id ? { ...o, status: message.data.status } : o,
+            ),
+            pendingOrders:
+              message.data.status.toLowerCase() === 'completed'
+                ? prev.data.pendingOrders - 1
+                : prev.data.pendingOrders,
+          },
+        }));
+      }
+    };
+
+    ws.onclose = () => {
+      console.log('WebSocket disconnected');
+    };
+
+    ws.onerror = (err) => console.error('WebSocket error:', err);
+
+    return () => ws.close();
+  }, [merchantAuth]);
+  // ===========================================
+
+  const updateMerchantSettings = (newSettings) =>
+    setMerchantSettings((prev) => ({ ...prev, ...newSettings }));
+
+  const updateOrderStatus = (orderId, status) =>
+    setOrders((prev) => prev.map((o) => (o.id === orderId ? { ...o, status } : o)));
+
+  const cancelOrder = (orderId, reason) =>
+    setOrders((prev) =>
+      prev.map((o) => (o.id === orderId ? { ...o, status: 'cancelled', notes: reason } : o)),
+    );
+
+  const toggleAutoConfirm = useCallback(() => {
+    setMerchantSettings((prev) => ({
+      ...prev,
+      autoConfirmOrders: !prev.autoConfirmOrders,
+    }));
+  }, []);
+
+  const logout = useCallback(() => {
+    setMerchantAuth(null);
+    localStorage.removeItem('merchantAuth');
+  }, []);
+
+  return (
+    <MerchantContext.Provider
+      value={{
+        merchantSettings,
+        updateMerchantSettings,
+        orders,
+        updateOrderStatus,
+        cancelOrder,
+        autoConfirmEnabled: merchantSettings.autoConfirmOrders,
+        toggleAutoConfirm,
+        merchantAuth,
+        logout,
+        dashboardData, // <- thêm dashboardData vào context
+        fetchDashboard,
+      }}
+    >
+      {children}
+    </MerchantContext.Provider>
+  );
+}
+
+export function useMerchant() {
+  const context = useContext(MerchantContext);
+  if (!context) throw new Error('useMerchant must be used within a MerchantProvider');
+  return context;
+}

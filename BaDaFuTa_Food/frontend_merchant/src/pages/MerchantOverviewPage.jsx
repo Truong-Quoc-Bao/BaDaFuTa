@@ -1,115 +1,120 @@
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
 import { Badge } from '../components/ui/badge';
-import { 
-  ShoppingBag, 
-  DollarSign, 
-  Clock, 
-  TrendingUp,
-  Users,
-  Star
-} from 'lucide-react';
+import { ShoppingBag, DollarSign, Clock, TrendingUp, Users, Star } from 'lucide-react';
 import { useMerchant } from '../contexts/MerchantContext';
 
 export function MerchantOverviewPage() {
-  const { merchantAuth, orders = [] } = useMerchant();
-  
-  // Calculate statistics from orders data
-  const todayOrders = orders.filter(order => {
-    const orderDate = new Date(order.orderTime);
-    const today = new Date();
-    return orderDate.toDateString() === today.toDateString();
-  });
+  // const { merchantAuth, orders = [] } = useMerchant();
+  const { merchantAuth, dashboardData } = useMerchant();
 
-  const totalRevenue = orders
-    .filter(order => order.status === 'delivered')
-    .reduce((sum, order) => sum + order.total, 0);
+  console.log('Merchant Auth:', merchantAuth);
+  console.log('Dashboard Data:', dashboardData);
+  console.log('dashboardData hiện tại:', dashboardData);
 
-  const todayRevenue = todayOrders
-    .filter(order => order.status === 'delivered')
-    .reduce((sum, order) => sum + order.total, 0);
+  const todayRevenue = dashboardData?.data?.todayRevenue || 0;
+  const todayOrders = dashboardData?.data?.todayOrders || 0;
+  const pendingOrders = dashboardData?.data?.pendingOrders || 0;
+  const totalRevenue = dashboardData?.data?.totalRevenue || 0;
+  const totalCustomers = dashboardData?.data?.totalCustomers || 0;
+  const recentOrders = dashboardData?.data?.recentOrders || [];
 
-  const pendingOrders = orders.filter(order => 
-    ['pending', 'confirmed', 'preparing'].includes(order.status)
-  ).length;
-
-  const completedOrders = orders.filter(order => 
-    order.status === 'delivered'
+  const completedOrders = recentOrders.filter(
+    (order) => order.status?.toLowerCase() === 'COMPLETED',
   ).length;
 
   const averageRating = 4.5; // Mock rating
-  const totalCustomers = 234; // Mock customer count
+  // const totalCustomers = 234; // Mock customer count
 
   const stats = [
     {
-      title: "Doanh thu hôm nay",
+      title: 'Doanh thu hôm nay',
       value: `${todayRevenue.toLocaleString('vi-VN')}đ`,
       icon: DollarSign,
-      color: "text-green-600",
-      bgColor: "bg-green-100"
+      color: 'text-green-600',
+      bgColor: 'bg-green-100',
     },
     {
-      title: "Đơn hàng hôm nay",
-      value: todayOrders.length.toString(),
+      title: 'Đơn hàng hôm nay',
+      // value: todayOrders.length.toString(),
+      value: todayOrders.toString(), // ✅
+
       icon: ShoppingBag,
-      color: "text-blue-600",
-      bgColor: "bg-blue-100"
+      color: 'text-blue-600',
+      bgColor: 'bg-blue-100',
     },
     {
-      title: "Đơn chờ xử lý",
+      title: 'Đơn chờ xử lý',
       value: pendingOrders.toString(),
       icon: Clock,
-      color: "text-orange-600",
-      bgColor: "bg-orange-100"
+      color: 'text-orange-600',
+      bgColor: 'bg-orange-100',
     },
     {
-      title: "Tổng doanh thu",
+      title: 'Tổng doanh thu',
       value: `${totalRevenue.toLocaleString('vi-VN')}đ`,
       icon: TrendingUp,
-      color: "text-purple-600",
-      bgColor: "bg-purple-100"
+      color: 'text-purple-600',
+      bgColor: 'bg-purple-100',
     },
     {
-      title: "Khách hàng",
+      title: 'Khách hàng',
       value: totalCustomers.toString(),
       icon: Users,
-      color: "text-indigo-600",
-      bgColor: "bg-indigo-100"
+      color: 'text-indigo-600',
+      bgColor: 'bg-indigo-100',
     },
     {
-      title: "Đánh giá trung bình",
+      title: 'Đánh giá trung bình',
       value: `${averageRating}/5`,
       icon: Star,
-      color: "text-yellow-600",
-      bgColor: "bg-yellow-100"
-    }
+      color: 'text-yellow-600',
+      bgColor: 'bg-yellow-100',
+    },
   ];
 
-  const recentOrders = orders.slice(0, 5);
+  // const recentOrders = orders.slice(0, 5);
 
   const getStatusBadgeVariant = (status) => {
     switch (status) {
-      case 'pending': return 'secondary';
-      case 'confirmed': return 'default';
-      case 'preparing': return 'secondary';
-      case 'delivering': return 'default';
-      case 'delivered': return 'default';
-      case 'cancelled': return 'destructive';
-      default: return 'secondary';
+      case 'pending':
+        return 'secondary';
+      case 'confirmed':
+        return 'default';
+      case 'preparing':
+        return 'secondary';
+      case 'delivering':
+        return 'default';
+      case 'delivered':
+        return 'default';
+      case 'cancelled':
+        return 'destructive';
+      default:
+        return 'secondary';
     }
   };
 
   const getStatusText = (status) => {
     switch (status) {
-      case 'pending': return 'Chờ xác nhận';
-      case 'confirmed': return 'Đã xác nhận';
-      case 'preparing': return 'Đang chuẩn bị';
-      case 'delivering': return 'Đang giao';
-      case 'delivered': return 'Đã giao';
-      case 'cancelled': return 'Đã hủy';
-      default: return status;
+      case 'pending':
+        return 'Chờ xác nhận';
+      case 'confirmed':
+        return 'Đã xác nhận';
+      case 'preparing':
+        return 'Đang chuẩn bị';
+      case 'delivering':
+        return 'Đang giao';
+      case 'delivered':
+        return 'Đã giao';
+      case 'cancelled':
+        return 'Đã hủy';
+      default:
+        return status;
     }
   };
+  if (!dashboardData?.data) {
+    return <p>Đang tải dữ liệu dashboard...</p>;
+  }
 
   return (
     <div className="p-6 space-y-6">
@@ -151,7 +156,10 @@ export function MerchantOverviewPage() {
               <p className="text-gray-500 text-center py-8">Chưa có đơn hàng nào</p>
             ) : (
               recentOrders.map((order) => (
-                <div key={order.id} className="flex items-center justify-between p-4 border border-gray-200 rounded-lg">
+                <div
+                  key={order.id}
+                  className="flex items-center justify-between p-4 border border-gray-200 rounded-lg"
+                >
                   <div className="flex-1">
                     <div className="flex items-center gap-3 mb-2">
                       <p className="font-medium">#{order.id}</p>
@@ -160,16 +168,14 @@ export function MerchantOverviewPage() {
                       </Badge>
                     </div>
                     <p className="text-sm text-gray-600">
-                      {order.customerName || 'Khách hàng'} • {order.items.length} món
+                      {order.user_name || 'Khách hàng'} • {order.item_count} món
                     </p>
                     <p className="text-xs text-gray-500">
-                      {new Date(order.orderTime).toLocaleString('vi-VN')}
+                      {new Date(order.created_at).toLocaleString('vi-VN')}
                     </p>
                   </div>
                   <div className="text-right">
-                    <p className="font-semibold">
-                      {order.total.toLocaleString('vi-VN')}đ
-                    </p>
+                    <p className="font-semibold">{order.total_amount.toLocaleString('vi-VN')}đ</p>
                     <p className="text-sm text-gray-600">Tiền mặt</p>
                   </div>
                 </div>

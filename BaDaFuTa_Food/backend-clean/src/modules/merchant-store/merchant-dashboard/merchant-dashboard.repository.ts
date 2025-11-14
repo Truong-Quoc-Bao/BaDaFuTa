@@ -1,8 +1,7 @@
 import { prisma } from "@/libs/prisma";
-import { MerchantOverviewResponse } from "./merchant-dashboard.type";
 
 export const merchantDashboardRepository = {
-  /** Lấy merchant_id từ user_id (chủ nhà hàng) */
+  /** 🔹 Lấy merchant_id từ user_id (chủ nhà hàng) */
   async findMerchantByUserId(user_id: string): Promise<string | null> {
     const merchant = await prisma.merchant.findFirst({
       where: { user_id },
@@ -11,38 +10,65 @@ export const merchantDashboardRepository = {
     return merchant?.id || null;
   },
 
-  /** Tổng doanh thu */
+  /** 🔹 Lấy thông tin cơ bản của merchant */
+  async getMerchantInfo(merchantId: string) {
+    return prisma.merchant.findUnique({
+      where: { id: merchantId },
+      select: {
+        id: true,
+        merchant_name: true,
+        location: true,
+        phone: true,
+        cover_image: true,
+        time_open: true,
+      },
+    });
+  },
+
+  /** 🔹 Tổng doanh thu (đã trừ delivery_fee) */
   async getTotalRevenue(merchantId: string): Promise<number> {
-    const res = await prisma.order.aggregate({
-      _sum: { total_amount: true },
+    const orders = await prisma.order.findMany({
       where: {
         merchant_id: merchantId,
         status: "COMPLETED",
         status_payment: "SUCCESS",
       },
+      select: {
+        total_amount: true,
+        delivery_fee: true,
+      },
     });
 
-    // Vì total_amount là BigInt trong DB → cần ép về number
-    const value = res._sum.total_amount ? Number(res._sum.total_amount) : 0;
-    return value;
+    const revenue = orders.reduce((sum, o) => {
+      const total = Number(o.total_amount ?? 0);
+      const fee = Number(o.delivery_fee ?? 0);
+      return sum + (total - fee);
+    }, 0);
+
+    return revenue;
   },
 
-  /** Doanh thu hôm nay */
+  /** 🔹 Doanh thu hôm nay (đã trừ delivery_fee) */
   async getTodayRevenue(merchantId: string, today: Date): Promise<number> {
-    const res = await prisma.order.aggregate({
-      _sum: { total_amount: true },
+    const orders = await prisma.order.findMany({
       where: {
         merchant_id: merchantId,
         status: "COMPLETED",
         status_payment: "SUCCESS",
         created_at: { gte: today },
       },
+      select: {
+        total_amount: true,
+        delivery_fee: true,
+      },
     });
 
-    return res._sum.total_amount ? Number(res._sum.total_amount) : 0;
+    return orders.reduce((sum, o) => {
+      return sum + (Number(o.total_amount) - Number(o.delivery_fee));
+    }, 0);
   },
 
-  /** Số đơn hôm nay */
+  /** 🔹 Số đơn hôm nay */
   async countTodayOrders(merchantId: string, today: Date): Promise<number> {
     return prisma.order.count({
       where: {
@@ -52,7 +78,7 @@ export const merchantDashboardRepository = {
     });
   },
 
-  /** Đơn chờ xử lý */
+  /** 🔹 Đơn chờ xử lý */
   async countPendingOrders(merchantId: string): Promise<number> {
     return prisma.order.count({
       where: {
@@ -62,7 +88,7 @@ export const merchantDashboardRepository = {
     });
   },
 
-  /** Tổng số khách hàng duy nhất */
+  /** 🔹 Tổng số khách hàng duy nhất */
   async countUniqueCustomers(merchantId: string): Promise<number> {
     const res = await prisma.order.groupBy({
       by: ["user_id"],
@@ -71,7 +97,7 @@ export const merchantDashboardRepository = {
     return res.length;
   },
 
-  /** Đơn hàng gần đây (5 đơn mới nhất) */
+  /** 🔹 Đơn hàng gần đây (5 đơn mới nhất) */
   async getRecentOrders(merchantId: string, limit = 5) {
     const orders = await prisma.order.findMany({
       where: { merchant_id: merchantId },
@@ -79,7 +105,7 @@ export const merchantDashboardRepository = {
       take: limit,
       include: {
         user: { select: { full_name: true } },
-        items: { select: { id: true } }, // field trong model là "items"
+        items: { select: { id: true } },
       },
     });
 
@@ -87,7 +113,7 @@ export const merchantDashboardRepository = {
       id: o.id,
       user_name: o.user?.full_name || "Khách lạ",
       item_count: o.items.length,
-      total_amount: Number(o.total_amount),
+      total_amount: Number(o.total_amount) - Number(o.delivery_fee), // ⭐ Đã trừ phí ship
       status: o.status,
       payment_method: o.payment_method,
       created_at: o.created_at,

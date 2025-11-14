@@ -1434,3 +1434,46 @@ if (userCoords && restaurantCoords) {
   deliveryTime = estimateDeliveryTime(distanceKm);
 }
 
+
+
+{item.selectedToppings &&
+  item.selectedToppings.length > 0 && (
+    <div className="mt-2 flex flex-wrap gap-1">
+      {item.selectedToppings.map((topping) => (
+        <Badge
+          key={topping.id}
+          variant="outline"
+          className="text-xs"
+        >
+          {topping.name}{" "}
+          {topping.price > 0 &&
+            `+${topping.price.toLocaleString(
+              "vi-VN"
+            )}đ`}
+        </Badge>
+      ))}
+    </div>
+  )}
+
+  selected_option_items: (i.selectedToppings || []).map((t) => ({
+    option_item_id: t.id,
+    option_item_name: t.name,
+    price: t.price,
+  })),
+  
+  navigate('/cart/checkout', { state: { orderItems } });
+
+  items: state.items.map((i) => ({
+    menu_item_id: i.menu_item_id ?? i.menuItem?.id,
+    quantity: i.quantity,
+    price: i.price ?? i.menuItem?.price,
+    
+    selected_option_items: (i.selectedOptions ?? []).flatMap((opt) =>
+      opt.items.map((oi) => ({
+        option_item_id: oi.option_item_id,
+        option_item_name: oi.option_item_name,
+        price: oi.price,
+      }))
+    ),
+  }))
+  

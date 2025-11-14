@@ -1,4 +1,4 @@
-// merchant-dashboard.type.ts
+import { order_status, payment_method } from "@prisma/client";
 
 export interface MerchantOverviewStats {
   totalRevenue: number;
@@ -12,12 +12,19 @@ export interface RecentOrder {
   id: string;
   user_name: string;
   item_count: number;
-  total_amount: number; // ✅ đổi từ total_price -> total_amount
-  status: string | null; // hoặc enum: order_status | null
-  payment_method: string | null; // hoặc enum: payment_method | null
-  created_at: Date | null; // ✅ đổi từ createdAt -> created_at
+  total_amount: number;
+  status: order_status | null;
+  payment_method: payment_method | null;
+  created_at: Date | null;
 }
 
 export interface MerchantOverviewResponse extends MerchantOverviewStats {
+  /** 🏪 Thông tin nhà hàng */
+  merchant_id: string;
+  merchantName: string;
+  merchantPhone: string;
+  merchantOpenHours: any; // time_open là JSON → để any hoặc JsonValue
+
+  /** 🧾 Danh sách 5 đơn gần nhất */
   recentOrders: RecentOrder[];
 }
