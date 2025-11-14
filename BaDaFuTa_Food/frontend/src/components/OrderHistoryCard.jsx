@@ -66,36 +66,42 @@ export const OrderHistoryCard = ({ order, onRatingSubmit }) => {
       minute: "2-digit",
     });
   };
-
   const handleReorder = () => {
-    // Clear cart first to avoid mixing orders from different restaurants
     dispatch({ type: "CLEAR_CART" });
 
-    // Add all items from this order to cart
     order.items.forEach((item) => {
-      for (let i = 0; i < item.quantity; i++) {
+      const rebuiltToppings = (item.options || []).map((opt) => ({
+        id: opt.option_item_id,
+        name: `${opt.option_name}: ${opt.option_item_name}`,
+        price: Number(opt.price) || 0,
+        option_group_id: opt.option_id,
+        option_group_name: opt.option_name,
+        option_item_id: opt.option_item_id,
+        option_item_name: opt.option_item_name,
+      }));
+
+      for (let i = 0; i < Number(item.quantity || 1); i++) {
         dispatch({
           type: "ADD_ITEM",
           payload: {
             restaurant: {
-              id: order.merchant_id, // ID quán/nhà hàng
-              name: order.merchant_name, // Tên quán
-              image: order.profile_image.url, // Ảnh quán
+              id: order.merchant_id,
+              name: order.merchant_name,
+              image: order.merchant_image?.url ?? "",
             },
             menuItem: {
-              id: item.menu_item.id, // ID món
-              name: item.name_item, // Tên món
-              image: item.image_item.url, // Ảnh món
-              price: item.price, // Giá món
-              orderId: item.order_id, // ID đơn hàng gốc
+              id: item.menu_item_id,
+              name: item.name_item,
+              image: item.image_item?.url ?? "",
+              price: Number(item.price),
             },
-            // quantity: item.quantity, // Số lượng
+
+            selectedToppings: rebuiltToppings,
           },
         });
       }
     });
 
-    // Navigate to cart
     navigate("/cart");
   };
 
