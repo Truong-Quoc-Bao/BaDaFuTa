@@ -1,7 +1,7 @@
 import crypto from "crypto";
 import moment from "moment";
 import { prisma } from "@/libs/prisma";
-import { paymentRepository } from "./vnpay.repository";
+import { paymentRepository } from "./payment.repository";
 
 function vnpEncode(v: string) {
   return encodeURIComponent(v).replace(/%20/g, "+");
