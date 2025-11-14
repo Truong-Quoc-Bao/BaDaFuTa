@@ -2,22 +2,23 @@ import { prisma } from "@/libs/prisma";
 import { PaymentStatus, order_status } from "@prisma/client";
 
 export const momoRepository = {
-  /** 🔹 Tạo order + order_item + order_item_option */
+  /** 🔹 Tạo hoặc cập nhật order + items + option */
   async createOrderWithItems(tx: any, data: any) {
-    // 1️⃣ Tìm order PENDING thuộc user + merchant + MOMO
+    // 1️⃣ Tìm order PENDING của user + merchant (MOMO hoặc VNPAY)
     let order = await tx.order.findFirst({
       where: {
         user_id: data.user_id,
         merchant_id: data.merchant_id,
         status: order_status.PENDING,
         status_payment: PaymentStatus.PENDING,
-        payment_method: "MOMO",
+        payment_method: { in: ["MOMO", "VNPAY"] },
       },
     });
 
-    // 2️⃣ Nếu có thì xóa items cũ, cập nhật lại order
+    // 2️⃣ Nếu có → update
     if (order) {
       await tx.order_item.deleteMany({ where: { order_id: order.id } });
+
       order = await tx.order.update({
         where: { id: order.id },
         data: {
@@ -26,6 +27,7 @@ export const momoRepository = {
           note: data.note ?? order.note,
           delivery_address: data.delivery_address,
           delivery_fee: BigInt(data.delivery_fee || 0),
+          updated_at: new Date(),
         },
       });
     } else {
@@ -47,7 +49,9 @@ export const momoRepository = {
       });
     }
 
-    // 4️⃣ Tạo các order_item và order_item_option
+    // =====================================
+    // 4️⃣ Tạo order_item + order_item_option
+    // =====================================
     if (data.items?.length) {
       for (const item of data.items) {
         const orderItem = await tx.order_item.create({
@@ -60,23 +64,31 @@ export const momoRepository = {
           },
         });
 
-        // 🔹 Nếu có option được chọn thì lưu vào order_item_option
-        if (item.selected_option_items?.length) {
+        // FE gửi selected_option_items dạng object:
+        // [{ option_item_id, price }]
+        const optionIds =
+          item.selected_option_items?.map((o: any) => o.option_item_id) ?? [];
+
+        if (optionIds.length > 0) {
           const validOptions = await tx.option_item.findMany({
-            where: { id: { in: item.selected_option_items } },
+            where: { id: { in: optionIds } },
             select: { id: true },
           });
 
-          if (validOptions.length !== item.selected_option_items.length) {
+          // Nếu có option nào không tồn tại → báo lỗi
+          if (validOptions.length !== optionIds.length) {
             throw new Error("Một số option không tồn tại hoặc không hợp lệ");
           }
 
-          await tx.order_item_option.createMany({
-            data: validOptions.map((opt: { id: string }) => ({
-              order_item_id: orderItem.id,
-              option_item_id: opt.id,
-            })),
-          });
+          // Lưu topping vào order_item_option
+          for (const opt of validOptions) {
+            await tx.order_item_option.create({
+              data: {
+                order_item_id: orderItem.id,
+                option_item_id: opt.id,
+              },
+            });
+          }
         }
       }
     }
@@ -84,7 +96,7 @@ export const momoRepository = {
     return order;
   },
 
-  /** 🔹 Lưu transaction của MoMo */
+  /** 🔹 Tạo transaction MoMo */
   async createTransaction(tx: any, data: any) {
     return tx.payment_transaction.create({
       data: {
@@ -100,9 +112,10 @@ export const momoRepository = {
     });
   },
 
-  /** 🔹 Cập nhật trạng thái giao dịch MoMo (sau callback) */
+  /** 🔹 Cập nhật trạng thái sau callback */
   async updateAfterCallback(txn_ref: string, data: any) {
     let statusEnum: PaymentStatus;
+
     switch (data.status?.toLowerCase()) {
       case "success":
         statusEnum = PaymentStatus.SUCCESS;
@@ -135,7 +148,7 @@ export const momoRepository = {
         where: { id: txn.order_id },
         data: {
           status_payment: statusEnum,
-          status: order_status.PENDING, // chờ xác nhận từ merchant
+          status: order_status.PENDING,
         },
       });
     }

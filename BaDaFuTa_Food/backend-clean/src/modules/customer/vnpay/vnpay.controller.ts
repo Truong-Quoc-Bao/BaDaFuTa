@@ -1,5 +1,5 @@
 import { Request, Response } from "express";
-import { paymentService } from "./payment.service";
+import { paymentService } from "./vnpay.service";
 import { CreateCODOrderSchema } from "../order/order.validation";
 
 export const paymentController = {

@@ -1,7 +1,7 @@
 import crypto from "crypto";
 import moment from "moment";
 import { prisma } from "@/libs/prisma";
-import { paymentRepository } from "./payment.repository";
+import { paymentRepository } from "./vnpay.repository";
 
 function vnpEncode(v: string) {
   return encodeURIComponent(v).replace(/%20/g, "+");
@@ -21,11 +21,16 @@ export const paymentService = {
     });
 
     // Tính tổng tiền
-    const total = data.items.reduce(
-      (sum: number, i: any) => sum + i.quantity * i.price,
-      0
-    );
-    const total_amount = BigInt(total + (data.delivery_fee || 0));
+    const totalItems = data.items.reduce((sum: number, item: any) => {
+      const toppingTotal = (item.selected_option_items ?? []).reduce(
+        (acc: number, top: any) => acc + (top.price ?? 0),
+        0
+      );
+
+      return sum + (item.price + toppingTotal) * item.quantity;
+    }, 0);
+
+    const total_amount = BigInt(totalItems + (data.delivery_fee || 0));
 
     let order: any;
     let txn_ref: string = "";
@@ -72,15 +77,21 @@ export const paymentService = {
             },
           });
 
-          // 2️⃣ Tạo các order_item_option (nếu có)
+          // 2️⃣ Tạo các option (nếu có)
           if (
             item.selected_option_items &&
             item.selected_option_items.length > 0
           ) {
+            console.log("👉 FE gửi option:", item.selected_option_items);
+
+            const optionIds = item.selected_option_items.map(
+              (opt: any) => opt.option_item_id
+            );
+
             await tx.order_item_option.createMany({
-              data: item.selected_option_items.map((optId: string) => ({
+              data: optionIds.map((id: string) => ({
                 order_item_id: orderItem.id,
-                option_item_id: optId,
+                option_item_id: id,
               })),
             });
           }
@@ -160,53 +171,7 @@ export const paymentService = {
       order_id: order.id,
     };
   },
-
-  // /** 🔹 Callback từ VNPAY */
-  // async handleVnpayCallback(params: Record<string, any>) {
-  //   const vnpHashSecret = process.env.VNP_HASH_SECRET!;
-
-  //   const input: Record<string, string> = {};
-  //   Object.keys(params).forEach((k) => {
-  //     if (k === "vnp_SecureHash" || k === "vnp_SecureHashType") return;
-  //     const val = params[k];
-  //     if (typeof val === "string") input[k] = val;
-  //     else if (Array.isArray(val)) input[k] = val.join(",");
-  //   });
-
-  //   const signData = Object.keys(input)
-  //     .sort()
-  //     .map((k) => `${k}=${vnpEncode(input[k])}`)
-  //     .join("&");
-
-  //   const calculatedHash = crypto
-  //     .createHmac("sha512", vnpHashSecret)
-  //     .update(signData, "utf-8")
-  //     .digest("hex");
-
-  //   const receivedHash = params["vnp_SecureHash"] as string;
-  //   const isValid = calculatedHash === receivedHash;
-
-  //   const responseCode = params["vnp_ResponseCode"];
-  //   const txnRef = params["vnp_TxnRef"];
-
-  //   if (isValid && responseCode === "00") {
-  //     await paymentRepository.updateAfterCallback(txnRef, {
-  //       status: "success",
-  //       response_code: responseCode,
-  //       transaction_no: params["vnp_TransactionNo"],
-  //     });
-  //     return { status: "success", code: responseCode };
-  //   } else {
-  //     await paymentRepository.updateAfterCallback(txnRef, {
-  //       status: "failed",
-  //       response_code: responseCode,
-  //     });
-  //     return { status: "failed", code: responseCode };
-  //   }
-  // },
-
-
-  /** 🔹 Callback từ VNPAY *//** 🔹 Callback từ VNPAY */
+  /** 🔹 Callback từ VNPAY */
   async handleVnpayCallback(params: Record<string, any>) {
     const vnpHashSecret = process.env.VNP_HASH_SECRET!;
 
@@ -287,4 +252,4 @@ export const paymentService = {
       created_at: createdAt,
     };
   },
-}
+};

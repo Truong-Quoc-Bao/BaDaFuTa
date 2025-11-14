@@ -9,8 +9,7 @@ import {
 export const prisma = new PrismaClient();
 
 export const paymentRepository = {
-  /** 🔹 Tạo order (và các order_item nếu có) */
-  /** 🔹 Tạo order (và các order_item + option nếu có) */
+  /**  Tạo order (và các order_item + option nếu có) */
   async createOrder(
     tx: Prisma.TransactionClient,
     data: {
@@ -25,12 +24,19 @@ export const paymentRepository = {
       status_payment?: PaymentStatus;
       payment_method: "VNPAY" | "MOMO" | "COD";
       full_name: string;
+
+      /** ⭐⭐ FIX QUAN TRỌNG NHẤT  ⭐⭐ */
       items?: {
         menu_item_id: string;
         quantity: number;
         price: number;
         note?: string | null;
-        selected_option_items?: string[]; // ✅ thêm vào đây
+
+        /** ❗ FE gửi object → BE phải nhận object */
+        selected_option_items?: {
+          option_item_id: string;
+          price: number;
+        }[];
       }[];
     }
   ) {
@@ -42,13 +48,13 @@ export const paymentRepository = {
       status_payment: orderData.status_payment ?? PaymentStatus.PENDING,
     };
 
-    // 1️⃣ Tạo order chính
+    // 🧾 Tạo order
     const order = await tx.order.create({ data: normalizedOrder });
 
-    // 2️⃣ Nếu có items thì tạo luôn order_item và order_item_option
+    // 🧾 Tạo order_item + option
     if (items?.length) {
       for (const item of items) {
-        // 🧾 Tạo order_item
+        // 1️⃣ Tạo order_item
         const orderItem = await tx.order_item.create({
           data: {
             order_id: order.id,
@@ -59,31 +65,37 @@ export const paymentRepository = {
           },
         });
 
-        // 🧩 Nếu có selected_option_items → tạo thêm bảng liên kết
+        // 2️⃣ Nếu có topping → tạo order_item_option
         if (item.selected_option_items?.length) {
-          // ✅ Kiểm tra option tồn tại (bảo vệ)
+          console.log("👉 repository nhận option:", item.selected_option_items);
+
+          // ⭐ FE gửi object → map lấy ID
+          const optionIds = item.selected_option_items.map(
+            (opt) => opt.option_item_id
+          );
+
+          // ⭐ Tìm các option hợp lệ
           const validOptions = await tx.option_item.findMany({
-            where: { id: { in: item.selected_option_items } },
+            where: { id: { in: optionIds } },
             select: { id: true },
           });
 
-          if (validOptions.length !== item.selected_option_items.length) {
-            throw new Error("Một số option không tồn tại hoặc không hợp lệ");
+          // ⭐ Lưu vào order_item_option
+          for (const opt of validOptions) {
+            await tx.order_item_option.create({
+              data: {
+                order_item_id: orderItem.id,
+                option_item_id: opt.id,
+              },
+            });
           }
-
-          // ✅ Lưu vào order_item_option
-          await tx.order_item_option.createMany({
-            data: validOptions.map((opt) => ({
-              order_item_id: orderItem.id,
-              option_item_id: opt.id,
-            })),
-          });
         }
       }
     }
 
     return order;
   },
+
   /** 🔹 Lưu transaction */
   async createTransaction(
     tx: Prisma.TransactionClient,
@@ -101,7 +113,6 @@ export const paymentRepository = {
       data: {
         ...data,
         status: PaymentStatus.PENDING,
-        raw_payload: data.raw_payload,
       },
     });
   },
@@ -127,9 +138,8 @@ export const paymentRepository = {
     });
   },
 
-  /** 🔹 Cập nhật sau callback (VNPAY báo về) */
+  /** 🔹 Cập nhật sau callback */
   async updateAfterCallback(txnRef: string, data: any) {
-    // 🧠 Map từ string → Enum PaymentStatus
     let statusEnum: PaymentStatus;
     switch (data.status?.toLowerCase()) {
       case "success":
@@ -145,7 +155,6 @@ export const paymentRepository = {
         statusEnum = PaymentStatus.PENDING;
     }
 
-    // ✅ Cập nhật payment_transaction
     const tx = await prisma.payment_transaction.updateMany({
       where: { txn_ref: txnRef },
       data: {
@@ -155,37 +164,15 @@ export const paymentRepository = {
       },
     });
 
-    // ✅ Nếu thanh toán thành công → cập nhật order
-    if (statusEnum === PaymentStatus.SUCCESS) {
+    if (statusEnum !== PaymentStatus.PENDING) {
       const txn = await prisma.payment_transaction.findFirst({
         where: { txn_ref: txnRef },
       });
-      if (txn?.order_id) {
-        await prisma.order.update({
-          where: { id: txn.order_id },
-          data: {
-            status_payment: PaymentStatus.SUCCESS,
-            status: order_status.PENDING,
-          },
-        });
-      }
-    }
 
-    // ❌ Nếu thất bại hoặc bị hủy → giữ order ở trạng thái pending
-    if (
-      statusEnum === PaymentStatus.FAILED ||
-      statusEnum === PaymentStatus.CANCELED
-    ) {
-      const txn = await prisma.payment_transaction.findFirst({
-        where: { txn_ref: txnRef },
-      });
       if (txn?.order_id) {
         await prisma.order.update({
           where: { id: txn.order_id },
-          data: {
-            status_payment: PaymentStatus.PENDING,
-            status: order_status.PENDING,
-          },
+          data: { status_payment: statusEnum },
         });
       }
     }
