@@ -111,10 +111,27 @@ const cartReducer = (state = initialCart, action) => {
       const restaurant = normalizeRestaurant(rawRestaurant);
 
       const normalizedToppings = (selectedToppings || []).map((t) => ({
-        id: t.id ?? t.topping_id ?? JSON.stringify(t),
-        name: t.name ?? t.label ?? "",
+        // Id chuẩn
+        id: t.id ?? t.option_item_id,
+
+        // Tên chuẩn
+        name:
+          t.name ??
+          (t.option_group_name
+            ? `${t.option_group_name}: ${t.option_item_name}`
+            : t.option_item_name),
+
+        // Giá
         price: Number(t.price) || 0,
-        raw: t,
+
+        // Giữ nguyên full data để CartPage có thể xài
+        option_group_id: t.option_group_id,
+        option_group_name: t.option_group_name,
+        option_item_id: t.option_item_id,
+        option_item_name: t.option_item_name,
+
+        required: t.required,
+        multi_select: t.multi_select,
       }));
 
       const toppingsKey = (toppingsArr) =>
