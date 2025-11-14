@@ -5,7 +5,6 @@ import { ShoppingBag, DollarSign, Clock, TrendingUp, Users, Star } from 'lucide-
 import { useMerchant } from '../contexts/MerchantContext';
 
 export function MerchantOverviewPage() {
-  // const { merchantAuth, orders = [] } = useMerchant();
   const { merchantAuth, dashboardData } = useMerchant();
 
   console.log('Merchant Auth:', merchantAuth);

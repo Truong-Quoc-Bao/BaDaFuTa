@@ -192,6 +192,7 @@ export const getOrder = {
         success: true,
         message: 'Lấy thông tin đơn hàng thành công',
         order_id: order.id,
+        merchant_id: order.merchant_id,
         merchant_name: order.merchant?.merchant_name ?? 'Không xác định',
         merchant_address,
         merchant_image: order.merchant.profile_image,

@@ -79,14 +79,15 @@ export const OrderHistoryCard = ({ order, onRatingSubmit }) => {
           payload: {
             restaurant: {
               id: order.merchant_id, // ID quán/nhà hàng
-              name: order.merchant.merchant_name, // Tên quán
-              image: order.merchant.profile_image.url, // Ảnh quán
+              name: order.merchant_name, // Tên quán
+              image: order.merchant_image?.url ?? "", // Ảnh quán
             },
             menuItem: {
-              id: item.menu_item.id, // ID món
-              name: item.menu_item.name_item, // Tên món
-              image: item.menu_item.image_item.url, // Ảnh món
-              price: item.menu_item.price, // Giá món
+              id: item.menu_item_id,
+              // id: item.id, // ID món
+              name: item.name_item, // Tên món
+              image: item.image_item?.url ?? "", // Ảnh món
+              price: Number(item.price), // Giá món
               orderId: item.order_id, // ID đơn hàng gốc
             },
             // quantity: item.quantity, // Số lượng

@@ -1477,3 +1477,35 @@ if (userCoords && restaurantCoords) {
     ),
   }))
   
+
+  const handleReorder = () => {
+    // Clear cart first
+    dispatch({ type: 'CLEAR_CART' });
+  
+    // Add all items from this order to cart
+    order.items.forEach((item) => {
+      for (let i = 0; i < Number(item.quantity); i++) {
+        dispatch({
+          type: 'ADD_ITEM',
+          payload: {
+            restaurant: {
+              id: order.merchant_id,
+              name: order.merchant_name,
+              image: order.merchant_image?.url ?? "", // fallback nếu undefined
+            },
+            menuItem: {
+              id: item.menu_item_id, // chú ý dùng menu_item_id
+              name: item.name_item,
+              image: item.image_item?.url ?? "",
+              price: Number(item.price), // convert string -> number
+              orderId: item.id,
+            },
+          },
+        });
+      }
+    });
+  
+    // Navigate to cart
+    navigate('/cart');
+  };
+  
