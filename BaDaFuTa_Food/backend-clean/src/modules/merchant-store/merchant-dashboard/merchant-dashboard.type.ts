@@ -23,7 +23,6 @@ export interface MerchantOverviewResponse extends MerchantOverviewStats {
   merchant_id: string;
   merchantName: string;
   merchantPhone: string;
-  merchantOpenHours: any; // time_open là JSON → để any hoặc JsonValue
 
   /** 🧾 Danh sách 5 đơn gần nhất */
   recentOrders: RecentOrder[];

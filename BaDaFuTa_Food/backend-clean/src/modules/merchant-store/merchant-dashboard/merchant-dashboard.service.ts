@@ -43,7 +43,6 @@ export const merchantDashboardService = {
       merchant_id: merchantInfo?.id ?? "",
       merchantName: merchantInfo?.merchant_name ?? "",
       merchantPhone: merchantInfo?.phone ?? "",
-      merchantOpenHours: merchantInfo?.time_open ?? null,
 
       totalRevenue,
       todayRevenue,
