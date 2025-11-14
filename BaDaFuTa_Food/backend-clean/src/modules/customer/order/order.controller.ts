@@ -30,6 +30,7 @@ export const createCODOrder = async (req: Request, res: Response) => {
       payment_method: order.payment_method,
       status_payment: order.status_payment,
       delivery_fee: order.delivery_fee,
+      note: order.note,
       total_amount: order.total_amount,
       status: order.status,
       created_at: order.created_at,
