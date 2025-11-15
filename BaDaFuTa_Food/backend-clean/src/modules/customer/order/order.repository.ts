@@ -26,6 +26,7 @@ export const CreateOrder = {
       status_payment?: string;
     }
   ) {
+    // Chuẩn hóa status
     const normalized = {
       ...data,
       status:
@@ -45,38 +46,112 @@ export const CreateOrder = {
       payment_method: "COD" as payment_method,
     };
 
-    const createdOrder = await tx.order.create({
+    // 1️⃣ Tạo order (chưa có items)
+    const baseOrder = await tx.order.create({
       data: normalized,
+    });
+
+    // 2️⃣ Truy vấn lại order FULL (sau khi FE đã gọi createOrderItems)
+    const fullOrder = await tx.order.findUnique({
+      where: { id: baseOrder.id },
       include: {
         merchant: {
           select: {
             merchant_name: true,
-            location: true,
             phone: true,
+            location: true,
+            profile_image: true,
+          },
+        },
+        items: {
+          include: {
+            menu_item: {
+              select: {
+                id: true,
+                name_item: true,
+                image_item: true,
+                price: true,
+              },
+            },
+            options: {
+              include: {
+                option_item: {
+                  select: {
+                    id: true,
+                    option_item_name: true,
+                    price: true,
+                    option: {
+                      select: {
+                        id: true,
+                        option_name: true,
+                      },
+                    },
+                  },
+                },
+              },
+            },
           },
         },
       },
     });
 
+    if (!fullOrder) throw new Error("Order not found after creation.");
+
+    // 3️⃣ Format address
     let merchant_address = "Chưa có địa chỉ";
     if (
-      typeof createdOrder.merchant?.location === "object" &&
-      createdOrder.merchant.location !== null &&
-      "address" in createdOrder.merchant.location
+      typeof fullOrder.merchant?.location === "object" &&
+      fullOrder.merchant.location !== null &&
+      "address" in fullOrder.merchant.location
     ) {
-      merchant_address = (createdOrder.merchant.location as any).address;
+      merchant_address = (fullOrder.merchant.location as any).address;
     }
 
+    // 4️⃣ Format JSON EXACT TEMPLATE
     return {
-      ...createdOrder,
-      merchant_name: createdOrder.merchant?.merchant_name ?? "Không xác định",
+      success: true,
+      message: "Tạo đơn hàng thành công",
+
+      order_id: fullOrder.id,
+      merchant_name: fullOrder.merchant?.merchant_name ?? "Không xác định",
       merchant_address,
-      merchant_phone: createdOrder.merchant.phone,
-      customer_name: createdOrder.full_name,
-      customer_phone: createdOrder.phone,
+      merchant_image: fullOrder.merchant?.profile_image,
+      merchant_phone: fullOrder.merchant?.phone ?? null,
+
+      receiver_name: fullOrder.full_name,
+      receiver_phone: fullOrder.phone,
+
+      delivery_address: fullOrder.delivery_address,
+      payment_method: fullOrder.payment_method,
+      status_payment: fullOrder.status_payment,
+
+      delivery_fee: fullOrder.delivery_fee
+        ? fullOrder.delivery_fee.toString()
+        : "0",
+      total_amount: fullOrder.total_amount.toString(),
+
+      status: fullOrder.status,
+      created_at: fullOrder.created_at,
+
+      items: fullOrder.items.map((item) => ({
+        id: item.id,
+        menu_item_id: item.menu_item_id,
+        name_item: item.menu_item?.name_item,
+        image_item: item.menu_item?.image_item,
+        quantity: item.quantity.toString(),
+        price: item.price.toString(),
+        note: item.note,
+
+        options: item.options.map((opt) => ({
+          option_id: opt.option_item.option.id,
+          option_name: opt.option_item.option.option_name,
+          option_item_id: opt.option_item.id,
+          option_item_name: opt.option_item.option_item_name,
+          price: opt.option_item.price.toString(),
+        })),
+      })),
     };
   },
-
   /** 🧩 Tạo món + option trong order */
   async createOrderItems(
     tx: Prisma.TransactionClient,
