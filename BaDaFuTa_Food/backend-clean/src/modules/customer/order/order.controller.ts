@@ -13,41 +13,15 @@ import {
 
 export const createCODOrder = async (req: Request, res: Response) => {
   try {
-    // Validate bằng Zod
     const data = CreateCODOrderSchema.parse(req.body);
 
-    // Tạo đơn hàng + trả về FULL format giống getOrder()
+    // Service trả về JSON FULL như repo template
     const order = await orderService.createCODOrder(data);
 
-    return res.status(201).json({
-      success: true,
-      message: "Tạo đơn hàng thành công",
-
-      order_id: order.order_id,
-      merchant_name: order.merchant_name,
-      merchant_address: order.merchant_address,
-      merchant_image: order.merchant_image,
-      merchant_phone: order.merchant_phone,
-
-      receiver_name: order.receiver_name,
-      receiver_phone: order.receiver_phone,
-
-      delivery_address: order.delivery_address,
-      payment_method: order.payment_method,
-      status_payment: order.status_payment,
-
-      delivery_fee: order.delivery_fee,
-      total_amount: order.total_amount,
-
-      status: order.status,
-      created_at: order.created_at,
-
-      items: order.items,
-    });
+    return res.status(201).json(order);
   } catch (err: any) {
     console.error("Create COD Order Error:", err);
 
-    // Lỗi Zod
     if (err.name === "ZodError") {
       return res.status(400).json({
         success: false,
@@ -56,7 +30,6 @@ export const createCODOrder = async (req: Request, res: Response) => {
       });
     }
 
-    // Lỗi khóa ngoại
     if (err.code === "P2003") {
       return res.status(400).json({
         success: false,
@@ -64,7 +37,6 @@ export const createCODOrder = async (req: Request, res: Response) => {
       });
     }
 
-    // Lỗi server
     return res.status(500).json({
       success: false,
       message: "Lỗi server khi tạo đơn hàng COD",
