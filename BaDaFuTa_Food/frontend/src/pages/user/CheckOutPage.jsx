@@ -286,6 +286,28 @@ export default function CheckOutPage() {
         console.error("❌ Lỗi tạo đơn VNPay:", err);
         alert("Không thể chuyển sang VNPay!");
       }
+    } else if (method === "MOMO") {
+      try {
+        console.log("📤 Sending body to MoMo:", orderBody);
+        const res = await fetch("http://localhost:3000/api/momo/create", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(orderBody),
+        });
+
+        const data = await res.json();
+        if (!res.ok) throw new Error(JSON.stringify(data));
+
+        console.log("📦 momo payment data:", data);
+
+        // ✅ redirect đúng field backend trả về
+        window.location.href = data.payment_url;
+        // Clear giỏ hàng
+        // clearCart();
+      } catch (err) {
+        console.error("❌ Lỗi tạo đơn VNPay:", err);
+        alert("Không thể chuyển sang VNPay!");
+      }
     }
   };
 

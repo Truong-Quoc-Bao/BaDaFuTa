@@ -131,6 +131,7 @@ export const CreateOrder = {
       total_amount: fullOrder.total_amount.toString(),
 
       status: fullOrder.status,
+      note: fullOrder.note,
       created_at: fullOrder.created_at,
 
       items: fullOrder.items.map((item) => ({
@@ -140,7 +141,6 @@ export const CreateOrder = {
         image_item: item.menu_item?.image_item,
         quantity: item.quantity.toString(),
         price: item.price.toString(),
-        note: item.note,
 
         options: item.options.map((opt) => ({
           option_id: opt.option_item.option.id,
