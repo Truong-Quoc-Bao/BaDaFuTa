@@ -398,48 +398,70 @@ export default function CheckOutPage() {
   };
 
   const [loading, setLoading] = useState(false);
+
   // ======================
-  // 🧭 VNPay Callback
+  // 🧭 UNIVERSAL PAYMENT CALLBACK (MoMo + VNPay)
   // ======================
   useEffect(() => {
     const params = new URLSearchParams(location.search);
-    const dataEncoded = params.get("data");
     const status = params.get("status");
+    const encoded = params.get("data");
 
     if (!status) return;
 
-    const processVNPay = async () => {
-      setLoading(true);
+    setLoading(true);
+
+    if (status === "success" && encoded) {
       try {
-        switch (status) {
-          case "success":
-            if (!dataEncoded) throw new Error("Không có dữ liệu đơn hàng");
+        const decoded = JSON.parse(atob(encoded));
+        console.log("📦 Payment decoded:", decoded);
 
-            localStorage.setItem("orderConfirmed", "true");
-            clearCart();
-            navigate("/cart/checkout/ordersuccess");
-            break;
+        // Lưu localStorage nếu cần
+        localStorage.setItem("orderConfirmed", "true");
+        localStorage.setItem("lastOrderId", decoded.order_id);
 
-          case "canceled":
-            navigate("/cart/pending");
-            break;
+        clearCart();
 
-          default:
-            clearCart();
-            alert("❌ Thanh toán thất bại, vui lòng thử lại!");
-            navigate("/cart/checkout/orderfailed");
-            break;
-        }
+        // Điều hướng sang trang success
+        navigate(`/cart/checkout/ordersuccess?status=success&data=${encoded}`);
+        return;
       } catch (err) {
-        console.error(err);
-        alert("❌ Lỗi xử lý VNPay!");
-      } finally {
-        setLoading(false);
+        console.error("❌ Payment decode error:", err);
+        navigate("/cart/checkout/orderfailed");
+        return;
       }
-    };
+    }
 
-    processVNPay();
-  }, [location.search, navigate]);
+    // Người dùng huỷ / lỗi
+    if (status === "canceled") {
+      navigate("/cart/pending");
+      return;
+    }
+
+    navigate("/cart/checkout/orderfailed");
+  }, [location.search]);
+
+  // ======================
+  // 🧭 MoMo Redirect Handler
+  // ======================
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const orderId = params.get("orderId");
+
+    if (!orderId) return;
+
+    setLoading(true);
+
+    // Lưu lại để OrderSuccessPage dùng
+    localStorage.setItem("orderConfirmed", "true");
+    localStorage.setItem("lastOrderId", orderId);
+
+    clearCart();
+    setLoading(false);
+
+    // Điều hướng sang trang thành công – CHỈ GỬI orderId
+    navigate(`/cart/checkout/ordersuccess?orderId=${orderId}`);
+  }, [location.search]);
 
   // 🧾 Hàm thay đổi input
   const handleInputChange = (e) => {

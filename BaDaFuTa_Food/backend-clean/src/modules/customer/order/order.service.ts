@@ -70,7 +70,6 @@ export const orderService = {
     });
   },
 };
-
 export const getOrderService = async (args: GetOrderInput) => {
   return getOrder.findMany(args);
 };

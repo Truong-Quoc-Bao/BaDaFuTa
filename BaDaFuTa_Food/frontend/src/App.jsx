@@ -19,10 +19,10 @@ import MenuItemDetailPage from "./pages/user/MenuItemDetailPage";
 import CartPage from "./pages/user/CartPage";
 import CheckOutPage from "./pages/user/CheckOutPage";
 import { MyOrdersPage } from "./pages/user/MyOrdersPage";
-import { TrackOrderPage } from "./pages/user/TrackOrderPage"
+import { TrackOrderPage } from "./pages/user/TrackOrderPage";
 import OrderSuccessPage from "./pages/user/OrderSuccessPage";
-import OrderPendingPage from "./pages/user/OrderPendingPage"
-import {ChatDriverPage} from "./pages/user/ChatDriverPage"
+import OrderPendingPage from "./pages/user/OrderPendingPage";
+import { ChatDriverPage } from "./pages/user/ChatDriverPage";
 import { LocationProvider } from "./contexts/LocationContext";
 import { Toaster } from "react-hot-toast";
 import "./index.css";
@@ -70,7 +70,7 @@ function AppRoutes() {
           </ProtectedRouteWrapper>
         }
       />
-
+      {/* 
       <Route
         path="/cart/checkout/ordersuccess"
         element={
@@ -81,11 +81,14 @@ function AppRoutes() {
             <OrderSuccessPage />
           </ProtectedRoute>
         }
-      />
+        
+      /> */}
       <Route
-        path="/cart/pending"
-        element={<OrderPendingPage />}
+        path="/cart/checkout/ordersuccess"
+        element={<OrderSuccessPage />}
       />
+
+      <Route path="/cart/pending" element={<OrderPendingPage />} />
 
       <Route path="/my-orders" element={<MyOrdersPage />} />
       <Route path="/track-order/:id" element={<TrackOrderPage />} />

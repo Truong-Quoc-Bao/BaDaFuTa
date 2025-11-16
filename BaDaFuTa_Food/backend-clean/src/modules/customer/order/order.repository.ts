@@ -249,6 +249,7 @@ export const getOrder = {
         delivery_fee: order.delivery_fee,
         total_amount: order.total_amount.toString(),
         status: order.status,
+        note: order.note,
         created_at: order.created_at,
         items: order.items.map((item) => ({
           id: item.id,

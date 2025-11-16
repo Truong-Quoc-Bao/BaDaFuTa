@@ -279,7 +279,7 @@ export const momoService = {
     const createdAt = order?.created_at ?? null;
 
     if (code === 0) {
-      // ✅ Thành công
+      // Update transaction
       await prisma.payment_transaction.update({
         where: {
           order_id_txn_ref: {
@@ -310,13 +310,14 @@ export const momoService = {
         transaction_no: String(params.transId || orderId),
       });
 
-      // 🔁 Trả về dữ liệu chuẩn cho redirect frontend
+      // ⭐ Lấy full order (template giống COD)
+      const full = await momoRepository.getFullOrder(orderIdStr);
+
+      // ⭐ Gắn thêm 2 field bắt buộc của MomoCallbackResult
       return {
-        status: "success",
+        ...full,
         code,
-        message,
-        order_id: orderIdStr,
-        created_at: createdAt,
+        status: "success",
       };
     }
 
