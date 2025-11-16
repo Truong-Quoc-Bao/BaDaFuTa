@@ -4,6 +4,7 @@ import {
   getOrder,
   updateOrder,
   updateOrderBody,
+  cancelOrder,
 } from "./order.repository";
 import { CreateCODOrderInput, GetOrderInput, UpdateOrder } from "./order.type";
 
@@ -97,4 +98,7 @@ export const updateOrderService = {
 
 export async function updateOrderStatus(orderId: string) {
   return updateOrder.updateStatus(orderId);
+}
+export async function cancelOrderStatus(orderId: string) {
+  return cancelOrder.updateStatus(orderId);
 }

@@ -104,7 +104,7 @@ export const momoService = {
               delivery_fee: BigInt(data.delivery_fee || 0),
               note: data.note ?? null,
               total_amount: BigInt(amount),
-              status: "PENDING",
+              status: "DELIVERING",
               status_payment: "PENDING",
               payment_method: "MOMO",
             },

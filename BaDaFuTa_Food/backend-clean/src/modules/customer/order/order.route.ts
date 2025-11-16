@@ -4,11 +4,13 @@ import {
   getOrder,
   updateOrder,
   updateOrderBody,
+  cancelOrder,
 } from "./order.controller";
 // import { createCODOrder } from "./order.controller";
 const router = Router();
 router.post("/", createCODOrder);
 router.post("/getOrder", getOrder);
 router.put("/:orderId/update", updateOrder); // xài cái này update
+router.put("/:orderId/cancel", cancelOrder); // xài cái này update
 router.put("/:orderId/updateBody", updateOrderBody); // không xài cái này
 export default router;

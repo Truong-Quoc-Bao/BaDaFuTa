@@ -92,6 +92,7 @@ export const CreateOrder = {
         merchant: {
           select: {
             merchant_name: true,
+            id: true,
             phone: true,
             location: true,
             profile_image: true,
@@ -122,6 +123,7 @@ export const CreateOrder = {
       message: "Tạo đơn hàng thành công",
 
       order_id: fullOrder.id,
+      merchant_id: fullOrder.merchant.id,
       merchant_name: fullOrder.merchant.merchant_name,
       merchant_address,
       merchant_image: fullOrder.merchant.profile_image,
@@ -182,6 +184,7 @@ export const getOrder = {
             phone: true,
             location: true,
             profile_image: true,
+            id: true,
           },
         },
         user: {
@@ -237,6 +240,7 @@ export const getOrder = {
         success: true,
         message: "Lấy thông tin đơn hàng thành công",
         order_id: order.id,
+        merchant_id: order.merchant.id,
         merchant_name: order.merchant?.merchant_name ?? "Không xác định",
         merchant_address,
         merchant_image: order.merchant.profile_image,
@@ -293,6 +297,22 @@ export const updateOrder = {
       data: {
         status: "COMPLETED",
         status_payment: "SUCCESS",
+        updated_at: new Date(),
+      },
+      include: {
+        user: true,
+        merchant: true,
+      },
+    });
+  },
+};
+export const cancelOrder = {
+  async updateStatus(orderId: string) {
+    return prisma.order.update({
+      where: { id: orderId },
+      data: {
+        status: "CANCELED",
+        status_payment: "REFUNDED",
         updated_at: new Date(),
       },
       include: {

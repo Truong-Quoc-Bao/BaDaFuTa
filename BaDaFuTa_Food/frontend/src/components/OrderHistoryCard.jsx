@@ -155,11 +155,20 @@ export const OrderHistoryCard = ({ order, onRatingSubmit }) => {
                       <p>
                         {" "}
                         Option:{" "}
-                        {item.options.length > 0
+                        {/* {item.options.length > 0
                           ? item.options
                               .map(
                                 (opt) =>
                                   `${opt.option_name}: ${opt.option_item.option_item_name}`
+                              )
+                              .join(", ")
+                          : "Không có"} */}
+                        {item.options?.length > 0
+                          ? item.options
+                              .filter(Boolean) // tránh undefined
+                              .map(
+                                (opt) =>
+                                  `${opt.option_name}: ${opt.option_item_name}`
                               )
                               .join(", ")
                           : "Không có"}

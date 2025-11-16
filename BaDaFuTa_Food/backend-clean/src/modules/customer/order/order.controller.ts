@@ -9,6 +9,7 @@ import {
   getOrderService,
   updateOrderService,
   updateOrderStatus,
+  cancelOrderStatus,
 } from "./order.service";
 
 export const createCODOrder = async (req: Request, res: Response) => {
@@ -85,6 +86,15 @@ export async function updateOrder(req: Request, res: Response) {
   try {
     const { orderId } = req.params;
     const result = await updateOrderStatus(orderId);
+    res.json({ success: true, data: result });
+  } catch (err: any) {
+    res.status(400).json({ success: false, error: err.message });
+  }
+}
+export async function cancelOrder(req: Request, res: Response) {
+  try {
+    const { orderId } = req.params;
+    const result = await cancelOrderStatus(orderId);
     res.json({ success: true, data: result });
   } catch (err: any) {
     res.status(400).json({ success: false, error: err.message });
