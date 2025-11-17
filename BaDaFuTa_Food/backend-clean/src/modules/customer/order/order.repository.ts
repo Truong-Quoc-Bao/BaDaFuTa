@@ -5,7 +5,7 @@ import {
   PaymentStatus,
   payment_method,
 } from "@prisma/client";
-import { OrderItemInput, GetOrderInput } from "./order.type";
+import { OrderItemInput, GetOrderInput, UpdateRating } from "./order.type";
 
 const prisma = new PrismaClient();
 
@@ -319,6 +319,51 @@ export const cancelOrder = {
         user: true,
         merchant: true,
       },
+    });
+  },
+};
+
+export const orderRatingRepo = {
+  findOrder(orderId: string) {
+    return prisma.order.findUnique({
+      where: { id: orderId },
+    });
+  },
+
+  findRatingByOrderId(orderId: string) {
+    return prisma.order_rating.findUnique({
+      where: { order_id: orderId },
+    });
+  },
+
+  createRating(orderId: string, data: UpdateRating) {
+    return prisma.order_rating.create({
+      data: {
+        order_id: orderId,
+        rating: data.rating,
+        review: data.review ?? null,
+      },
+      include: {
+        order: true,
+      },
+    });
+  },
+
+  updateRating(orderId: string, data: UpdateRating) {
+    return prisma.order_rating.update({
+      where: { order_id: orderId },
+      data: {
+        rating: data.rating,
+        review: data.review ?? null,
+      },
+      include: {
+        order: true,
+      },
+    });
+  },
+  deleteRating(orderId: string) {
+    return prisma.order_rating.delete({
+      where: { order_id: orderId },
     });
   },
 };

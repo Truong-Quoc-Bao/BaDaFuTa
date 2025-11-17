@@ -3,6 +3,7 @@ import {
   CreateCODOrderSchema,
   GetOrderSchema,
   UpdateOrderSchema,
+  UpdateRating,
 } from "./order.validation";
 import {
   orderService,
@@ -10,6 +11,7 @@ import {
   updateOrderService,
   updateOrderStatus,
   cancelOrderStatus,
+  orderRatingService,
 } from "./order.service";
 
 export const createCODOrder = async (req: Request, res: Response) => {
@@ -100,3 +102,94 @@ export async function cancelOrder(req: Request, res: Response) {
     res.status(400).json({ success: false, error: err.message });
   }
 }
+
+export const updateRatingOrder = async (req: Request, res: Response) => {
+  try {
+    const { orderId } = req.params;
+
+    const data = UpdateRating.parse(req.body);
+
+    const result = await orderRatingService.update(
+      orderId,
+      data,
+      req.app.get("io")
+    );
+
+    return res.json(result);
+  } catch (err: any) {
+    console.error("ratingOrder error:", err);
+
+    if (err.errors) {
+      return res.status(400).json({
+        success: false,
+        message: "Dữ liệu không hợp lệ!",
+        errors: err.errors,
+      });
+    }
+
+    return res.status(500).json({
+      success: false,
+      message: err.message,
+    });
+  }
+};
+export const createRatingOrder = async (req: Request, res: Response) => {
+  try {
+    const { orderId } = req.params;
+
+    const data = UpdateRating.parse(req.body);
+
+    const result = await orderRatingService.create(
+      orderId,
+      data,
+      req.app.get("io")
+    );
+
+    return res.json(result);
+  } catch (err: any) {
+    console.error("ratingOrder error:", err);
+
+    if (err.errors) {
+      return res.status(400).json({
+        success: false,
+        message: "Dữ liệu không hợp lệ!",
+        errors: err.errors,
+      });
+    }
+
+    return res.status(500).json({
+      success: false,
+      message: err.message,
+    });
+  }
+};
+
+export const getRatingOrder = async (req: Request, res: Response) => {
+  try {
+    const { orderId } = req.params;
+    const result = await orderRatingService.get(orderId);
+    return res.json(result);
+  } catch (err: any) {
+    console.error("lấy Rating lỗi:", err);
+
+    return res.status(500).json({
+      success: false,
+      message: err.message || "Lỗi server!",
+    });
+  }
+};
+
+export const deleteRatingOrder = async (req: Request, res: Response) => {
+  try {
+    const { orderId } = req.params;
+    const result = await orderRatingService.delete(orderId);
+    return res.json(result);
+  } catch (err: any) {
+    console.error("lỗi xoá đánh giá:", err);
+
+    return res.status(500).json({
+      success: false,
+      message: err.message || "Lỗi server!",
+    });
+  }
+};

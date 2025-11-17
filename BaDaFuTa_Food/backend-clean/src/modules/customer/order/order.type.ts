@@ -3,6 +3,7 @@ import {
   CreateCODOrderSchema,
   GetOrderSchema,
   UpdateOrderSchema,
+  UpdateRating,
 } from "./order.validation";
 
 /**
@@ -86,3 +87,5 @@ export interface OrderCreateData {
 export type GetOrderInput = z.infer<typeof GetOrderSchema>;
 
 export type UpdateOrder = z.infer<typeof UpdateOrderSchema>;
+
+export type UpdateRating = z.infer<typeof UpdateRating>;

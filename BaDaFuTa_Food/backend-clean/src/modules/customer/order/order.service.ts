@@ -5,8 +5,14 @@ import {
   updateOrder,
   updateOrderBody,
   cancelOrder,
+  orderRatingRepo,
 } from "./order.repository";
-import { CreateCODOrderInput, GetOrderInput, UpdateOrder } from "./order.type";
+import {
+  CreateCODOrderInput,
+  GetOrderInput,
+  UpdateOrder,
+  UpdateRating,
+} from "./order.type";
 
 export const orderService = {
   async createCODOrder(data: CreateCODOrderInput) {
@@ -75,6 +81,12 @@ export const getOrderService = async (args: GetOrderInput) => {
   return getOrder.findMany(args);
 };
 
+export async function updateOrderStatus(orderId: string) {
+  return updateOrder.updateStatus(orderId);
+}
+export async function cancelOrderStatus(orderId: string) {
+  return cancelOrder.updateStatus(orderId);
+}
 export const updateOrderService = {
   async updateOrderStatus(orderId: string, data: UpdateOrder, io?: any) {
     const updated = await updateOrderBody.updateStatus(orderId, data);
@@ -95,10 +107,78 @@ export const updateOrderService = {
     };
   },
 };
+export const orderRatingService = {
+  async create(orderId: string, data: UpdateRating, io?: any) {
+    const order = await orderRatingRepo.findOrder(orderId);
+    if (!order) throw new Error("Không tìm thấy đơn hàng.");
 
-export async function updateOrderStatus(orderId: string) {
-  return updateOrder.updateStatus(orderId);
-}
-export async function cancelOrderStatus(orderId: string) {
-  return cancelOrder.updateStatus(orderId);
-}
+    const existed = await orderRatingRepo.findRatingByOrderId(orderId);
+    if (existed) throw new Error("Đơn hàng này đã được đánh giá.");
+
+    // tạo rating
+    const created = await orderRatingRepo.createRating(orderId, data);
+
+    // emit socket
+    if (io) {
+      io.emit("order:ratingCreated", {
+        orderId,
+        ...data,
+      });
+    }
+
+    return {
+      success: true,
+      message: "Đánh giá đơn hàng thành công!",
+      data: created,
+    };
+  },
+
+  async update(orderId: string, data: UpdateRating, io?: any) {
+    const existed = await orderRatingRepo.findRatingByOrderId(orderId);
+    if (!existed) {
+      throw new Error("Bạn chưa đánh giá đơn hàng này.");
+    }
+
+    //update
+    const updated = await orderRatingRepo.updateRating(orderId, data);
+
+    //emit socket
+    if (io) {
+      io.emit("order:ratingUpdated", {
+        orderId,
+        ...data,
+      });
+    }
+
+    return {
+      success: true,
+      message: "Cập nhật đánh giá đơn hàng thành công!",
+      data: updated,
+    };
+  },
+
+  async get(orderId: string) {
+    const rating = await orderRatingRepo.findRatingByOrderId(orderId);
+
+    return {
+      success: true,
+      message: rating
+        ? "Lấy đánh giá đơn hàng thành công!"
+        : "Đơn hàng này chưa được đánh giá",
+      data: rating ?? null,
+    };
+  },
+  async delete(orderId: string) {
+    const existed = await orderRatingRepo.findRatingByOrderId(orderId);
+
+    if (!existed) {
+      throw new Error("Đơn hàng này chưa có đánh giá để xoá.");
+    }
+
+    const deleted = await orderRatingRepo.deleteRating(orderId);
+    return {
+      success: true,
+      message: "Xoá đánh giá thành công!",
+    };
+  },
+};
