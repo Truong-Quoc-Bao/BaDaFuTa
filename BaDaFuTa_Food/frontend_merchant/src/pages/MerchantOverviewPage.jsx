@@ -5,7 +5,6 @@ import { ShoppingBag, DollarSign, Clock, TrendingUp, Users, Star } from 'lucide-
 import { useMerchant } from '../contexts/MerchantContext';
 
 export function MerchantOverviewPage() {
-  // const { merchantAuth, orders = [] } = useMerchant();
   const { merchantAuth, dashboardData } = useMerchant();
 
   console.log('Merchant Auth:', merchantAuth);
@@ -24,7 +23,6 @@ export function MerchantOverviewPage() {
   ).length;
 
   const averageRating = 4.5; // Mock rating
-  // const totalCustomers = 234; // Mock customer count
 
   const stats = [
     {
@@ -113,7 +111,32 @@ export function MerchantOverviewPage() {
     }
   };
   if (!dashboardData?.data) {
-    return <p>Đang tải dữ liệu dashboard...</p>;
+    return (
+      <div className="flex items-center justify-center h-64 bg-gray-50">
+        <div className="flex flex-col items-center space-y-2">
+          {/* Spinner */}
+          <svg
+            className="animate-spin h-8 w-8 text-blue-500"
+            xmlns="http://www.w3.org/2000/svg"
+            fill="none"
+            viewBox="0 0 24 24"
+          >
+            <circle
+              className="opacity-25"
+              cx="12"
+              cy="12"
+              r="10"
+              stroke="currentColor"
+              strokeWidth="4"
+            ></circle>
+            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"></path>
+          </svg>
+
+          {/* Text */}
+          <p className="text-gray-500 font-medium">Đang tải dữ liệu dashboard...</p>
+        </div>
+      </div>
+    );
   }
 
   return (
@@ -151,7 +174,7 @@ export function MerchantOverviewPage() {
           <CardTitle>Đơn hàng gần đây</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="space-y-4">
+          <div className="space-y-4 max-h-96 overflow-y-auto">
             {recentOrders.length === 0 ? (
               <p className="text-gray-500 text-center py-8">Chưa có đơn hàng nào</p>
             ) : (
@@ -162,7 +185,7 @@ export function MerchantOverviewPage() {
                 >
                   <div className="flex-1">
                     <div className="flex items-center gap-3 mb-2">
-                      <p className="font-medium">#{order.id}</p>
+                      <p className="font-medium">Mã đơn hàng: #{order.id}</p>
                       <Badge variant={getStatusBadgeVariant(order.status)}>
                         {getStatusText(order.status)}
                       </Badge>
@@ -173,10 +196,11 @@ export function MerchantOverviewPage() {
                     <p className="text-xs text-gray-500">
                       {new Date(order.created_at).toLocaleString('vi-VN')}
                     </p>
+                    {/* <p className="text-xs text-gray-500">{order.note || 'Không có'}</p> */}
                   </div>
                   <div className="text-right">
                     <p className="font-semibold">{order.total_amount.toLocaleString('vi-VN')}đ</p>
-                    <p className="text-sm text-gray-600">Tiền mặt</p>
+                    <p className="text-sm text-gray-600">{order.payment_method}</p>
                   </div>
                 </div>
               ))

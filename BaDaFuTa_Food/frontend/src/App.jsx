@@ -1,31 +1,31 @@
-import { Routes, Route, Navigate, useLocation } from "react-router-dom";
-import { AuthProvider } from "./contexts/AuthContext";
-import { CartProvider, useCart } from "./contexts/CartContext";
-import ProtectedRoute from "./components/ProtectedRoute";
-import { Layout } from "./components/Layout";
+import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
+import { AuthProvider } from './contexts/AuthContext';
+import { CartProvider, useCart } from './contexts/CartContext';
+import ProtectedRoute from './components/ProtectedRoute';
+import { Layout } from './components/Layout';
 // import MerchantLogin from "./pages/merchant/MerchantLoginPage";
-import PhoneVerificationPage from "./pages/user/PhoneVerificationPage";
-import { Header } from "./components/Header";
-import { Footer } from "./components/Footer";
-import LoginPage from "./pages/user/LoginPage";
-import RegisterPage from "./pages/user/RegisterPage";
-import HomePage from "./pages/user/HomePage";
-import { AboutPage } from "./pages/user/AboutPage";
-import { SupportPage } from "./pages/user/SupportPage";
-import { ProfilePage } from "./pages/user/ProfilePage";
-import { SettingsPage } from "./pages/user/SettingsPage";
-import { RestaurantPage } from "./pages/user/RestaurantPage";
-import MenuItemDetailPage from "./pages/user/MenuItemDetailPage";
-import CartPage from "./pages/user/CartPage";
-import CheckOutPage from "./pages/user/CheckOutPage";
-import { MyOrdersPage } from "./pages/user/MyOrdersPage";
-import { TrackOrderPage } from "./pages/user/TrackOrderPage";
-import OrderSuccessPage from "./pages/user/OrderSuccessPage";
-import OrderPendingPage from "./pages/user/OrderPendingPage";
-import { ChatDriverPage } from "./pages/user/ChatDriverPage";
-import { LocationProvider } from "./contexts/LocationContext";
-import { Toaster } from "react-hot-toast";
-import "./index.css";
+import PhoneVerificationPage from './pages/user/PhoneVerificationPage';
+import { Header } from './components/Header';
+import { Footer } from './components/Footer';
+import LoginPage from './pages/user/LoginPage';
+import RegisterPage from './pages/user/RegisterPage';
+import HomePage from './pages/user/HomePage';
+import { AboutPage } from './pages/user/AboutPage';
+import { SupportPage } from './pages/user/SupportPage';
+import { ProfilePage } from './pages/user/ProfilePage';
+import { SettingsPage } from './pages/user/SettingsPage';
+import { RestaurantPage } from './pages/user/RestaurantPage';
+import MenuItemDetailPage from './pages/user/MenuItemDetailPage';
+import CartPage from './pages/user/CartPage';
+import CheckOutPage from './pages/user/CheckOutPage';
+import { MyOrdersPage } from './pages/user/MyOrdersPage';
+import { TrackOrderPage } from './pages/user/TrackOrderPage';
+import OrderSuccessPage from './pages/user/OrderSuccessPage';
+import OrderPendingPage from './pages/user/OrderPendingPage';
+import { ChatDriverPage } from './pages/user/ChatDriverPage';
+import { LocationProvider } from './contexts/LocationContext';
+import { Toaster } from 'react-hot-toast';
+import './index.css';
 
 // ----- Protected wrapper dựa trên giỏ hàng -----
 function ProtectedRouteWrapper({ children }) {
@@ -56,10 +56,7 @@ function AppRoutes() {
       <Route path="/profile" element={<ProfilePage />} />
       <Route path="/settings" element={<SettingsPage />} />
       <Route path="/restaurant/:id" element={<RestaurantPage />} />
-      <Route
-        path="/restaurant/:id/menu/:itemId"
-        element={<MenuItemDetailPage />}
-      />
+      <Route path="/restaurant/:id/menu/:itemId" element={<MenuItemDetailPage />} />
       <Route path="/cart" element={<CartPage />} />
 
       <Route
@@ -70,8 +67,8 @@ function AppRoutes() {
           </ProtectedRouteWrapper>
         }
       />
-      {/* 
-      <Route
+
+      {/* <Route
         path="/cart/checkout/ordersuccess"
         element={
           <ProtectedRoute
@@ -81,13 +78,8 @@ function AppRoutes() {
             <OrderSuccessPage />
           </ProtectedRoute>
         }
-        
       /> */}
-      <Route
-        path="/cart/checkout/ordersuccess"
-        element={<OrderSuccessPage />}
-      />
-
+      <Route path="/cart/checkout/ordersuccess" element={<OrderSuccessPage />} />
       <Route path="/cart/pending" element={<OrderPendingPage />} />
 
       <Route path="/my-orders" element={<MyOrdersPage />} />
@@ -101,12 +93,9 @@ function AppRoutes() {
 // ----- AppInner: chỉ mount CartProvider sau AuthProvider -----
 function AppInner() {
   const location = useLocation();
-  const hideHeaderFooter = [
-    "/login",
-    "/register",
-    "/merchantlogin",
-    "/phone-otp",
-  ].includes(location.pathname);
+  const hideHeaderFooter = ['/login', '/register', '/merchantlogin', '/phone-otp'].includes(
+    location.pathname,
+  );
 
   return (
     <>
@@ -114,7 +103,7 @@ function AppInner() {
         position="top-right"
         toastOptions={{
           duration: 1000,
-          style: { pointerEvents: "none" },
+          style: { pointerEvents: 'none' },
           pauseOnFocusLoss: false,
           pauseOnHover: false,
         }}

@@ -74,8 +74,8 @@ export const UpdateOrderSchema = z
       path: ["status"],
     }
   );
-export const UpdateRating = z.object({
-  rating: z.number().int().min(1).max(5),
-
-  review: z.string().trim().optional().nullable(),
-});
+  export const UpdateRating = z.object({
+    rating: z.number().int().min(1).max(5),
+  
+    review: z.string().trim().optional().nullable(),
+  });

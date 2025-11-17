@@ -20,9 +20,9 @@ export function MerchantOrderManagementPage() {
     toggleAutoConfirm 
   } = useMerchant();
 
-  useEffect(() => {
-    fetchOrders();
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  // useEffect(() => {
+  //   fetchOrders();
+  // }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Filter orders based on tab and search
   const filteredOrders = orders.filter(order => {

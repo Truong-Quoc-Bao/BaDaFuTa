@@ -1,10 +1,10 @@
-import { z } from "zod";
+import { z } from 'zod';
 import {
   CreateCODOrderSchema,
   GetOrderSchema,
   UpdateOrderSchema,
   UpdateRating,
-} from "./order.validation";
+} from './order.validation';
 
 /**
  * Kiểu dữ liệu đầu vào cho API tạo đơn hàng COD
@@ -45,23 +45,18 @@ export type CreateCODOrderResponse = {
  * Có thể dùng chung cho cả COD / VNPAY / MOMO
  */
 export enum PaymentMethod {
-  COD = "COD",
-  VNPAY = "VNPAY",
-  MOMO = "MOMO",
+  COD = 'COD',
+  VNPAY = 'VNPAY',
+  MOMO = 'MOMO',
 }
 
 export enum PaymentStatus {
-  PENDING = "PENDING",
-  UNPAID = "UNPAID",
-  PAID = "PAID",
-  FAILED = "FAIlED",
+  PENDING = 'PENDING',
+  UNPAID = 'UNPAID',
+  PAID = 'PAID',
+  FAILED = 'FAIlED',
 }
-export type OrderStatus =
-  | "PENDING"
-  | "PAID"
-  | "CANCELED"
-  | "REFUNDED"
-  | "FAILED";
+export type OrderStatus = 'PENDING' | 'PAID' | 'CANCELED' | 'REFUNDED' | 'FAILED';
 
 // 🔹 Dùng cho GET /api/order (lọc / tìm đơn)
 export type GetOrderArgs = {
@@ -87,5 +82,4 @@ export interface OrderCreateData {
 export type GetOrderInput = z.infer<typeof GetOrderSchema>;
 
 export type UpdateOrder = z.infer<typeof UpdateOrderSchema>;
-
 export type UpdateRating = z.infer<typeof UpdateRating>;
