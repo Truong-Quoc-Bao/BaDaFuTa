@@ -21,6 +21,8 @@ export const createApp = () => {
   app.use(helmet());
   app.use(compression());
   app.use(express.json());
+  app.use(express.json({ limit: "10mb", type: "application/json" }));
+  app.use(express.urlencoded({ extended: true }));
 
   // app.use(
   //   cors({
@@ -38,8 +40,8 @@ export const createApp = () => {
   app.use(
     cors({
       origin: [
-        "http://localhost:5173",   // customer
-        "http://localhost:5174",   // ➕ thêm merchant
+        "http://localhost:5173", // customer
+        "http://localhost:5174", // ➕ thêm merchant
         "http://192.168.100.124:5173",
         "http://192.168.100.124:5174", // ➕ nếu merchant chạy cùng mạng LAN
         "http://172.20.10.3:5173",
@@ -50,7 +52,7 @@ export const createApp = () => {
       credentials: true,
     })
   );
-  
+
   app.use(
     session({
       secret: process.env.SESSION_SECRET || "abc123",

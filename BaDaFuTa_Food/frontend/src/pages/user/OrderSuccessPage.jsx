@@ -1,3 +1,215 @@
+// // import { CheckCircle } from "lucide-react";
+// // import { Button } from "../../components/ui/button";
+// // import { useNavigate, useLocation } from "react-router-dom";
+// // import { useEffect, useState } from "react";
+// // import { useCart } from "../../contexts/CartContext";
+
+// // export default function OrderSuccessPage() {
+// //   const navigate = useNavigate();
+// //   const location = useLocation();
+// //   const { clearCart } = useCart();
+
+// //   const [validated, setValidated] = useState(false);
+// //   const [order, setOrder] = useState(null);
+
+// //   // Lấy orderId từ query param
+// //   const params = new URLSearchParams(location.search);
+// //   const orderId = params.get("orderId");
+
+// //   useEffect(() => {
+// //     // ❌ Không có orderId → đuổi về cart
+// //     if (!orderId) {
+// //       navigate("/cart", { replace: true });
+// //       return;
+// //     }
+
+// //     // ❌ Chưa có dấu hiệu đã xác nhận từ callback → đuổi về cart
+// //     const confirmed = localStorage.getItem("orderConfirmed");
+// //     if (!confirmed) {
+// //       navigate("/cart", { replace: true });
+// //       return;
+// //     }
+
+// //     // 🟢 Bắt đầu load order
+// //     async function loadOrder() {
+// //       try {
+// //         const res = await fetch(`http://localhost:3000/api/order/${orderId}`);
+// //         const data = await res.json();
+
+// //         setOrder(data); // Lưu order vào state
+// //         clearCart(); // Xóa cart
+// //         setValidated(true); // Cho phép render UI
+
+// //         // Sau 5 giây → auto chuyển sang trang theo dõi đơn
+// //         setTimeout(() => {
+// //           navigate(`/track-order/${orderId}`, { state: { order: data } });
+// //         }, 5000);
+
+// //         // Xoá dấu ấn xác nhận
+// //         setTimeout(() => {
+// //           localStorage.removeItem("orderConfirmed");
+// //         }, 5000);
+// //       } catch (err) {
+// //         console.error("Load order error:", err);
+// //         navigate("/cart/checkout/orderfailed");
+// //       }
+// //     }
+
+// //     loadOrder();
+// //   }, [orderId, navigate, clearCart]);
+
+// //   // Chưa load xong → ẩn UI
+// //   if (!validated) return null;
+
+// //   const handleReturn = () => navigate("/");
+
+// //   const handleCancelOrder = () => {
+// //     if (window.confirm("❗ Bạn có chắc muốn huỷ đơn hàng này không?")) {
+// //       alert("🚫 Đã huỷ đơn!");
+// //       navigate("/");
+// //     }
+// //   };
+
+// //   return (
+// //     <div className="flex flex-col items-center justify-center h-[500px] text-center">
+// //       <CheckCircle className="w-24 h-24 text-green-500 mb-4 animate-bounce" />
+
+// //       <h1 className="text-2xl font-bold mb-2">Đặt hàng thành công!</h1>
+// //       <p className="text-gray-500 mb-6">Đơn hàng đang được xử lý.</p>
+
+// //       <p className="text-sm text-gray-600 mb-4">
+// //         Mã đơn hàng: <strong>{order?.order_id}</strong>
+// //       </p>
+
+// //       <div className="flex flex-col gap-3">
+// //         <Button
+// //           className="bg-orange-600 hover:bg-orange-700 text-white"
+// //           onClick={handleReturn}
+// //         >
+// //           Quay lại trang chủ
+// //         </Button>
+
+// //         <Button
+// //           variant="destructive"
+// //           className="bg-red-600 hover:bg-red-700 text-white"
+// //           onClick={handleCancelOrder}
+// //         >
+// //           Huỷ đơn
+// //         </Button>
+// //       </div>
+// //     </div>
+// //   );
+// // }
+
+// // import { CheckCircle } from "lucide-react";
+// // import { Button } from "../../components/ui/button";
+// // import { useNavigate, useLocation } from "react-router-dom";
+// // import { useEffect, useState } from "react";
+// // import { useCart } from "../../contexts/CartContext";
+
+// // export default function OrderSuccessPage() {
+// //   const navigate = useNavigate();
+// //   const location = useLocation();
+// //   const { clearCart } = useCart();
+
+// //   const [validated, setValidated] = useState(false);
+// //   const [order, setOrder] = useState(null);
+
+// //   // Case 1: COD → FE gửi nguyên object về state
+// //   const orderFromState = location.state?.order;
+
+// //   // Case 2: MoMo / VNPay → Backend redirect kèm ?orderId
+// //   const params = new URLSearchParams(location.search);
+// //   const orderIdFromQuery = params.get("orderId");
+
+// //   useEffect(() => {
+// //     // Nếu có order từ state → COD flow
+// //     if (orderFromState) {
+// //       setOrder(orderFromState);
+// //       clearCart();
+// //       setValidated(true);
+
+// //       setTimeout(() => {
+// //         navigate(`/track-order/${orderFromState.order_id}`, {
+// //           state: { order: orderFromState },
+// //         });
+// //       }, 5000);
+// //       return;
+// //     }
+
+// //     // Nếu không có order nhưng có orderId → MoMo/VNPay flow
+// //     if (orderIdFromQuery) {
+// //       async function loadOrder() {
+// //         try {
+// //           const res = await fetch(
+// //             `http://localhost:3000/api/order/${orderIdFromQuery}`
+// //           );
+// //           const full = await res.json();
+
+// //           setOrder(full);
+// //           clearCart();
+// //           setValidated(true);
+
+// //           setTimeout(() => {
+// //             navigate(`/track-order/${orderIdFromQuery}`, {
+// //               state: { order: full },
+// //             });
+// //           }, 5000);
+// //         } catch (err) {
+// //           console.error("❌ Load order error:", err);
+// //           navigate("/cart");
+// //         }
+// //       }
+
+// //       loadOrder();
+// //       return;
+// //     }
+
+// //     // ❌ Không có cả 2 → người dùng mở tab /ordersuccess → Redirect về cart
+// //     navigate("/cart", { replace: true });
+// //   }, [orderFromState, orderIdFromQuery, navigate, clearCart]);
+
+// //   if (!validated) return null;
+
+// //   const handleReturn = () => navigate("/");
+// //   const handleCancelOrder = () => {
+// //     if (window.confirm("❗Bạn chắc muốn huỷ đơn?")) {
+// //       alert("Đã huỷ đơn!");
+// //       navigate("/");
+// //     }
+// //   };
+
+// //   return (
+// //     <div className="flex flex-col items-center justify-center h-[500px] text-center">
+// //       <CheckCircle className="w-24 h-24 text-green-500 mb-4 animate-bounce" />
+
+// //       <h1 className="text-2xl font-bold mb-2">Đặt hàng thành công!</h1>
+// //       <p className="text-gray-500 mb-6">Đơn hàng đang được xử lý.</p>
+
+// //       <p className="text-sm text-gray-600 mb-4">
+// //         Mã đơn hàng: <strong>{order?.order_id}</strong>
+// //       </p>
+
+// //       <div className="flex flex-col gap-3">
+// //         <Button
+// //           className="bg-orange-600 hover:bg-orange-700 text-white"
+// //           onClick={handleReturn}
+// //         >
+// //           Quay lại trang chủ
+// //         </Button>
+
+// //         <Button
+// //           variant="destructive"
+// //           className="bg-red-600 hover:bg-red-700 text-white"
+// //           onClick={handleCancelOrder}
+// //         >
+// //           Huỷ đơn
+// //         </Button>
+// //       </div>
+// //     </div>
+// //   );
+// // }
+
 // import { CheckCircle } from "lucide-react";
 // import { Button } from "../../components/ui/button";
 // import { useNavigate, useLocation } from "react-router-dom";
@@ -12,64 +224,103 @@
 //   const [validated, setValidated] = useState(false);
 //   const [order, setOrder] = useState(null);
 
-//   // Lấy orderId từ query param
+//   // Case 1: COD → FE gửi nguyên object qua state
+//   const orderFromState = location.state?.order;
+
+//   // Case 2: MoMo / VNPay redirect → backend gửi data=<base64>
 //   const params = new URLSearchParams(location.search);
-//   const orderId = params.get("orderId");
+//   const encodedData = params.get("data");
+//   const status = params.get("status");
 
 //   useEffect(() => {
-//     // ❌ Không có orderId → đuổi về cart
-//     if (!orderId) {
-//       navigate("/cart", { replace: true });
+//     // ============================
+//     // CASE 1: COD
+//     // ============================
+//     if (orderFromState) {
+//       setOrder(orderFromState);
+//       clearCart();
+//       setValidated(true);
+
+//       setTimeout(() => {
+//         navigate(`/track-order/${orderFromState.order_id}`, {
+//           state: { order: orderFromState },
+//         });
+//       }, 5000);
+
 //       return;
 //     }
 
-//     // ❌ Chưa có dấu hiệu đã xác nhận từ callback → đuổi về cart
-//     const confirmed = localStorage.getItem("orderConfirmed");
-//     if (!confirmed) {
-//       navigate("/cart", { replace: true });
-//       return;
-//     }
-
-//     // 🟢 Bắt đầu load order
-//     async function loadOrder() {
+//     // ============================
+//     // CASE 2: MoMo / VNPay → nhận data base64
+//     // ============================
+//     if (status === "success" && encodedData) {
 //       try {
-//         const res = await fetch(`http://localhost:3000/api/order/${orderId}`);
-//         const data = await res.json();
+//         const decoded = JSON.parse(atob(encodedData));
+//         console.log("📦 Order from callback:", decoded);
 
-//         setOrder(data); // Lưu order vào state
-//         clearCart(); // Xóa cart
-//         setValidated(true); // Cho phép render UI
+//         setOrder(decoded);
+//         clearCart();
+//         setValidated(true);
 
-//         // Sau 5 giây → auto chuyển sang trang theo dõi đơn
+//         // Auto chuyển qua trang theo dõi đơn
 //         setTimeout(() => {
-//           navigate(`/track-order/${orderId}`, { state: { order: data } });
-//         }, 5000);
-
-//         // Xoá dấu ấn xác nhận
-//         setTimeout(() => {
-//           localStorage.removeItem("orderConfirmed");
+//           navigate(`/track-order/${decoded.order_id}`, {
+//             state: { order: decoded },
+//           });
 //         }, 5000);
 //       } catch (err) {
-//         console.error("Load order error:", err);
+//         console.error("❌ Decode callback error:", err);
 //         navigate("/cart/checkout/orderfailed");
 //       }
+
+//       return;
 //     }
 
-//     loadOrder();
-//   }, [orderId, navigate, clearCart]);
+//     // ============================
+//     // ❌ Không có thông tin gì → cấm vào
+//     // ============================
+//     navigate("/cart", { replace: true });
+//   }, [orderFromState, encodedData, status, navigate, clearCart]);
 
-//   // Chưa load xong → ẩn UI
 //   if (!validated) return null;
 
 //   const handleReturn = () => navigate("/");
-
 //   const handleCancelOrder = () => {
-//     if (window.confirm("❗ Bạn có chắc muốn huỷ đơn hàng này không?")) {
-//       alert("🚫 Đã huỷ đơn!");
+//     if (window.confirm("❗Bạn chắc muốn huỷ đơn?")) {
+//       alert("Đã huỷ đơn!");
 //       navigate("/");
 //     }
 //   };
 
+//   // return (
+//   //   <div className="flex flex-col items-center justify-center h-[500px] text-center">
+//   //     <CheckCircle className="w-24 h-24 text-green-500 mb-4 animate-bounce" />
+
+//   //     <h1 className="text-2xl font-bold mb-2">Đặt hàng thành công!</h1>
+//   //     <p className="text-gray-500 mb-6">Đơn hàng đang được xử lý.</p>
+
+//   //     <p className="text-sm text-gray-600 mb-4">
+//   //       Mã đơn hàng: <strong>{order?.order_id}</strong>
+//   //     </p>
+
+//   //     <div className="flex flex-col gap-3">
+//   //       <Button
+//   //         className="bg-orange-600 hover:bg-orange-700 text-white"
+//   //         onClick={handleReturn}
+//   //       >
+//   //         Quay lại trang chủ
+//   //       </Button>
+
+//   //       <Button
+//   //         variant="destructive"
+//   //         className="bg-red-600 hover:bg-red-700 text-white"
+//   //         onClick={handleCancelOrder}
+//   //       >
+//   //         Huỷ đơn
+//   //       </Button>
+//   //     </div>
+//   //   </div>
+//   // );
 //   return (
 //     <div className="flex flex-col items-center justify-center h-[500px] text-center">
 //       <CheckCircle className="w-24 h-24 text-green-500 mb-4 animate-bounce" />
@@ -99,7 +350,7 @@
 //       </div>
 //     </div>
 //   );
-// }
+// // }
 
 // import { CheckCircle } from "lucide-react";
 // import { Button } from "../../components/ui/button";
@@ -115,15 +366,22 @@
 //   const [validated, setValidated] = useState(false);
 //   const [order, setOrder] = useState(null);
 
-//   // Case 1: COD → FE gửi nguyên object về state
+//   // ============================
+//   // CASE 1: COD → FE gửi object
+//   // ============================
 //   const orderFromState = location.state?.order;
 
-//   // Case 2: MoMo / VNPay → Backend redirect kèm ?orderId
+//   // ============================
+//   // CASE 2: MoMo / VNPay redirect → nhận data base64
+//   // ============================
 //   const params = new URLSearchParams(location.search);
-//   const orderIdFromQuery = params.get("orderId");
+//   const encodedData = params.get("data");
+//   const status = params.get("status");
 
 //   useEffect(() => {
-//     // Nếu có order từ state → COD flow
+//     // ============================
+//     // CASE 1: COD
+//     // ============================
 //     if (orderFromState) {
 //       setOrder(orderFromState);
 //       clearCart();
@@ -134,47 +392,46 @@
 //           state: { order: orderFromState },
 //         });
 //       }, 5000);
+
 //       return;
 //     }
 
-//     // Nếu không có order nhưng có orderId → MoMo/VNPay flow
-//     if (orderIdFromQuery) {
-//       async function loadOrder() {
-//         try {
-//           const res = await fetch(
-//             `http://localhost:3000/api/order/${orderIdFromQuery}`
-//           );
-//           const full = await res.json();
+//     // ============================
+//     // CASE 2: MOMO / VNPAY CALLBACK
+//     // ============================
+//     if (status === "success" && encodedData) {
+//       try {
+//         const decoded = JSON.parse(atob(encodedData));
+//         setOrder(decoded);
+//         clearCart();
+//         setValidated(true);
 
-//           setOrder(full);
-//           clearCart();
-//           setValidated(true);
-
-//           setTimeout(() => {
-//             navigate(`/track-order/${orderIdFromQuery}`, {
-//               state: { order: full },
-//             });
-//           }, 5000);
-//         } catch (err) {
-//           console.error("❌ Load order error:", err);
-//           navigate("/cart");
-//         }
+//         setTimeout(() => {
+//           navigate(`/track-order/${decoded.order_id}`, {
+//             state: { order: decoded },
+//           });
+//         }, 5000);
+//       } catch (err) {
+//         console.error("❌ Decode callback error:", err);
+//         navigate("/cart/checkout/orderfailed");
 //       }
 
-//       loadOrder();
 //       return;
 //     }
 
-//     // ❌ Không có cả 2 → người dùng mở tab /ordersuccess → Redirect về cart
+//     // ============================
+//     // ❌ Không có thông tin → chặn vào
+//     // ============================
 //     navigate("/cart", { replace: true });
-//   }, [orderFromState, orderIdFromQuery, navigate, clearCart]);
+//   }, [orderFromState, encodedData, status, navigate, clearCart]);
 
+//   // ⚠️ Tránh flash trắng
 //   if (!validated) return null;
 
 //   const handleReturn = () => navigate("/");
 //   const handleCancelOrder = () => {
 //     if (window.confirm("❗Bạn chắc muốn huỷ đơn?")) {
-//       alert("Đã huỷ đơn!");
+//       alert("🚫 Đơn hàng đã được huỷ!");
 //       navigate("/");
 //     }
 //   };
@@ -183,8 +440,19 @@
 //     <div className="flex flex-col items-center justify-center h-[500px] text-center">
 //       <CheckCircle className="w-24 h-24 text-green-500 mb-4 animate-bounce" />
 
-//       <h1 className="text-2xl font-bold mb-2">Đặt hàng thành công!</h1>
-//       <p className="text-gray-500 mb-6">Đơn hàng đang được xử lý.</p>
+//       <h1 className="text-2xl font-bold text-gray-800 mb-2">
+//         Đặt hàng thành công!
+//       </h1>
+
+//       {order?.status === "CONFIRMED" || order?.status === "DELIVERING" ? (
+//         <p className="mb-6 text-green-600 font-medium">
+//           Đơn hàng đã được xác nhận!
+//         </p>
+//       ) : (
+//         <p className="mb-6 text-yellow-600 font-medium">
+//           Đơn hàng đang chờ xác nhận...
+//         </p>
+//       )}
 
 //       <p className="text-sm text-gray-600 mb-4">
 //         Mã đơn hàng: <strong>{order?.order_id}</strong>
@@ -224,18 +492,16 @@ export default function OrderSuccessPage() {
   const [validated, setValidated] = useState(false);
   const [order, setOrder] = useState(null);
 
-  // Case 1: COD → FE gửi nguyên object qua state
+  // CASE 1: COD
   const orderFromState = location.state?.order;
 
-  // Case 2: MoMo / VNPay redirect → backend gửi data=<base64>
+  // CASE 2: MOMO/VNPAY callback
   const params = new URLSearchParams(location.search);
   const encodedData = params.get("data");
   const status = params.get("status");
 
   useEffect(() => {
-    // ============================
     // CASE 1: COD
-    // ============================
     if (orderFromState) {
       setOrder(orderFromState);
       clearCart();
@@ -250,22 +516,20 @@ export default function OrderSuccessPage() {
       return;
     }
 
-    // ============================
-    // CASE 2: MoMo / VNPay → nhận data base64
-    // ============================
+    // CASE 2: Momo callback
     if (status === "success" && encodedData) {
       try {
-        const decoded = JSON.parse(atob(encodedData));
-        console.log("📦 Order from callback:", decoded);
+        // ⭐ DECODE CHUẨN — KHÔNG BAO GIỜ LỖI UTF-8
+        const decodedJson = atob(decodeURIComponent(encodedData));
+        const decodedData = JSON.parse(decodedJson);
 
-        setOrder(decoded);
+        setOrder(decodedData);
         clearCart();
         setValidated(true);
 
-        // Auto chuyển qua trang theo dõi đơn
         setTimeout(() => {
-          navigate(`/track-order/${decoded.order_id}`, {
-            state: { order: decoded },
+          navigate(`/track-order/${decodedData.order_id}`, {
+            state: { order: decodedData },
           });
         }, 5000);
       } catch (err) {
@@ -276,9 +540,7 @@ export default function OrderSuccessPage() {
       return;
     }
 
-    // ============================
-    // ❌ Không có thông tin gì → cấm vào
-    // ============================
+    // Không có gì → chặn vào
     navigate("/cart", { replace: true });
   }, [orderFromState, encodedData, status, navigate, clearCart]);
 
@@ -287,46 +549,28 @@ export default function OrderSuccessPage() {
   const handleReturn = () => navigate("/");
   const handleCancelOrder = () => {
     if (window.confirm("❗Bạn chắc muốn huỷ đơn?")) {
-      alert("Đã huỷ đơn!");
+      alert("🚫 Đơn hàng đã được huỷ!");
       navigate("/");
     }
   };
 
-  // return (
-  //   <div className="flex flex-col items-center justify-center h-[500px] text-center">
-  //     <CheckCircle className="w-24 h-24 text-green-500 mb-4 animate-bounce" />
-
-  //     <h1 className="text-2xl font-bold mb-2">Đặt hàng thành công!</h1>
-  //     <p className="text-gray-500 mb-6">Đơn hàng đang được xử lý.</p>
-
-  //     <p className="text-sm text-gray-600 mb-4">
-  //       Mã đơn hàng: <strong>{order?.order_id}</strong>
-  //     </p>
-
-  //     <div className="flex flex-col gap-3">
-  //       <Button
-  //         className="bg-orange-600 hover:bg-orange-700 text-white"
-  //         onClick={handleReturn}
-  //       >
-  //         Quay lại trang chủ
-  //       </Button>
-
-  //       <Button
-  //         variant="destructive"
-  //         className="bg-red-600 hover:bg-red-700 text-white"
-  //         onClick={handleCancelOrder}
-  //       >
-  //         Huỷ đơn
-  //       </Button>
-  //     </div>
-  //   </div>
-  // );
   return (
     <div className="flex flex-col items-center justify-center h-[500px] text-center">
       <CheckCircle className="w-24 h-24 text-green-500 mb-4 animate-bounce" />
 
-      <h1 className="text-2xl font-bold mb-2">Đặt hàng thành công!</h1>
-      <p className="text-gray-500 mb-6">Đơn hàng đang được xử lý.</p>
+      <h1 className="text-2xl font-bold text-gray-800 mb-2">
+        Đặt hàng thành công!
+      </h1>
+
+      {order?.status === "CONFIRMED" || order?.status === "DELIVERING" ? (
+        <p className="mb-6 text-green-600 font-medium">
+          Đơn hàng đã được xác nhận!
+        </p>
+      ) : (
+        <p className="mb-6 text-yellow-600 font-medium">
+          Đơn hàng đang chờ xác nhận...
+        </p>
+      )}
 
       <p className="text-sm text-gray-600 mb-4">
         Mã đơn hàng: <strong>{order?.order_id}</strong>

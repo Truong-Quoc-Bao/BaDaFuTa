@@ -153,6 +153,10 @@ export const momoService = {
         const requestId = momoOrderId;
         const orderInfo = `Thanh toán đơn hàng ${order.id}`;
 
+        // LOG ĐỂ ĐỐI CHIẾU ENV
+        console.log("🔧 MoMo RETURN_URL:", MOMO_CONFIG.redirectUrl);
+        console.log("🔧 MoMo IPN_URL:", MOMO_CONFIG.ipnUrl);
+
         const rawSignature =
           `accessKey=${MOMO_CONFIG.accessKey}` +
           `&amount=${amount}` +

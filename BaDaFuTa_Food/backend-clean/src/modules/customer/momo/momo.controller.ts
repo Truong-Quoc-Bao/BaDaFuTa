@@ -50,8 +50,8 @@ export const momoController = {
       }
 
       // Encode base64 full order JSON
-      const base64 = Buffer.from(JSON.stringify(callbackData)).toString(
-        "base64"
+      const base64 = encodeURIComponent(
+        Buffer.from(JSON.stringify(callbackData), "utf8").toString("base64")
       );
 
       return res.redirect(
