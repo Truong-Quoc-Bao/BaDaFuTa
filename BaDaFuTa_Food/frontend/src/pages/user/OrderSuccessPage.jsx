@@ -16,7 +16,7 @@ export default function OrderSuccessPage() {
   const { orderId } = location.state || {};
 
   console.log('Order ID:', orderId); // ✅ kiểm tra xem có lấy được không
-
+  console.log('Order status:', order.status);
   // 🔒 Chặn người dùng vào thẳng link khi chưa đặt hàng
   useEffect(() => {
     const orderConfirmed = localStorage.getItem('orderConfirmed');
@@ -32,11 +32,17 @@ export default function OrderSuccessPage() {
     }, 5000);
 
     // ✅ Tự động chuyển sang /my-orders sau 5s
+    // const redirectTimer = setTimeout(() => {
+    //   navigate(`/track-order/${order.order_id}`, { state: { order, from: 'OrderSuccess' } });
+    // }, 5000);
+
     const redirectTimer = setTimeout(() => {
-      // navigate('/my-orders');
-      // Redirect sang trang TrackOrderPage kèm state orderId
-      // navigate(`/track-order/${order.order_id}`, { state: { order } });
-      navigate(`/track-order/${order.order_id}`, { state: { order, from: 'OrderSuccess' } });
+      if (order?.status === 'DELIVERING') {
+        navigate(`/track-order/${order.order_id}`, { state: { order, from: 'OrderSuccess' } });
+      } else {
+        alert('Đơn hàng chưa được xác nhận, không thể xem chi tiết vận chuyển.');
+        navigate('/my-orders', { state: { activeTab: 'PENDING' } });
+      }
     }, 5000);
 
     return () => {
@@ -64,13 +70,20 @@ export default function OrderSuccessPage() {
     <div className="flex flex-col items-center justify-center h-[500px]  text-center">
       <CheckCircle className="w-24 h-24 text-green-500 mb-4 animate-bounce" />
       <h1 className="text-2xl font-bold text-gray-800 mb-2">Đặt hàng thành công!</h1>
-      <p className="text-gray-500 mb-6">
-        Cảm ơn bạn đã đặt hàng. Chúng tôi sẽ giao hàng sớm nhất có thể!
-      </p>
+      {order?.status === 'CONFIRMED' || order?.status === 'DELIVERING' ? (
+        <p className="mb-6 text-green-600 font-medium">
+          Cảm ơn bạn đã đặt hàng. Chúng tôi sẽ giao hàng sớm nhất có thể!
+        </p>
+      ) : (
+        <p className="mb-6 text-orange-500 font-medium">
+          Đơn hàng của bạn đang chờ nhà hàng xác nhận. Vui lòng đợi trong giây lát!
+        </p>
+      )}
+
       {/* <p>
         Mã đơn hàng của bạn: <strong>{order.orderId}</strong>
       </p> */}
-
+      {/* 
       <div className="flex space-x-10 flex-col gap-3">
         <span>
           <Button
@@ -91,7 +104,7 @@ export default function OrderSuccessPage() {
             Huỷ đơn
           </Button>
         </span>
-      </div>
+      </div> */}
     </div>
   );
 }

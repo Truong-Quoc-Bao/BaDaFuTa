@@ -76,7 +76,7 @@ export const ToppingSelectionDialog = ({ isOpen, onClose, menuItem, restaurant, 
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-3xl w-[90vw] max-h-[90vh] overflow-y-auto mx-auto p-4 sm:p-6">
+      <DialogContent className="max-w-3xl w-[90vw] max-h-[90vh] overflow-y-auto border border-gray-300 mx-auto p-4 sm:p-6">
         <DialogHeader>
           <DialogTitle>Tùy chọn món ăn</DialogTitle>
           <DialogDescription>
@@ -183,9 +183,13 @@ export const ToppingSelectionDialog = ({ isOpen, onClose, menuItem, restaurant, 
                                 setSelectedToppings((prev) => [
                                   ...prev,
                                   {
+                                    id: optItem.option_item_id,
+                                    name: `${optionGroup.option_name}: ${optItem.option_item_name}`,
                                     option_group_id: optionGroup.option_id,
                                     option_group_name: optionGroup.option_name,
-                                    ...optItem,
+                                    // ...optItem,
+                                    option_item_id: optItem.option_item_id,
+                                    option_item_name: optItem.option_item_name,
                                     price: Number(optItem.price || 0),
                                     required: optionGroup.require_select,
                                     multi_select: optionGroup.multi_select,

@@ -1,5 +1,5 @@
-import { prisma } from "@/libs/prisma";
-import { MerchantOverviewResponse } from "./merchant-dashboard.type";
+import { prisma } from '@/libs/prisma';
+import { MerchantOverviewResponse } from './merchant-dashboard.type';
 
 export const merchantDashboardRepository = {
   /** Lấy merchant_id từ user_id (chủ nhà hàng) */
@@ -31,8 +31,8 @@ export const merchantDashboardRepository = {
     const orders = await prisma.order.findMany({
       where: {
         merchant_id: merchantId,
-        status: "COMPLETED",
-        status_payment: "SUCCESS",
+        status: 'COMPLETED',
+        status_payment: 'SUCCESS',
       },
       select: {
         total_amount: true,
@@ -54,8 +54,8 @@ export const merchantDashboardRepository = {
     const orders = await prisma.order.findMany({
       where: {
         merchant_id: merchantId,
-        status: "COMPLETED",
-        status_payment: "SUCCESS",
+        status: 'COMPLETED',
+        status_payment: 'SUCCESS',
         created_at: { gte: today },
       },
       select: {
@@ -84,7 +84,7 @@ export const merchantDashboardRepository = {
     return prisma.order.count({
       where: {
         merchant_id: merchantId,
-        status: "PENDING",
+        status: 'PENDING',
       },
     });
   },
@@ -92,17 +92,17 @@ export const merchantDashboardRepository = {
   /** Tổng số khách hàng duy nhất */
   async countUniqueCustomers(merchantId: string): Promise<number> {
     const res = await prisma.order.groupBy({
-      by: ["user_id"],
+      by: ['user_id'],
       where: { merchant_id: merchantId },
     });
     return res.length;
   },
 
   /** Đơn hàng gần đây (5 đơn mới nhất) */
-  async getRecentOrders(merchantId: string, limit = 5) {
+  async getRecentOrders(merchantId: string, limit = 10) {
     const orders = await prisma.order.findMany({
       where: { merchant_id: merchantId },
-      orderBy: { created_at: "desc" },
+      orderBy: { created_at: 'desc' },
       take: limit,
       include: {
         user: { select: { full_name: true } },
@@ -112,7 +112,7 @@ export const merchantDashboardRepository = {
 
     return orders.map((o) => ({
       id: o.id,
-      user_name: o.user?.full_name || "Khách lạ",
+      user_name: o.user?.full_name || 'Khách lạ',
       item_count: o.items.length,
       total_amount: Number(o.total_amount) - Number(o.delivery_fee), // ⭐
       status: o.status,

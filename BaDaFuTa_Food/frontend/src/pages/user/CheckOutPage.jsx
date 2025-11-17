@@ -29,6 +29,7 @@ import {
 } from '../../components/ui/dialog';
 import { Clock } from 'lucide-react';
 import { getDistanceKm, calculateDeliveryFee } from '../../utils/distanceUtils';
+import { Badge } from '../../components/ui/badge';
 
 export default function CheckOutPage() {
   // 🧩 Lấy user từ AuthContext
@@ -100,6 +101,7 @@ export default function CheckOutPage() {
     phone: '',
     address: '',
     note: '',
+    utensils: '',
   });
 
   const handleSelectAddress = (addr) => {
@@ -130,6 +132,7 @@ export default function CheckOutPage() {
       phone: user?.phone ?? '',
       address: '', // để trống nếu GPS bị từ chối
       note: '',
+      utensils: '',
     };
 
     // Hàm fetch địa chỉ từ GPS
@@ -226,21 +229,21 @@ export default function CheckOutPage() {
       phone: finalAddress.phone,
       delivery_address: finalAddress.address,
       delivery_fee: deliveryFee,
-      note: finalAddress?.note,
+      note: note,
+      utensils: true,
       payment_method: selectedPaymentMethod.type, // COD / VNPAY / MOMO
 
       items: state.items.map((i) => ({
         menu_item_id: i.menu_item_id ?? i.menuItem?.id,
         quantity: i.quantity,
         price: i.price ?? i.menuItem?.price,
+        note: i.note ?? '', // <-- thêm dòng này
 
-        selected_option_items: (i.selectedOptions ?? []).flatMap((opt) =>
-          opt.items.map((oi) => ({
-            option_item_id: oi.option_item_id,
-            option_item_name: oi.option_item_name,
-            price: oi.price,
-          })),
-        ),
+        selected_option_items: (i.selectedToppings ?? []).map((t) => ({
+          option_item_id: t.option_item_id ?? t.id,
+          option_item_name: t.option_item_name ?? t.name,
+          price: t.price,
+        })),
       })),
     };
 
@@ -267,6 +270,28 @@ export default function CheckOutPage() {
         if (!res.ok) throw new Error(JSON.stringify(data));
 
         console.log('📦 VNPay payment data:', data);
+
+        // ✅ redirect đúng field backend trả về
+        window.location.href = data.payment_url;
+        // Clear giỏ hàng
+        // clearCart();
+      } catch (err) {
+        console.error('❌ Lỗi tạo đơn VNPay:', err);
+        alert('Không thể chuyển sang VNPay!');
+      }
+    } else if (method === 'MOMO') {
+      try {
+        console.log('📤 Sending body to MoMo:', orderBody);
+        const res = await fetch('http://localhost:3000/api/momo/create', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(orderBody),
+        });
+
+        const data = await res.json();
+        if (!res.ok) throw new Error(JSON.stringify(data));
+
+        console.log('📦 momo payment data:', data);
 
         // ✅ redirect đúng field backend trả về
         window.location.href = data.payment_url;
@@ -331,18 +356,18 @@ export default function CheckOutPage() {
         delivery_fee: deliveryFee,
         payment_method: 'COD', // ✅ đồng bộ với backend
         note: selectedAddress?.note,
+        utensils: true,
         items: state.items.map((i) => ({
           menu_item_id: i.menu_item_id ?? i.menuItem?.id,
           quantity: i.quantity,
           price: i.price ?? i.menuItem?.price,
+          note: i.note ?? '', // <-- thêm dòng này
 
-          selected_option_items: (i.selectedOptions ?? []).flatMap((opt) =>
-            opt.items.map((oi) => ({
-              option_item_id: oi.option_item_id,
-              option_item_name: oi.option_item_name,
-              price: oi.price,
-            })),
-          ),
+          selected_option_items: (i.selectedToppings ?? []).map((t) => ({
+            option_item_id: t.option_item_id ?? t.id,
+            option_item_name: t.option_item_name ?? t.name,
+            price: t.price,
+          })),
         })),
       };
 
@@ -369,7 +394,7 @@ export default function CheckOutPage() {
 
   const [loading, setLoading] = useState(false);
   // ======================
-  // 🧭 VNPay Callback
+  // 🧭 UNIVERSAL PAYMENT CALLBACK (MoMo + VNPay)
   // ======================
   useEffect(() => {
     const params = new URLSearchParams(location.search);
@@ -411,6 +436,28 @@ export default function CheckOutPage() {
     processVNPay();
   }, [location.search, navigate]);
 
+  // ======================
+  // 🧭 MoMo Redirect Handler
+  // ======================
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const orderId = params.get('orderId');
+
+    if (!orderId) return;
+
+    setLoading(true);
+
+    // Lưu lại để OrderSuccessPage dùng
+    localStorage.setItem('orderConfirmed', 'true');
+    localStorage.setItem('lastOrderId', orderId);
+
+    clearCart();
+    setLoading(false);
+
+    // Điều hướng sang trang thành công – CHỈ GỬI orderId
+    navigate(`/cart/checkout/ordersuccess?orderId=${orderId}`);
+  }, [location.search]);
+
   // 🧾 Hàm thay đổi input
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -425,7 +472,6 @@ export default function CheckOutPage() {
   };
 
   // ➕ Thêm địa chỉ mới
-
   const handleAddNewAddress = () => {
     setIsAdding(true);
     setIsEditing(false);
@@ -595,6 +641,19 @@ export default function CheckOutPage() {
                       className="w-full min-h-[90px] font-semibold text-gray-500 break-words resize-none"
                     />
                   </div>
+
+                  {/* ✅ Checkbox utensils */}
+                  <label className="flex items-center gap-2 text-sm mt-1">
+                    <input
+                      type="checkbox"
+                      checked={formData.utensils || false}
+                      onChange={(e) => {
+                        setFormData((prev) => ({ ...prev, utensils: e.target.checked }));
+                      }}
+                      className="w-4 h-4 text-orange-600 border-gray-300 rounded"
+                    />
+                    Dụng cụ ăn uống
+                  </label>
 
                   {/* <div className="mt-3 flex">
                     <Button className="" onClick={handleConfirmNote}>
@@ -807,7 +866,7 @@ export default function CheckOutPage() {
             <CardFooter>
               <Button
                 variant="default"
-                className="bg-orange-600 hover:bg-orange-700 w-[200px] flex justify-start text-white"
+                className="bg-orange-500 hover:bg-orange-600 w-[200px] flex justify-start text-white"
                 onClick={() => {
                   setIsAdding(true);
                   setIsEditing(false);
@@ -856,7 +915,7 @@ export default function CheckOutPage() {
             </div>
           </div>
 
-          <div className="flex space-x-3">
+          <div className="flex justify-center space-x-3">
             <Button
               onClick={() => {
                 console.log('🧭 selectedPaymentMethod:', selectedPaymentMethod);
@@ -866,15 +925,15 @@ export default function CheckOutPage() {
                 }
                 handleSaveOnCheckout();
               }}
-              className="flex-1 bg-orange-500 hover:bg-orange-600"
+              className=" w-max  bg-orange-500 hover:bg-orange-600"
               size="lg"
             >
               {selectedPaymentMethod?.type === 'COD' ? 'Đặt hàng' : 'Tiếp tục thanh toán'}
             </Button>
 
-            <Button variant="outline" onClick={() => setShowCancelDialog(true)} size="lg">
+            {/* <Button className="flex-1" variant="outline" onClick={() => setShowCancelDialog(true)} size="lg">
               Hủy
-            </Button>
+            </Button> */}
           </div>
         </div>
         {showConfirmPopup && (
@@ -964,7 +1023,7 @@ export default function CheckOutPage() {
                   ))}
                 </div>
               </div>
-              <div className="flex items-center justify-end gap-3 mt-4">
+              <div className="flex items-center justify-center gap-3 mt-4">
                 <Button
                   variant="outline"
                   className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition"
@@ -1000,39 +1059,61 @@ export default function CheckOutPage() {
               {/* Order Items */}
               <div className="space-y-3">
                 {state.items.map((item) => {
-                  const optionTotal = item.selectedOptions
-                    ? item.selectedOptions.reduce(
-                        (sum, opt) =>
-                          sum + opt.items.reduce((s, oi) => s + Number(oi.price || 0), 0),
-                        0,
-                      )
-                    : 0;
+                  const optionTotal =
+                    item.selectedOptions?.reduce(
+                      (sum, opt) =>
+                        sum + (opt.items?.reduce((s, oi) => s + Number(oi.price || 0), 0) || 0),
+                      0,
+                    ) || 0;
 
                   const itemTotal = (item.menuItem.price + optionTotal) * item.quantity;
                   return (
-                    <div key={item.id} className="flex justify-between items-center">
-                      <ImageWithFallback
-                        src={item.menuItem.image}
-                        alt={item.menuItem.name}
-                        className="object-cover w-[40px] h-[40px] p-1  rounded-lg flex-shrink-0"
-                      />
-                      <div className="flex-1">
-                        <p className="font-medium">{item.menuItem.name}</p>
-
-                        {/* Hiển thị option đã chọn */}
-                        {item.selectedOptions?.map((opt) => (
-                          <p key={opt.option_id} className="text-xs text-gray-500">
-                            {opt.option_name}:{' '}
-                            {opt.items.map((oi) => oi.option_item_name).join(', ')}
+                    // <div key={item.id} className="flex justify-between items-center">
+                    <div
+                      key={item.id}
+                      className="flex flex-col gap-2 p-3 border border-gray-200 bg-gray-50 rounded-md transition"
+                    >
+                      {/* Hàng trên: Ảnh món + tên + số lượng + giá */}
+                      <div className="flex items-center justify-between gap-3">
+                        {/* Ảnh món */}
+                        <ImageWithFallback
+                          src={item.menuItem.image}
+                          alt={item.menuItem.name}
+                          className="object-cover w-[40px] h-[40px] p-1  rounded-lg flex-shrink-0"
+                        />
+                        {/* Tên + số lượng */}
+                        <div className="flex-1 flex flex-col">
+                          <p className="font-medium">{item.menuItem.name}</p>
+                          <p className="text-sm text-gray-500">
+                            {item.quantity} x {item.menuItem.price.toLocaleString('vi-VN')}đ
                           </p>
-                        ))}
-                        <p className="text-sm text-gray-500">
-                          {item.quantity} x {item.menuItem.price.toLocaleString('vi-VN')}đ
-                        </p>
+                        </div>
+                        {/* Giá */}
+                        <div className="mt-2 md:mt-0 md:ml-4 flex-shrink-0">
+                          <span className="font-medium">
+                            {(item.menuItem.price * item.quantity).toLocaleString('vi-VN')}đ
+                          </span>
+                        </div>
                       </div>
-                      <span className="font-medium">
-                        {(item.menuItem.price * item.quantity).toLocaleString('vi-VN')}đ
-                      </span>
+                      {/* Topping hiển thị riêng */}
+                      {item.selectedToppings && item.selectedToppings.length > 0 && (
+                        <div className="mt-2 md:mt-0 md:ml-4 flex flex-wrap gap-1 w-full md:w-auto">
+                          {item.selectedToppings.map((topping) => (
+                            <Badge
+                              key={topping.id}
+                              variant="outline"
+                              className="text-xs border border-gray-300"
+                            >
+                              {topping.option_group_name
+                                ? `${topping.option_group_name}: ${topping.option_item_name}`
+                                : topping.option_item_name}
+                              {topping.price > 0 && ` +${topping.price.toLocaleString('vi-VN')}đ`}
+                            </Badge>
+                          ))}
+                        </div>
+                      )}
+                      {/* Hiển thị option đã chọn */}
+                      {console.log('item:', item)}
                     </div>
                   );
                 })}

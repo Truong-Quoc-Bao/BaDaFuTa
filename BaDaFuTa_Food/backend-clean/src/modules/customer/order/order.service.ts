@@ -1,93 +1,74 @@
-import { prisma } from "@/libs/prisma";
+import { prisma } from '@/libs/prisma';
 import {
   CreateOrder,
   getOrder,
   updateOrder,
   updateOrderBody,
-} from "./order.repository";
-import { CreateCODOrderInput, GetOrderInput, UpdateOrder } from "./order.type";
+  cancelOrder,
+  orderRatingRepo,
+} from './order.repository';
+import { CreateCODOrderInput, GetOrderInput, UpdateOrder, UpdateRating } from './order.type';
 
 export const orderService = {
   async createCODOrder(data: CreateCODOrderInput) {
     return prisma.$transaction(async (tx) => {
-      // Kiểm tra user tồn tại
+      // 1️⃣ Kiểm tra user
       const user = await tx.users.findUnique({
         where: { id: data.user_id },
         select: { id: true, phone: true, full_name: true },
       });
+      if (!user) throw new Error('User không tồn tại');
+      if (user.phone !== data.phone) throw new Error('Số điện thoại không khớp');
 
-      if (!user) {
-        throw new Error("User không tồn tại trong hệ thống");
-      }
-
-      // Kiểm tra phone có khớp user
-      if (user.phone !== data.phone) {
-        throw new Error("Số điện thoại không khớp với tài khoản người dùng");
-      }
-
-      //Kiểm tra các món thuộc merchant
-      const itemIds = data.items.map((i) => i.menu_item_id);
-
-      // Lấy các id không trùng
-      const uniqueIds = [...new Set(itemIds)];
-
+      // 2️⃣ Kiểm tra món
+      const itemIds = [...new Set(data.items.map((i) => i.menu_item_id))];
       const itemsFromDB = await tx.menu_item.findMany({
-        where: { id: { in: uniqueIds } },
+        where: { id: { in: itemIds } },
         select: { id: true, merchant_id: true, name_item: true },
       });
 
-      // Kiểm tra tồn tại
-      if (itemsFromDB.length !== uniqueIds.length) {
-        throw new Error("món không tồn tại");
-      }
+      if (itemsFromDB.length !== itemIds.length) throw new Error('Một số món không tồn tại');
 
-      const invalidItems = itemsFromDB.filter(
-        (i) => i.merchant_id !== data.merchant_id
-      );
-      if (invalidItems.length > 0) {
+      const invalid = itemsFromDB.filter((i) => i.merchant_id !== data.merchant_id);
+      if (invalid.length)
         throw new Error(
-          `Một số món không thuộc merchant này: ${invalidItems
-            .map((i) => i.name_item)
-            .join(", ")}`
+          'Một số món không thuộc merchant: ' + invalid.map((i) => i.name_item).join(', '),
         );
-      }
 
-      // Tổng tiền
+      // 3️⃣ Tính total
       const totalItems = data.items.reduce((sum, item) => {
-        const toppingTotal = (item.selected_option_items ?? []).reduce(
-          (acc, top) => acc + (top.price ?? 0),
-          0
+        const toppings = (item.selected_option_items ?? []).reduce(
+          (t, op) => t + (op.price ?? 0),
+          0,
         );
-
-        const itemTotal = (item.price + toppingTotal) * item.quantity;
-
-        return sum + itemTotal;
+        return sum + (item.price + toppings) * item.quantity;
       }, 0);
-
       const total = BigInt(totalItems + data.delivery_fee);
 
-      //Tạo Order
-      const order = await CreateOrder.createOrder(tx, {
+      // 4️⃣ Tạo order cơ bản (repo trả về id)
+      const base = await CreateOrder.createOrder(tx, {
         user_id: data.user_id,
         merchant_id: data.merchant_id,
-        full_name: user.full_name ?? "Khách hàng COD",
+        full_name: user.full_name ?? 'Khách COD',
         phone: user.phone,
         delivery_address: data.delivery_address,
         delivery_fee: BigInt(data.delivery_fee),
-        note: data.note ?? null,
+        note: data.note,
         total_amount: total,
-        // status: "PENDING",
+        // status: 'PENDING',
         status: "DELIVERING",
-        status_payment: "PENDING",
+        status_payment: 'PENDING',
       });
 
-      //Tạo order items
-      await CreateOrder.createOrderItems(tx, order.id, data.items);
+      // 5️⃣ Tạo items + options
+      await CreateOrder.createOrderItems(tx, base.id, data.items);
 
-      return order;
+      // 6️⃣ Lấy full order + format JSON từ repo
+      return await CreateOrder.getFullOrder(tx, base.id);
     });
   },
 };
+
 export const getOrderService = async (args: GetOrderInput) => {
   return getOrder.findMany(args);
 };
@@ -97,7 +78,7 @@ export const updateOrderService = {
     const updated = await updateOrderBody.updateStatus(orderId, data);
 
     if (io) {
-      io.emit("order:statusUpdated", {
+      io.emit('order:statusUpdated', {
         orderId,
         ...data,
         userId: updated.user_id,
@@ -107,7 +88,7 @@ export const updateOrderService = {
 
     return {
       success: true,
-      message: "Cập nhật trạng thái đơn hàng thành công!",
+      message: 'Cập nhật trạng thái đơn hàng thành công!',
       data: updated,
     };
   },
@@ -116,3 +97,80 @@ export const updateOrderService = {
 export async function updateOrderStatus(orderId: string) {
   return updateOrder.updateStatus(orderId);
 }
+
+export async function cancelOrderStatus(orderId: string) {
+  return cancelOrder.updateStatus(orderId);
+}
+export const orderRatingService = {
+  async create(orderId: string, data: UpdateRating, io?: any) {
+    const order = await orderRatingRepo.findOrder(orderId);
+    if (!order) throw new Error('Không tìm thấy đơn hàng.');
+
+    const existed = await orderRatingRepo.findRatingByOrderId(orderId);
+    if (existed) throw new Error('Đơn hàng này đã được đánh giá.');
+
+    // tạo rating
+    const created = await orderRatingRepo.createRating(orderId, data);
+
+    // emit socket
+    if (io) {
+      io.emit('order:ratingCreated', {
+        orderId,
+        ...data,
+      });
+    }
+
+    return {
+      success: true,
+      message: 'Đánh giá đơn hàng thành công!',
+      data: created,
+    };
+  },
+
+  async update(orderId: string, data: UpdateRating, io?: any) {
+    const existed = await orderRatingRepo.findRatingByOrderId(orderId);
+    if (!existed) {
+      throw new Error('Bạn chưa đánh giá đơn hàng này.');
+    }
+
+    //update
+    const updated = await orderRatingRepo.updateRating(orderId, data);
+
+    //emit socket
+    if (io) {
+      io.emit('order:ratingUpdated', {
+        orderId,
+        ...data,
+      });
+    }
+
+    return {
+      success: true,
+      message: 'Cập nhật đánh giá đơn hàng thành công!',
+      data: updated,
+    };
+  },
+
+  async get(orderId: string) {
+    const rating = await orderRatingRepo.findRatingByOrderId(orderId);
+
+    return {
+      success: true,
+      message: rating ? 'Lấy đánh giá đơn hàng thành công!' : 'Đơn hàng này chưa được đánh giá',
+      data: rating ?? null,
+    };
+  },
+  async delete(orderId: string) {
+    const existed = await orderRatingRepo.findRatingByOrderId(orderId);
+
+    if (!existed) {
+      throw new Error('Đơn hàng này chưa có đánh giá để xoá.');
+    }
+
+    const deleted = await orderRatingRepo.deleteRating(orderId);
+    return {
+      success: true,
+      message: 'Xoá đánh giá thành công!',
+    };
+  },
+};

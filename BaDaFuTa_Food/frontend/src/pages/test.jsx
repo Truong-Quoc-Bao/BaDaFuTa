@@ -509,1003 +509,482 @@ app
 //
 //Mới nhất
 
-import React, { useState, useEffect, useRef, useMemo } from 'react';
-import { useLocation, useNavigate, useParams } from 'react-router-dom';
-import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
+import { useState, useEffect, useMemo } from 'react';
+import axios from 'axios';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { Button } from '../../components/ui/button';
-import L from 'leaflet';
-import {
-  MapPin,
-  MessageCircle,
-  Phone,
-  Package,
-  Truck,
-  Bike,
-  Check,
-  Home,
-  Star,
-  ArrowLeft,
-} from 'lucide-react';
-import 'leaflet/dist/leaflet.css';
-import { motion } from 'framer-motion';
-import TruckAnimated from '../../components/TruckAnimated'; // đường dẫn tùy dự án
+import { Card, CardContent } from '../../components/ui/card';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../components/ui/tabs';
+import { OrderHistoryCard } from '../../components/OrderHistoryCard';
+// import { ProtectedRoute } from "../components/ProtectedRoute";
+import { ShoppingBag, Package2, X, Clock } from 'lucide-react';
+import { orderHistory as initialOrderHistory } from '../../../data/mockData';
+import { useAuth } from '../../contexts/AuthContext';
+import { Dialog, DialogContent, DialogOverlay, DialogPortal } from '@radix-ui/react-dialog';
 
-// Fix icon mặc định Leaflet
-delete L.Icon.Default.prototype._getIconUrl;
-L.Icon.Default.mergeOptions({
-  iconRetinaUrl:
-    'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon-2x.png',
-  iconUrl:
-    'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon.png',
-  shadowUrl:
-    'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
-});
-
-const timelineSteps = [
-  { id: 1, label: 'Đã đặt đơn', icon: Check },
-  { id: 2, label: 'Tài xế nhận đơn', icon: Truck },
-  { id: 3, label: 'Tới quán', icon: MapPin },
-  { id: 4, label: 'Đã lấy đơn', icon: Package },
-  { id: 5, label: 'Giao thành công', icon: Home },
-];
-
-export const TrackOrderPage = () => {
-  const location = useLocation();
+export const MyOrdersPage = () => {
   const navigate = useNavigate();
-  const { id } = useParams();
+  // const [orders, setOrders] = useState(initialOrderHistory);
+  // const [orders, setOrders] = useState([]);
+  const [orders, setOrders] = useState([]); // ✅ KHỞI TẠO MẢNG RỖNG
 
-  // order có thể đến qua state (navigate) hoặc fetch bằng param id
-  const orderFromState = location.state?.order || null;
-  const cameFrom = location.state?.from || null; // e.g. 'OrderSuccess' (nếu được set)
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const location = useLocation();
+  const [activeTab, setActiveTab] = useState(location.state?.activeTab || 'PENDING');
+  const { state: authState } = useAuth();
+  const user = authState?.user;
+  //state huỷ đơn
+  const [orderToCancel, setOrderToCancel] = useState(null);
+  const [showCancelDialog, setShowCancelDialog] = useState(false);
 
-  const [order, setOrder] = useState(orderFromState || null);
-  const [isDelivered, setIsDelivered] = useState(false);
-
-  // --- Helpers: orderKey (dùng để lưu localStorage) và apiId (dùng cho API) ---
-  const orderKey = useMemo(() => {
-    // prefer internal id, then order_id, then route param
-    return (
-      (order && (order.id || order._id || order.order_id)) ||
-      (orderFromState && (orderFromState.id || orderFromState._id || orderFromState.order_id)) ||
-      id ||
-      null
-    );
-  }, [order, orderFromState, id]);
-
-  // --- restore step & start time from localStorage keyed by orderKey ---
-  const [currentStep, setCurrentStep] = useState(() => {
-    try {
-      const key = id ? `order_${id}_step` : null;
-      const saved = key ? localStorage.getItem(key) : null;
-      return saved ? Number(saved) : orderFromState?.currentStep || 1;
-    } catch (e) {
-      return orderFromState?.currentStep || 1;
-    }
-  });
-
-  const [stepStartTime, setStepStartTime] = useState(() => {
-    try {
-      const key = id ? `order_${id}_step_start` : null;
-      const saved = key ? localStorage.getItem(key) : null;
-      return saved ? Number(saved) : Date.now();
-    } catch (e) {
-      return Date.now();
-    }
-  });
-
-  // cho phép auto tracking theo mặc định; chúng ta sẽ resume từ savedStep nếu có
-  const [isAutoTracking, setIsAutoTracking] = useState(true);
-
-  // ref để đảm bảo updateBody chỉ gọi 1 lần
-  const hasUpdatedRef = useRef(false);
-  // ref để giữ timer id
-  const timerRef = useRef(null);
-
-  // -------- Fetch order nếu cần (reload trường hợp mất state) --------
   useEffect(() => {
-    // If we already have orderFromState, set it (and attempt to restore saved step/time)
-    if (orderFromState) {
-      setOrder(orderFromState);
+    if (location.state?.updatedOrder) {
+      const updatedOrder = location.state.updatedOrder;
+      setOrders((prev) => prev.map((o) => (o.id === updatedOrder.id ? updatedOrder : o)));
+    }
+  }, [location.state?.updatedOrder]);
 
-      // restore saved step/start if exists for that order
-      const keyBase =
-        orderFromState.id || orderFromState._id || orderFromState.order_id || id || null;
-      if (keyBase) {
-        const savedStep = localStorage.getItem(`order_${keyBase}_step`);
-        const savedStart = localStorage.getItem(`order_${keyBase}_step_start`);
-        if (savedStep) setCurrentStep(Number(savedStep));
-        if (savedStart) setStepStartTime(Number(savedStart));
-      }
+  // 🧩 Gọi API lấy danh sách đơn hàng
+  useEffect(() => {
+    if (user === null) return; // Chờ user load từ context
+
+    if (!user) {
+      navigate('/login');
       return;
     }
 
-    // else try fetch by route param id (most cases)
-    if (id) {
-      fetch(`/apiLocal/order/getOrder/${id}`)
-        .then((res) => {
-          if (!res.ok) throw new Error('Fetch order failed');
-          return res.json();
-        })
-        .then((data) => {
-          setOrder(data);
-
-          // restore saved step/start for fetched order
-          const keyBase = data.id || data._id || data.order_id || id;
-          const savedStep = localStorage.getItem(`order_${keyBase}_step`);
-          const savedStart = localStorage.getItem(`order_${keyBase}_step_start`);
-          if (savedStep) setCurrentStep(Number(savedStep));
-          if (savedStart) setStepStartTime(Number(savedStart));
-        })
-        .catch((err) => {
-          console.error('❌ Fetch order error:', err);
-        });
-    }
-  }, [id, orderFromState]);
-
-  // -------- Persist currentStep and stepStartTime keyed by the actual orderKey --------
-  useEffect(() => {
-    if (!orderKey) return;
-    try {
-      localStorage.setItem(`order_${orderKey}_step`, String(currentStep));
-      localStorage.setItem(`order_${orderKey}_step_start`, String(stepStartTime));
-    } catch (e) {
-      console.warn('localStorage set error', e);
-    }
-  }, [currentStep, stepStartTime, orderKey]);
-
-  // Clear timer on unmount
-  useEffect(() => {
-    return () => {
-      if (timerRef.current) {
-        clearTimeout(timerRef.current);
-        timerRef.current = null;
-      }
+    // Tạo body
+    const orderBody = {
+      user_id: user.id,
     };
-  }, []);
 
-  // -------- Auto increment step logic (robust — resumes using saved start time) --------
-  useEffect(() => {
-    if (!order || !isAutoTracking) return;
-
-    // ensure we don't double-update when currentStep already past final
-    if (currentStep > timelineSteps.length) return;
-
-    // compute stepDuration and remaining
-    const stepDuration = 20000; // 20s per step
-    const now = Date.now();
-
-    // If saved start time is in future or not a number, reset to now
-    const start = Number(stepStartTime) || now;
-    // elapsed in current step
-    const elapsed = Math.max(0, now - start);
-    const remaining = Math.max(stepDuration - elapsed, 0);
-
-    // If we're already at final step, run completion flow
-    if (currentStep >= timelineSteps.length) {
-      // completion
-      (async () => {
-        if (hasUpdatedRef.current) return; // already handled
-        hasUpdatedRef.current = true;
-
+    const fetchOrders = async () => {
+      const hosts = ['/apiLocal/order/getOrder'];
+      for (const host of hosts) {
         try {
-          // choose api identifier (order.id || order.order_id || id)
-          const apiId = order.id || order._id || order.order_id || id;
-          if (!apiId) {
-            console.error('No order id available for update');
-            return;
-          }
+          setLoading(true);
+          const token = localStorage.getItem('accessToken');
 
-          const res = await fetch(`/apiLocal/order/${apiId}/updateBody`, {
-            method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              status: 'COMPLETED',
-              status_payment: 'SUCCESS',
-              delivered_at: new Date().toISOString(),
-            }),
+          const res = await fetch(host, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              ...(token ? { Authorization: `Bearer ${token}` } : {}),
+            },
+            body: JSON.stringify({ user_id: user.id }),
           });
 
-          if (!res.ok) throw new Error('Update failed');
+          if (!res.ok) throw new Error(`❌ Lỗi khi gọi ${host}`);
           const data = await res.json();
+          console.log('📦 API trả về:', data);
 
-          // cleanup + navigate
-          setIsAutoTracking(false);
-          setIsDelivered(true);
-          localStorage.removeItem(`order_${apiId}_step`);
-          localStorage.removeItem(`order_${apiId}_step_start`);
-
-          navigate('/my-orders', {
-            state: { activeTab: 'COMPLETED', updatedOrder: data },
-          });
+          const formattedOrders = Array.isArray(data.items)
+          ? data.items.map(o => ({ ...o, id: o.order_id }))
+          : [{ ...data, id: data.order_id }];
+        
+          setOrders(formattedOrders);
+          // setOrders(data.orders);
+          setOrders(Array.isArray(data) ? data : [data]);
+          console.log('✅ Lấy dữ liệu đơn hàng từ:', host);
+          return;
         } catch (err) {
-          console.error('❌ Error updating order on completion:', err);
+          console.warn(err.message);
+        } finally {
+          setLoading(false);
         }
-      })();
-
-      return;
-    }
-
-    // Otherwise schedule increment after remaining milliseconds
-    timerRef.current = setTimeout(() => {
-      setCurrentStep((prev) => Math.min(prev + 1, timelineSteps.length));
-      setStepStartTime(Date.now());
-    }, remaining);
-
-    return () => {
-      if (timerRef.current) {
-        clearTimeout(timerRef.current);
-        timerRef.current = null;
       }
+
+      console.error('❌ Không thể lấy dữ liệu đơn hàng từ bất kỳ host nào');
+      setError('Không thể tải dữ liệu đơn hàng.');
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [order, isAutoTracking, currentStep, stepStartTime, id]);
 
-  // If user navigated from OrderSuccess and we want to ensure auto-tracking runs,
-  // we will keep isAutoTracking true (default). No extra toggle needed here.
-  // BUT if you want different behavior (like pause), you can detect `cameFrom === 'OrderSuccess'`.
+    fetchOrders();
+  }, [user]);
 
-  if (!order) return <p className="text-center mt-10">Đang tải đơn hàng...</p>;
-
-  const createdAt = new Date(order.created_at);
-  const estimatedDelivery = new Date(createdAt.getTime() + 40 * 60 * 1000);
-
-  const handleBack = () => navigate('/my-orders');
-
-  // For UI: compute stepProgress for active step using stepStartTime
-  const activeElapsed = Math.min(Math.max(0, Date.now() - stepStartTime), 20000);
-  const activeProgress = Math.min(activeElapsed / 20000, 1);
-
-  return (
-    <div className="max-w-6xl mx-auto p-4 space-y-6">
-      <Button onClick={handleBack} variant="outline" className="mb-6 mt-4">
-        <ArrowLeft className="w-4 h-4 mr-2" />
-        Quay lại Đơn hàng của tôi
-      </Button>
-
-      <div className="text-center space-y-1">
-        <h2 className="text-2xl md:text-3xl font-bold">Theo dõi đơn hàng</h2>
-        <p className="text-gray-600 text-sm md:text-base">
-          Dự kiến giao hàng:{' '}
-          <span className="font-semibold text-orange-500">
-            {estimatedDelivery.toLocaleTimeString('vi-VN', {
-              hour: '2-digit',
-              minute: '2-digit',
-            })}
-          </span>
-        </p>
-      </div>
-
-      {/* Timeline responsive */}
-      <div className="flex flex-col md:flex-row md:justify-between items-center gap-6 relative">
-        {timelineSteps.map((step, index) => {
-          const StepIcon = step.icon;
-          const stepIndex = index + 1;
-          const isCompleted = stepIndex < currentStep;
-          const isActive = stepIndex === currentStep;
-
-          // progress for active step
-          const stepProgress = isActive ? activeProgress : isCompleted ? 1 : 0;
-
-          return (
-            <div key={step.id} className="flex md:flex-1 flex-col items-center text-center relative">
-              {index < timelineSteps.length - 1 && (
-                <div
-                  className="hidden md:block absolute top-5 left-2/2 transform -translate-x-1/2 h-1 z-0 bg-gray-300 overflow-visible"
-                  style={{ width: '100%' }}
-                >
-                  <motion.div
-                    className="h-full bg-orange-500 origin-left"
-                    initial={{ scaleX: isCompleted ? 1 : stepProgress }}
-                    animate={{ scaleX: isCompleted ? 1 : isActive ? stepProgress : 0 }}
-                    transition={{ duration: 0.3, ease: 'linear' }}
-                  />
-                  {isActive && (
-                    <motion.div
-                      className="absolute top-[-20px] z-10"
-                      initial={{ left: `${stepProgress * 100}%` }}
-                      animate={{ left: `${Math.max(stepProgress, 0.02) * 100}%` }}
-                      transition={{ duration: 0.3, ease: 'linear' }}
-                    >
-                      <TruckAnimated />
-                    </motion.div>
-                  )}
-                </div>
-              )}
-
-              <motion.div
-                className="w-10 h-10 md:w-12 md:h-12 flex items-center justify-center rounded-full border-2 mb-2 z-10"
-                animate={{
-                  backgroundColor: isCompleted ? '#f97316' : isActive ? '#fde68a' : '#f3f3f3',
-                  borderColor: isCompleted || isActive ? '#f97316' : '#d1d5db',
-                }}
-              >
-                <StepIcon
-                  className="w-5 h-5 md:w-6 md:h-6"
-                  style={{ stroke: isCompleted ? '#fff' : isActive ? '#f97316' : '#9ca3af' }}
-                />
-              </motion.div>
-
-              <span className={`text-xs md:text-sm font-medium ${isCompleted || isActive ? 'text-orange-500' : 'text-gray-400'}`}>
-                {step.label}
-              </span>
-            </div>
-          );
-        })}
-      </div>
-
-      {/* Driver info */}
-      {order.driver && currentStep >= 2 && (
-        <div className="mt-4 text-sm text-gray-700 flex items-center space-x-2 bg-gray-50 p-3 rounded-xl shadow-sm">
-          <span className="font-medium">Tài xế:</span>
-          <img
-            src={
-              order.driver?.avatar ||
-              'https://scontent.fsgn2-10.fna.fbcdn.net/v/t39.30808-6/487326873_1887063878796318_9080709797256676382_n.jpg'
-            }
-            alt="Driver avatar"
-            className="w-8 h-8 rounded-full border border-gray-300"
-          />
-          <span>{order.driver?.name} | </span>
-          <Bike className="w-4 h-4 mr-1 text-orange-500" />
-          <span className="text-gray-500">Biển số: {order.driver?.BS} | </span>
-          <span className="flex items-center text-yellow-500">
-            {[...Array(5)].map((_, i) => (
-              <Star key={i} className="w-4 h-4" />
-            ))}
-          </span>
-          {order.driver?.SĐT && (
-            <span className="flex items-center text-gray-500">
-              | <Phone className="w-4 h-4 mx-1 text-orange-500" /> {order.driver.SĐT}
-            </span>
-          )}
-          <button
-            onClick={() => navigate(`/chat-driver/${order.driver?.id}`)}
-            className="ml-auto flex items-center gap-1 text-orange-500 hover:text-orange-600 transition"
-          >
-            <MessageCircle className="w-5 h-5" />
-            <span>Nhắn tin</span>
-          </button>
-        </div>
-      )}
-
-      {/* Order info responsive */}
-      <div className="bg-white p-4 md:p-6 rounded-lg shadow-sm space-y-2 text-sm md:text-base">
-        <p className="text-lg font-semibold text-orange-600">Thông tin đơn hàng</p>
-        <p>
-          <strong>Thanh toán:</strong> {order.payment_method}
-        </p>
-        <p>
-          <strong>Tổng tiền:</strong> {Number(order.total_amount).toLocaleString('vi-VN')}đ
-        </p>
-        {order.note && (
-          <p>
-            <strong>Ghi chú:</strong> {order.note}
-          </p>
-        )}
-      </div>
-    </div>
-  );
-};
-
-export default TrackOrderPage;
-
-
-// ✅ Tự động chuyển sang trang theo dõi đơn sau 5 giây
-setTimeout(() => {
-  navigate(`/track-order/${order.order_id}`, {
-    state: { order, from: "OrderSuccess" }, // 👈 thêm flag này
-  });
-}, 5000);
-
-
-const [isAutoTracking, setIsAutoTracking] = useState(() => {
-  const fromSuccess = location.state?.from === 'OrderSuccess';
-  return fromSuccess || !!orderFromState; // ✅ Cho phép auto nếu từ OrderSuccess
-});
-
-
-useEffect(() => {
-  if (!orderKey) return;
-
-  const savedStep = localStorage.getItem(`order_${orderKey}_step`);
-  const savedStart = localStorage.getItem(`order_${orderKey}_step_start`);
-
-  if (savedStep) setCurrentStep(Number(savedStep));
-  if (savedStart) setStepStartTime(Number(savedStart));
-}, [orderKey]);
-
-
-if (currentStep >= timelineSteps.length) {
-  localStorage.removeItem(`order_${orderKey}_step`);
-  localStorage.removeItem(`order_${orderKey}_step_start`);
-  // ...navigate hoặc update trạng thái
-}
-
-const stepDuration = 20000; // 20s mỗi step
-const now = Date.now();
-const elapsed = now - stepStartTime; // thời gian trôi trong step hiện tại
-const stepProgress = Math.min(elapsed / stepDuration, 1); // 0 -> 1
-
-
-//
-//
-//
-
-//
-import { motion } from 'framer-motion';
-import { Truck } from 'lucide-react';
-import { useState, useEffect, useRef, useMemo } from 'react';
-import { useLocation, useNavigate, useParams } from 'react-router-dom';
-import TruckAnimated from './TruckAnimated'; // component xe chạy
-
-const timelineSteps = [
-  { id: 1, label: 'Đã đặt đơn', icon: Truck },
-  { id: 2, label: 'Tài xế nhận đơn', icon: Truck },
-  { id: 3, label: 'Tới quán', icon: Truck },
-  { id: 4, label: 'Đã lấy đơn', icon: Truck },
-  { id: 5, label: 'Giao thành công', icon: Truck },
-];
-
-export const TrackOrderPage = () => {
-  const location = useLocation();
-  const navigate = useNavigate();
-  const { id } = useParams();
-
-  const orderFromState = location.state?.order || null;
-  const [order, setOrder] = useState(orderFromState || null);
-  const [currentStep, setCurrentStep] = useState(() => {
-    const saved = localStorage.getItem(`order_${id}_step`);
-    return saved ? Number(saved) : 1;
-  });
-  const [stepStartTime, setStepStartTime] = useState(() => {
-    const saved = localStorage.getItem(`order_${id}_step_start`);
-    return saved ? Number(saved) : Date.now();
-  });
-  const [isAutoTracking, setIsAutoTracking] = useState(true);
-  const timerRef = useRef(null);
-
-  const orderKey = useMemo(() => id, [id]);
-
-  // Persist step/time
-  useEffect(() => {
-    localStorage.setItem(`order_${orderKey}_step`, String(currentStep));
-    localStorage.setItem(`order_${orderKey}_step_start`, String(stepStartTime));
-  }, [currentStep, stepStartTime, orderKey]);
-
-  // Auto increment step
-  useEffect(() => {
-    if (!order || !isAutoTracking) return;
-    if (currentStep > timelineSteps.length) return;
-
-    const stepDuration = 20000; // 20s
-    const now = Date.now();
-    const elapsed = Math.max(0, now - stepStartTime);
-    const remaining = Math.max(stepDuration - elapsed, 0);
-
-    if (currentStep >= timelineSteps.length) {
-      // completed
-      localStorage.removeItem(`order_${orderKey}_step`);
-      localStorage.removeItem(`order_${orderKey}_step_start`);
-      setIsAutoTracking(false);
+  // Khi nhấn nút Huỷ
+  const handleOpenCancelDialog = (order) => {
+    if (order.status === 'CONFIRMED') {
+      alert('❌ Đơn hàng đã được xác nhận, không thể huỷ.');
       return;
     }
+    setOrderToCancel(order);
+    setShowCancelDialog(true);
+  };
 
-    timerRef.current = setTimeout(() => {
-      setCurrentStep((prev) => Math.min(prev + 1, timelineSteps.length));
-      setStepStartTime(Date.now());
-    }, remaining);
+  // Xác nhận hủy
+  const handleConfirmCancel = () => {
+    if (orderToCancel) handleCancelOrder(orderToCancel.order_id);
+  };
+  // Khi xác nhận huỷ
+  // const handleCancelOrder = async (order) => {
+  //   if (!orderToCancel) return;
+  //   const order_id = order.order_id;
+  //   const oldStatus = order.status; // lưu trạng thái cũ
+  //   // Optimistic update
+  //   setOrders((prev) => prev.map((o) => (o.id === order_id ? { ...o, status: 'CANCELED' } : o)));
 
-    return () => {
-      if (timerRef.current) clearTimeout(timerRef.current);
-    };
-  }, [order, isAutoTracking, currentStep, stepStartTime, orderKey]);
+  //   // Đóng dialog
+  //   setShowCancelDialog(false);
+  //   setOrderToCancel(null);
 
-  if (!order) return <p className="text-center mt-10">Đang tải đơn hàng...</p>;
+  //   try {
+  //     const token = localStorage.getItem('accessToken');
+  //     const res = await fetch(`/apiLocal/order/${order_id}/cancel`, {
+  //       method: 'PUT',
+  //       headers: {
+  //         'Content-Type': 'application/json',
+  //         ...(token ? { Authorization: `Bearer ${token}` } : {}),
+  //       },
+  //     });
 
-  return (
-    <div className="flex flex-col md:flex-row md:justify-between items-center gap-6 relative">
-      {timelineSteps.map((step, index) => {
-        const StepIcon = step.icon;
-        const isCompleted = index + 1 < currentStep;
-        const isActive = index + 1 === currentStep;
+  //     if (!res.ok) throw new Error('❌ Hủy đơn thất bại');
 
-        const stepDuration = 20000;
-        const now = Date.now();
-        const elapsed = Math.max(0, now - stepStartTime);
-        const stepProgress = Math.min(elapsed / stepDuration, 1);
+  //     // // Cập nhật ngay state orders
+  //     // setOrders((prev) => prev.map((o) => (o.id === order_id ? { ...o, status: 'CANCELED' } : o)));
+  //     console.log('✔ Đã hủy đơn:', order_id);
+  //   } catch (err) {
+  //     console.error('❌ Lỗi hủy đơn:', err);
+  //     // 🔹 Rollback dùng trạng thái cũ đã lưu
+  //     setOrders((prev) => prev.map((o) => (o.id === order_id ? { ...o, status: oldStatus } : o)));
+  //     alert('❌ Hủy đơn thất bại, vui lòng thử lại.');
+  //   }
+  //   // } finally {
+  //   //   setShowCancelDialog(false);
+  //   //   setOrderToCancel(null);
+  //   // }
+  // };
+  const handleCancelOrder = async () => {
+    if (!orderToCancel) return;
 
-        return (
-          <div key={step.id} className="flex md:flex-1 flex-col items-center text-center relative">
-            {/* Line between steps */}
-            {index < timelineSteps.length - 1 && (
-              <div className="hidden md:block absolute top-5 left-1/2 transform -translate-x-1/2 h-1 w-full z-0 bg-gray-300 overflow-visible">
-                {/* Thanh màu cam */}
-                <motion.div
-                  key={`progress-${currentStep}`}
-                  className="h-full bg-orange-500 origin-left"
-                  initial={{ scaleX: stepProgress }}
-                  animate={{ scaleX: 1 }}
-                  transition={{
-                    duration: (1 - stepProgress) * stepDuration / 1000,
-                    ease: 'linear',
-                  }}
-                />
+    const order_id = orderToCancel.order_id;
+    const oldStatus = orderToCancel.status;
 
-                {/* Xe chạy */}
-                {isActive && (
-                  <motion.div
-                    key={`truck-${currentStep}`}
-                    className="absolute top-[-20px] z-10"
-                    initial={{ left: `${stepProgress * 100}%` }}
-                    animate={{ left: '100%' }}
-                    transition={{
-                      duration: (1 - stepProgress) * stepDuration / 1000,
-                      ease: 'linear',
-                    }}
-                  >
-                    <TruckAnimated />
-                  </motion.div>
-                )}
-              </div>
-            )}
+    // ✅ Optimistic update
+    setOrders(prev => prev.map(o => o.order_id === order_id ? { ...o, status: 'CANCELED' } : o));
+    setShowCancelDialog(false);
+    setOrderToCancel(null);
+    setActiveTab('CANCELED'); // đổi tab ngay
 
-            {/* Icon step */}
-            <div
-              className={`w-12 h-12 flex items-center justify-center rounded-full z-10 ${
-                isCompleted || isActive ? 'bg-orange-500 text-white' : 'bg-gray-300 text-gray-500'
-              }`}
-            >
-              <StepIcon size={24} />
-            </div>
-            <span className="mt-2 text-sm">{step.label}</span>
-          </div>
-        );
-      })}
-    </div>
+    try {
+      const token = localStorage.getItem('accessToken');
+      const res = await fetch(`/apiLocal/order/${order_id}/cancel`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+      });
+
+      if (!res.ok) throw new Error('❌ Hủy đơn thất bại');
+
+      console.log('✔ Đã hủy đơn:', order_id);
+    } catch (err) {
+      console.error('❌ Lỗi hủy đơn:', err);
+
+      // rollback nếu lỗi
+      setOrders(prev => prev.map(o => o.order_id === order_id ? { ...o, status: oldStatus } : o));
+      alert('❌ Hủy đơn thất bại, vui lòng thử lại.');
+    }
+  };
+
+  //Rating
+  const handleRatingSubmit = (rating) => {
+    setOrders((prevOrders) =>
+      prevOrders.map((order) =>
+        order.id === rating.orderId
+          ? {
+              ...order,
+              rating: rating.rating,
+              review: rating.review,
+              canRate: false,
+            }
+          : order,
+      ),
+    );
+  };
+
+  // 🧠 Lọc đơn hàng theo trạng thái
+  const pendingOrders = useMemo(
+    () => (orders ? orders.filter((order) => order.status === 'PENDING') : []),
+    [orders],
   );
+
+  const deliveredOrders = useMemo(
+    () => (orders ? orders.filter((order) => order.status === 'COMPLETED') : []),
+    [orders],
+  );
+
+  const shippingOrders = useMemo(
+    () =>
+      orders
+        ? orders.filter((order) => order.status === 'DELIVERING' || order.status === 'CONFIRMED')
+        : [],
+    [orders],
+  );
+
+  const cancelledOrders = useMemo(
+    () => (orders ? orders.filter((order) => order.status === 'CANCELED') : []),
+    [orders],
+  );
+
+  //    const ratingOrders = useMemo(
+  //     () => orders.fillter((order) => order.status === "rating"),
+  //     [orders]
+  //   );
+
+  // console.log('📦 Orders:', data); // xem key của ID là gì
+
+  const EmptyState = ({ type, icon: Icon, message }) => (
+    <Card className="hover:scale-100">
+      <CardContent className="text-center py-12">
+        <Icon className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+        <h3 className="font-semibold text-lg mb-2">{message}</h3>
+        <p className="text-gray-500 mb-6">
+          {type === 'shipping' && 'Bạn chưa có đơn hàng nào đang được giao. Hãy đặt hàng ngay!'}
+          {type === 'delivered' &&
+            'Bạn chưa có đơn hàng nào đã mua. Khám phá các nhà hàng ngon ngay!'}
+          {type === 'cancelled' && 'Bạn chưa có đơn hàng nào bị hủy. Thật tuyệt vời!'}
+        </p>
+        <Button variant="default" onClick={() => navigate('/')} className="w-max">
+          Khám phá nhà hàng
+        </Button>
+      </CardContent>
+    </Card>
+  );
+
+  // ⏳ Hiển thị khi đang tải hoặc lỗi
+  if (loading) return <p className="text-center py-10">Đang tải đơn hàng...</p>;
+  if (error) return <p className="text-center py-10 text-red-500">{error}</p>;
+
+  //Giao diện chính
+  return (
+    // <ProtectedRoute>
+    <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8 ">
+      <div className="mb-8">
+        <h1 className="text-3xl font-bold mb-2">Đơn hàng của tôi</h1>
+        <p className="text-gray-600">Theo dõi và quản lý các đơn hàng của bạn</p>
+      </div>
+
+      {/* <Tabs defaultValue="DELIVERING" className="space-y-6"> */}
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
+        <TabsList className="grid w-full grid-cols-4">
+          <TabsTrigger value="PENDING" className="flex items-center space-x-2">
+            <ShoppingBag className="w-4 h-4" />
+            <span>Chờ xác nhận ({pendingOrders.length})</span>
+          </TabsTrigger>
+
+          <TabsTrigger value="DELIVERING" className="flex items-center space-x-2">
+            <Clock className="w-4 h-4" />
+            <span>Đang giao ({shippingOrders.length})</span>
+          </TabsTrigger>
+          <TabsTrigger value="COMPLETED" className="flex items-center space-x-2">
+            <Package2 className="w-4 h-4" />
+            <span>Đã giao ({deliveredOrders.length})</span>
+          </TabsTrigger>
+          <TabsTrigger value="CANCELED" className="flex items-center space-x-2">
+            <X className="w-4 h-4" />
+            <span>Đã hủy ({cancelledOrders.length})</span>
+          </TabsTrigger>
+          {/* <TabsTrigger
+            value="delivered"
+            className="flex items-center space-x-2"
+          >
+            <Package2 className="w-4 h-4" />
+            <span>Đánh giá ({ratingOrders.length})</span>
+          </TabsTrigger> */}
+        </TabsList>
+        <TabsContent value="PENDING" className="space-y-4">
+          {pendingOrders.length > 0 ? (
+            pendingOrders.map((order) => (
+              <OrderHistoryCard
+                key={order.id}
+                order={order}
+                onRatingSubmit={handleRatingSubmit}
+                onCancel={handleOpenCancelDialog} // ✅ truyền hàm mở dialog
+              />
+            ))
+          ) : (
+            <EmptyState type="PENDING" icon={ShoppingBag} message="Chưa có đơn hàng chờ xác nhận" />
+          )}
+        </TabsContent>
+
+        <TabsContent value="DELIVERING" className="space-y-4">
+          {shippingOrders.length > 0 ? (
+            shippingOrders.map((order) => (
+              <OrderHistoryCard key={order.id} order={order} onRatingSubmit={handleRatingSubmit} />
+            ))
+          ) : (
+            <EmptyState type="DELIVERING" icon={Clock} message="Chưa có đơn hàng đang giao" />
+          )}
+        </TabsContent>
+
+        <TabsContent value="COMPLETED" className="space-y-4">
+          {deliveredOrders.length > 0 ? (
+            deliveredOrders.map((order) => (
+              <OrderHistoryCard key={order.id} order={order} onRatingSubmit={handleRatingSubmit} />
+            ))
+          ) : (
+            <EmptyState type="COMPLETED" icon={Package2} message="Chưa có đơn hàng mua" />
+          )}
+        </TabsContent>
+
+        <TabsContent value="CANCELED" className="space-y-4">
+          {cancelledOrders.length > 0 ? (
+            cancelledOrders.map((order) => (
+              <OrderHistoryCard key={order.id} order={order} onRatingSubmit={handleRatingSubmit} />
+            ))
+          ) : (
+            <EmptyState type="CANCELED" icon={X} message="Chưa có đơn hàng hủy" />
+          )}
+        </TabsContent>
+      </Tabs>
+      {showCancelDialog && orderToCancel && (
+        <Dialog open={showCancelDialog} onOpenChange={setShowCancelDialog}>
+          <DialogPortal>
+            <DialogOverlay className="fixed inset-0 bg-black/30" />
+            <DialogContent className="fixed top-1/2 left-1/2 w-full max-w-md -translate-x-1/2 -translate-y-1/2 rounded-lg bg-white p-6 shadow-lg">
+              <h3 className="text-lg mb-4">
+                Bạn có chắc muốn huỷ đơn gồm:{' '}
+                {orderToCancel.items.map((item, index) => (
+                  <span key={index}>
+                    <strong>{item.name_item}</strong>
+                    {index < orderToCancel.items.length - 1 ? ', ' : ''}
+                  </span>
+                ))}{' '}
+                không?
+              </h3>
+
+              <div className="flex justify-end space-x-4">
+                <Button variant="outline" onClick={() => setShowCancelDialog(false)}>
+                  Huỷ
+                </Button>
+                <Button variant="default" className="w-max" onClick={handleCancelOrder}>
+                  Xác nhận
+                </Button>
+              </div>
+            </DialogContent>
+          </DialogPortal>
+        </Dialog>
+      )}
+    </div>
+    // </ProtectedRoute>
+  );
+};
+///
+///
+//
+const handleSubmit = () => {
+  if (rating === 0) {
+    alert("Vui lòng chọn số sao đánh giá");
+    return;
+  }
+
+  const newRating = {
+    orderId: order.id,
+    rating,
+    review: review.trim(),
+    date: new Date().toISOString(),
+  };
+
+  if (order.rating) {
+    onUpdateRating?.(newRating.orderId, newRating.rating, newRating.review);
+  } else {
+    onCreateRating?.(newRating.orderId, newRating.rating, newRating.review);
+  }
+
+  setRating(0);
+  setReview("");
+  setHoveredRating(0);
+  onOpenChange(false);
 };
 
 
-
-
-
-{/* ✅ Driver Info chỉ hiện khi currentStep ≥ 2 */}
-{order.driver && currentStep >= 2 && (
-  <div className="mt-4 text-sm text-gray-700 flex flex-col md:flex-row md:items-center md:space-x-4 bg-gray-50 p-3 rounded-xl shadow-sm">
-    <div className="flex items-center space-x-2 mb-2 md:mb-0">
-      {/* Ảnh tài xế */}
-      <img
-        src={
-          order.driver.avatar ||
-          'https://scontent.fsgn2-10.fna.fbcdn.net/v/t39.30808-6/487326873_1887063878796318_9080709797256676382_n.jpg'
-        }
-        alt="Driver avatar"
-        className="w-10 h-10 md:w-8 md:h-8 rounded-full border border-gray-300"
+{order.canRate && activeTab === 'COMPLETED' && (
+  <Button
+    variant="outline"
+    size="sm"
+    onClick={() => setShowRatingDialog(true)}
+    className="flex items-center gap-1"
+  >
+    <Star className="w-4 h-4" />
+    <span>Đánh giá</span>
+  </Button>
+)}
+<TabsContent value="COMPLETED" className="space-y-4">
+  {deliveredOrders.length > 0 ? (
+    deliveredOrders.map((order) => (
+      <OrderHistoryCard
+        key={order.id}
+        order={order}
+        onCreateRating={handleCreateRating}
+        onUpdateRating={handleUpdateRating}
+        onDeleteRating={handleDeleteRating}
+        onCancel={handleOpenCancelDialog}
       />
-      <div className="flex flex-col">
-        <span className="font-medium">{order.driver.name || 'Tài xế'}</span>
-        <span className="text-gray-500 text-xs md:text-sm flex items-center gap-1">
-          <MotorBike className="w-3 h-3 text-orange-500" /> Biển số: {order.driver.BS || '-'}
-        </span>
-      </div>
-    </div>
+    ))
+  ) : (
+    <EmptyState type="COMPLETED" icon={Package2} message="Chưa có đơn hàng mua" />
+  )}
+</TabsContent>
+const updatedOrder = {
+  ...order,
+  rating: data.data?.rating || null,
+  review: data.data?.review || '',
+  canRate: !data.data?.rating,
+};
+{/* Hiển thị đánh giá với icon chỉnh */}
+{order.status === 'COMPLETED' && order.rating && (
+  <div className="flex items-center gap-1">
+    <Star className="w-4 h-4 fill-yellow-400 text-yellow-400" />
+    <span className="text-sm font-medium">{order.rating}</span>
 
-    {/* Rating */}
-    <div className="flex items-center gap-0.5 text-yellow-400">
-      {[...Array(5)].map((_, i) => (
-        <Star key={i} className="w-4 h-4" />
-      ))}
-    </div>
-
-    {/* SĐT */}
-    {order.driver.SĐT && (
-      <span className="flex items-center text-gray-500 text-sm md:ml-2 gap-1">
-        <Phone className="w-4 h-4 text-orange-500" /> {order.driver.SĐT}
-      </span>
-    )}
-
-    {/* Icon tin nhắn */}
-    {order.driver.id && (
-      <button
-        onClick={() => navigate(`/chat-driver/${order.driver.id}`)}
-        className="mt-2 md:mt-0 ml-auto flex items-center gap-1 text-orange-500 hover:text-orange-600 transition"
+    {/* Icon cây bút nhỏ để chỉnh */}
+    <button
+      type="button"
+      className="ml-1 text-gray-500 hover:text-gray-700"
+      onClick={() => {
+        setEditingOrder(order); // lưu order đang chỉnh
+        setShowRatingDialog(true); // mở dialog rating
+      }}
+    >
+      <svg
+        xmlns="http://www.w3.org/2000/svg"
+        className="w-3 h-3"
+        fill="none"
+        viewBox="0 0 24 24"
+        stroke="currentColor"
+        strokeWidth={2}
       >
-        <MessageCircle className="w-5 h-5" />
-        <span className="text-sm md:text-base">Nhắn tin</span>
-      </button>
-    )}
+        <path
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          d="M15.232 5.232l3.536 3.536M4 13v7h7l11-11-7-7L4 13z"
+        />
+      </svg>
+    </button>
   </div>
 )}
-
-
-// Test driver info
-const testOrder = {
-  id: 'dummy-123',
-  status: 'DELIVERING',
-  merchant: { merchant_name: 'Nhà hàng Bảo Bến Cảng' },
-  driver: {
-    id: 'driver-001', // thêm id để nút nhắn tin hoạt động
-    name: 'Trương Quốc Bảo',
-    BS: '79-Z1 51770',
-    SĐT: '0399503025',
-    avatar: '', // có thể để avatar rỗng để dùng default
-  },
-  created_at: new Date(),
-};
-
-// Dùng testOrder để render driver info
-{testOrder.driver && currentStep >= 2 && (
-  <DriverInfo driver={testOrder.driver} />
-)}
-
-
-
-
-
-
-
-
-export const ToppingSelectionDialog = ({
-  isOpen,
-  onClose,
-  menuItem,
-  restaurant,
-  quantity,
-  imgRef,       // 👈 ref hình món
-  cartIconRef,  // 👈 ref icon giỏ hàng
-  flyToCart,    // 👈 animation function
-}) => {
-  const { addItemWithToppings } = useCart();
-  const [selectedToppings, setSelectedToppings] = useState([]);
-  const [specialInstructions, setSpecialInstructions] = useState('');
-
-  const isAvailable = menuItem.isAvailable !== false;
-
-  const handleToppingChange = (options, checked) => {
-    if (checked) {
-      setSelectedToppings((prev) => [...prev, options]);
-    } else {
-      setSelectedToppings((prev) => prev.filter((t) => t.id !== options.id));
-    }
-  };
-
-  const handleAddToCart = () => {
-    if (!isAvailable) {
-      toast.error('Sản phẩm đã hết hàng/ngừng kinh doanh, vui lòng chọn sản phẩm khác.');
-      return;
-    }
-
-    const requiredToppings = menuItem.options?.filter((t) => t.required) || [];
-    const selectedRequiredToppings = selectedToppings.filter((t) => t.required);
-
-    if (requiredToppings.length > 0 && selectedRequiredToppings.length !== requiredToppings.length) {
-      toast.error('Vui lòng chọn topping/tùy chọn đầy đủ.');
-      return;
-    }
-
-    for (let i = 0; i < quantity; i++) {
-      addItemWithToppings(menuItem, restaurant, selectedToppings, specialInstructions);
-    }
-
-    // 👇 Chạy animation nếu có ref
-    if (imgRef?.current && cartIconRef?.current && flyToCart) {
-      flyToCart();
-    }
-
-    // 👇 Hiển thị toast custom
-    toast.custom((t) => (
-      <div
-        className={`${
-          t.visible ? 'animate-enter' : 'animate-leave'
-        } flex items-center gap-2 bg-white border border-gray-200 w-[50vw] sm:w-[380px] p-3 rounded-lg`}
-      >
-        <div className="w-5 h-5 flex-shrink-0 flex items-center justify-center bg-green-500 rounded-full text-white font-bold">
-          ✓
-        </div>
-        <img
-          src={menuItem.image}
-          alt={menuItem.name}
-          className="w-7 h-7 sm:w-8 sm:h-8 object-cover rounded"
-        />
-        <span className="text-xs sm:text-sm font-medium leading-snug break-words">
-          Đã thêm <span className="font-bold text-black">{quantity} </span> cái{' '}
-          <span className="font-bold text-black">{menuItem.name}</span> vào giỏ hàng!
-        </span>
-      </div>
-    ));
-
-    onClose();
-    setSelectedToppings([]);
-    setSpecialInstructions('');
-  };
-
-  useEffect(() => {
-    if (isOpen) {
-      setSelectedToppings([]);
-      setSpecialInstructions('');
-    }
-  }, [isOpen]);
-
-  return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-3xl w-[90vw] max-h-[90vh] overflow-y-auto mx-auto p-4 sm:p-6">
-        {/* ... phần còn lại giữ nguyên ... */}
-        <DialogFooter className="flex-col space-y-2 sm:flex-row sm:space-y-0">
-          <Button variant="outline" onClick={onClose} className="w-full sm:w-auto">
-            Hủy
-          </Button>
-          <Button
-            onClick={handleAddToCart}
-            className="w-full sm:w-auto bg-orange-500 hover:bg-orange-600"
-            disabled={!isAvailable}
-          >
-            {isAvailable ? 'Thêm vào giỏ hàng' : 'Hết hàng'}
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
-  );
-};
-
-if (!isAvailable) {
-  toast.error('Sản phẩm đã hết hàng/ngừng kinh doanh, vui lòng chọn sản phẩm khác.');
-  return;
-}
-
-toast.success(`Đã thêm ${quantity} ${menuItem.name} vào giỏ hàng`);
 //
 //
-{state.items.map((item) => {
-  const optionTotal = item.selectedOptions
-    ? item.selectedOptions.reduce(
-        (sum, opt) =>
-          sum +
-          opt.items.reduce((s, oi) => s + Number(oi.price || 0), 0),
-        0
-      )
-    : 0;
+<div className="flex justify-between items-start p-4 rounded-xl border border-gray-200 bg-white shadow-sm mb-4">
+  <div className="space-y-2 w-full">
+    <!-- nội dung địa chỉ -->
+  </div>
 
-  const itemTotal = (item.menuItem.price + optionTotal) * item.quantity;
-
-  return (
-    <div key={item.id} className="flex justify-between items-center">
-      <ImageWithFallback
-        src={item.menuItem.image}
-        alt={item.menuItem.name}
-        className="object-cover w-[40px] h-[40px] p-1 rounded-lg flex-shrink-0"
-      />
-      <div className="flex-1">
-        <p className="font-medium">{item.menuItem.name}</p>
-
-        {/* Hiển thị option đã chọn */}
-        {item.selectedOptions?.map((opt) => (
-          <p key={opt.option_id} className="text-xs text-gray-500">
-            {opt.option_name}: {opt.items.map((oi) => oi.option_item_name).join(', ')}
-          </p>
-        ))}
-
-        <p className="text-sm text-gray-500">
-          {item.quantity} x {(item.menuItem.price + optionTotal).toLocaleString('vi-VN')}đ
-        </p>
-      </div>
-
-      <span className="font-medium">{itemTotal.toLocaleString('vi-VN')}đ</span>
-    </div>
-  );
-})}
-
-
-{state.items
-  .reduce((total, i) => {
-    const optionTotal = i.selectedOptions
-      ? i.selectedOptions.reduce(
-          (sum, opt) =>
-            sum + opt.items.reduce((s, oi) => s + Number(oi.price || 0), 0),
-          0
-        )
-      : 0;
-    return total + (i.menuItem.price + optionTotal) * i.quantity;
-  }, 0)
-  .toLocaleString('vi-VN')}
-//
-import { getDistanceKm, calculateDeliveryFee } from '../../utils/distanceUtils';
-
-// Lấy lat/lon nhà hàng và địa chỉ
-const restaurantLat = merchant?.lat;
-const restaurantLon = merchant?.lon;
-
-const deliveryLat = selectedAddress?.lat;
-const deliveryLon = selectedAddress?.lon;
-
-// Tính khoảng cách
-const distanceKm = getDistanceKm(restaurantLat, restaurantLon, deliveryLat, deliveryLon);
-
-// Tính phí giao hàng
-const deliveryFee = calculateDeliveryFee(distanceKm);
-
-// Tổng cộng
-const total = subtotal + deliveryFee;
-
-
-import { useDeliveryFee } from "../../hooks/useDeliveryFee";
-import { useLocation } from "../../contexts/LocationContext";
-
-export default function HomePage() {
-  const { state: locationState } = useLocation(); // vị trí người dùng
-  const [restaurants, setRestaurants] = useState([]);
-  const [searchQuery, setSearchQuery] = useState("");
-
-  // fetch restaurants như anh đã làm
-  useEffect(() => { /* ...fetch code... */ }, [searchQuery]);
-
-  return (
-    <div>
-      {restaurants.map((r) => {
-        const fee = useDeliveryFee(
-          r.coordinates,
-          locationState.currentLocation?.coordinates
-        );
-
-        return (
-          <div key={r.id}>
-            <RestaurantCard restaurant={r} />
-            <p className="text-sm text-gray-500">
-              Phí giao hàng: {fee.toLocaleString("vi-VN")}đ
-            </p>
-          </div>
-        );
-      })}
-    </div>
-  );
-}
-
-
-
-
-
-/**
- * Tính khoảng cách (km) giữa 2 điểm lat/lon theo Haversine formula
- * @param {number} lat1 
- * @param {number} lng1 
- * @param {number} lat2 
- * @param {number} lng2 
- * @returns {number} khoảng cách (km)
- */
-export function getDistanceKm(lat1, lng1, lat2, lng2) {
-  const toRad = (deg) => (deg * Math.PI) / 180;
-
-  const R = 6371; // bán kính Trái Đất (km)
-  const dLat = toRad(lat2 - lat1);
-  const dLon = toRad(lng2 - lng1);
-
-  const a =
-    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-    Math.cos(toRad(lat1)) *
-      Math.cos(toRad(lat2)) *
-      Math.sin(dLon / 2) *
-      Math.sin(dLon / 2);
-
-  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-  return R * c;
-}
-
-/**
-* Tính phí giao hàng dựa vào khoảng cách
-* @param {number} distanceKm 
-* @returns {number} phí ship (VNĐ)
-*/
-export function calculateDeliveryFee(distanceKm) {
-  if (distanceKm <= 2) return 10000;
-  if (distanceKm <= 5) return 15000;
-  if (distanceKm <= 10) return 20000;
-  return 30000; // >10km
-}
-
-/**
-* Tính thời gian giao hàng dựa vào khoảng cách (km)
-* Giả sử tốc độ trung bình 25 km/h
-* @param {number} distanceKm
-* @returns {number} phút
-*/
-export function estimateDeliveryTime(distanceKm) {
-  const speedKmH = 25;
-  const timeH = distanceKm / speedKmH;
-  return Math.ceil(timeH * 60); // phút
-}
-//
-//
-//
-const userCoords = state.currentLocation?.coordinates;
-const restaurantCoords = restaurant?.coordinates;
-
-let distanceKm = 0;
-let deliveryTime = 0;
-let deliveryFee = 0;
-
-if (userCoords && restaurantCoords) {
-  distanceKm = getDistanceKm(
-    userCoords.lat,
-    userCoords.lng,
-    restaurantCoords.lat,
-    restaurantCoords.lng
-  );
-
-  deliveryFee = calculateDeliveryFee(distanceKm);
-  deliveryTime = estimateDeliveryTime(distanceKm);
-}
-
-
-
-{item.selectedToppings &&
-  item.selectedToppings.length > 0 && (
-    <div className="mt-2 flex flex-wrap gap-1">
-      {item.selectedToppings.map((topping) => (
-        <Badge
-          key={topping.id}
-          variant="outline"
-          className="text-xs"
-        >
-          {topping.name}{" "}
-          {topping.price > 0 &&
-            `+${topping.price.toLocaleString(
-              "vi-VN"
-            )}đ`}
-        </Badge>
-      ))}
-    </div>
-  )}
-
-  selected_option_items: (i.selectedToppings || []).map((t) => ({
-    option_item_id: t.id,
-    option_item_name: t.name,
-    price: t.price,
-  })),
-  
-  navigate('/cart/checkout', { state: { orderItems } });
-
-  items: state.items.map((i) => ({
-    menu_item_id: i.menu_item_id ?? i.menuItem?.id,
-    quantity: i.quantity,
-    price: i.price ?? i.menuItem?.price,
-    
-    selected_option_items: (i.selectedOptions ?? []).flatMap((opt) =>
-      opt.items.map((oi) => ({
-        option_item_id: oi.option_item_id,
-        option_item_name: oi.option_item_name,
-        price: oi.price,
-      }))
-    ),
-  }))
-  
-
-  const handleReorder = () => {
-    // Clear cart first
-    dispatch({ type: 'CLEAR_CART' });
-  
-    // Add all items from this order to cart
-    order.items.forEach((item) => {
-      for (let i = 0; i < Number(item.quantity); i++) {
-        dispatch({
-          type: 'ADD_ITEM',
-          payload: {
-            restaurant: {
-              id: order.merchant_id,
-              name: order.merchant_name,
-              image: order.merchant_image?.url ?? "", // fallback nếu undefined
-            },
-            menuItem: {
-              id: item.menu_item_id, // chú ý dùng menu_item_id
-              name: item.name_item,
-              image: item.image_item?.url ?? "",
-              price: Number(item.price), // convert string -> number
-              orderId: item.id,
-            },
-          },
-        });
-      }
-    });
-  
-    // Navigate to cart
-    navigate('/cart');
-  };
-  
+  <!-- Nút sửa thu gọn -->
+  <div className="flex-shrink-0">
+    <Button
+      variant="outline"
+      onClick={() => {
+        setFormData(selectedAddress);
+        setIsEditing(true);
+        setIsAdding(false);
+        setIsDialogOpen(true);
+      }}
+      className="flex items-center gap-1"
+    >
+      <Edit className="w-4 h-4" /> Sửa
+    </Button>
+  </div>
+</div>
