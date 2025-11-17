@@ -441,15 +441,15 @@ export default function CheckOutPage() {
   // ======================
   useEffect(() => {
     const params = new URLSearchParams(location.search);
-    const orderId = params.get('orderId');
+    const orderId = params.get("orderId");
 
     if (!orderId) return;
 
     setLoading(true);
 
     // Lưu lại để OrderSuccessPage dùng
-    localStorage.setItem('orderConfirmed', 'true');
-    localStorage.setItem('lastOrderId', orderId);
+    localStorage.setItem("orderConfirmed", "true");
+    localStorage.setItem("lastOrderId", orderId);
 
     clearCart();
     setLoading(false);

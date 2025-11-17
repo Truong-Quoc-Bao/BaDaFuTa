@@ -988,3 +988,30 @@ const updatedOrder = {
     </Button>
   </div>
 </div>
+//
+//
+//
+//
+<Route
+path="/cart/checkout/ordersuccess"
+element={<OrderSuccessPage />}
+/>
+
+{/* 
+      <Route
+        path="/cart/checkout/ordersuccess"
+        element={
+          <ProtectedRoute
+            condition={localStorage.getItem("orderConfirmed") === "true"}
+            redirectTo="/cart"
+          >
+            <OrderSuccessPage />
+          </ProtectedRoute>
+        }
+        
+      /> */}
+      <Route
+        path="/cart/checkout/ordersuccess"
+        element={<OrderSuccessPage />}
+      />
+ app.jsx
