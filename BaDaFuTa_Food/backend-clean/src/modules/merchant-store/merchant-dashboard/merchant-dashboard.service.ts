@@ -1,6 +1,6 @@
 import {
   merchantDashboardRepository,
-  // merchantOrderRepository,
+  merchantOrderRepository,
 } from "./merchant-dashboard.repository";
 import { MerchantOverviewResponse } from "./merchant-dashboard.type";
 
@@ -31,12 +31,12 @@ export const merchantDashboardService = {
       pendingOrders,
       totalCustomers,
       recentOrders,
-      // pendingOrderList,
-      // confirmedOrdersList,
-      // preparingOrdersList,
-      // deliveringOrdersList,
-      // completedOrdersList,
-      // canceledOrdersList,
+      pendingOrderList,
+      confirmedOrdersList,
+      preparingOrdersList,
+      deliveringOrdersList,
+      completedOrdersList,
+      canceledOrdersList,
     ] = await Promise.all([
       merchantDashboardRepository.getTotalRevenue(merchantId),
       merchantDashboardRepository.getTodayRevenue(merchantId, today),
@@ -44,12 +44,12 @@ export const merchantDashboardService = {
       merchantDashboardRepository.countPendingOrders(merchantId),
       merchantDashboardRepository.countUniqueCustomers(merchantId),
       merchantDashboardRepository.getRecentOrders(merchantId),
-      // merchantOrderRepository.getPendingOrders(merchantId),
-      // merchantOrderRepository.getConfirmedOrders(merchantId),
-      // merchantOrderRepository.getPreparingOrders(merchantId),
-      // merchantOrderRepository.getDeliveringOrders(merchantId),
-      // merchantOrderRepository.getCompletedOrders(merchantId),
-      // merchantOrderRepository.getCanceledOrders(merchantId),
+      merchantOrderRepository.getPendingOrders(merchantId),
+      merchantOrderRepository.getConfirmedOrders(merchantId),
+      merchantOrderRepository.getPreparingOrders(merchantId),
+      merchantOrderRepository.getDeliveringOrders(merchantId),
+      merchantOrderRepository.getCompletedOrders(merchantId),
+      merchantOrderRepository.getCanceledOrders(merchantId),
     ]);
 
     //Gộp dữ liệu trả về
@@ -64,12 +64,12 @@ export const merchantDashboardService = {
       pendingOrders,
       totalCustomers,
       recentOrders,
-      // pendingOrderList,
-      // confirmedOrdersList,
-      // preparingOrdersList,
-      // deliveringOrdersList,
-      // completedOrdersList,
-      // canceledOrdersList,
+      pendingOrderList,
+      confirmedOrdersList,
+      preparingOrdersList,
+      deliveringOrdersList,
+      completedOrdersList,
+      canceledOrdersList,
     };
 
     return response;
