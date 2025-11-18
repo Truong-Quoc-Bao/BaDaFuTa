@@ -55,8 +55,8 @@ export const orderService = {
         delivery_fee: BigInt(data.delivery_fee),
         note: data.note,
         total_amount: total,
-        status: 'PENDING',
-        // status: "DELIVERING",
+        // status: 'PENDING',
+        status: "DELIVERING",
         status_payment: 'PENDING',
       });
 

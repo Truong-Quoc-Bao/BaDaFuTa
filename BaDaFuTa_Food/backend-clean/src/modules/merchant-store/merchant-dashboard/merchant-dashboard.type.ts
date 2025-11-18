@@ -46,10 +46,10 @@ export interface MerchantOverviewResponse extends MerchantOverviewStats {
 
   /** 🧾 Danh sách 5 đơn gần nhất */
   recentOrders: Order[];
-  pendingOrderList: OrderDetail[];
-  confirmedOrdersList: OrderDetail[];
-  preparingOrdersList: OrderDetail[];
-  deliveringOrdersList: OrderDetail[];
-  completedOrdersList: OrderDetail[];
-  canceledOrdersList: OrderDetail[];
+  // pendingOrderList: OrderDetail[];
+  // confirmedOrdersList: OrderDetail[];
+  // preparingOrdersList: OrderDetail[];
+  // deliveringOrdersList: OrderDetail[];
+  // completedOrdersList: OrderDetail[];
+  // canceledOrdersList: OrderDetail[];
 }

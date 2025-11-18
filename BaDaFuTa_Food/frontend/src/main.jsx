@@ -45,6 +45,16 @@ const router = createBrowserRouter(
   }
 );
 
+if ("serviceWorker" in navigator) {
+  window.addEventListener("load", () => {
+    navigator.serviceWorker
+      .register("/service-worker.js")
+      .then((reg) => console.log("Service Worker registered!"))
+      .catch((err) => console.error("Service Worker failed:", err));
+  });
+}
+
+
 ReactDOM.createRoot(document.getElementById("root")).render(
   <React.StrictMode>
     <RouterProvider router={router} />

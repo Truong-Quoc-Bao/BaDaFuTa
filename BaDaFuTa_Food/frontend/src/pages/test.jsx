@@ -1015,3 +1015,34 @@ element={<OrderSuccessPage />}
         element={<OrderSuccessPage />}
       />
  app.jsx
+const momoHandled = useRef(false);
+
+useEffect(() => {
+  if (status === "success" && encodedData && !momoHandled.current) {
+    momoHandled.current = true; // ✅ chỉ chạy 1 lần
+    try {
+      const decodedJson = atob(decodeURIComponent(encodedData));
+      const decodedData = JSON.parse(decodedJson);
+
+      setValidated(true);
+      clearCart();
+
+      setTimeout(() => {
+        if (decodedData?.status === "DELIVERING") {
+          navigate(`/track-order/${decodedData.order_id}`, {
+            state: { order: decodedData, from: "OrderSuccess" },
+          });
+        } else {
+          alert("Đơn hàng chưa được xác nhận, không thể xem chi tiết vận chuyển.");
+          navigate("/my-orders", { state: { activeTab: "PENDING" } });
+        }
+      }, 5000);
+    } catch (err) {
+      console.error("❌ Decode callback error:", err);
+      navigate("/cart/checkout/orderfailed");
+    }
+  }
+}, [status, encodedData, navigate, clearCart]);
+
+<link rel="manifest" href="/manifest.json">
+<meta name="theme-color" content="#4a90e2">

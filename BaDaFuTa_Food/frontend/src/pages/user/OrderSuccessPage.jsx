@@ -109,12 +109,10 @@
 //   );
 // }
 
-
-
 import { CheckCircle } from 'lucide-react';
 import { Button } from '../../components/ui/button';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useCart } from '../../contexts/CartContext';
 
 export default function OrderSuccessPage() {
@@ -126,12 +124,16 @@ export default function OrderSuccessPage() {
 
   // Query params
   const params = new URLSearchParams(location.search);
-  const status = params.get("status");
-  const encodedData = params.get("data");
+  const status = params.get('status');
+  const encodedData = params.get('data');
+
+  // ⚡ Khai báo ref để chặn MOMO callback chạy lại
+  const momoHandled = useRef(false);
 
   // ------------------- ⭐ XỬ LÝ CALLBACK MOMO TRƯỚC -------------------
   useEffect(() => {
-    if (status === "success" && encodedData) {
+    if (status === 'success' && encodedData && !momoHandled.current) {
+      momoHandled.current = true;
       try {
         const decodedJson = atob(decodeURIComponent(encodedData));
         const decodedData = JSON.parse(decodedJson);
@@ -140,18 +142,18 @@ export default function OrderSuccessPage() {
         clearCart();
 
         setTimeout(() => {
-          if (decodedData?.status === "DELIVERING") {
+          if (decodedData?.status === 'DELIVERING') {
             navigate(`/track-order/${decodedData.order_id}`, {
-              state: { order: decodedData, from: "OrderSuccess" },
+              state: { order: decodedData, from: 'OrderSuccess' },
             });
           } else {
-            alert("Đơn hàng chưa được xác nhận, không thể xem chi tiết vận chuyển.");
-            navigate("/my-orders", { state: { activeTab: "PENDING" } });
+            alert('Đơn hàng chưa được xác nhận, không thể xem chi tiết vận chuyển.');
+            navigate('/my-orders', { state: { activeTab: 'PENDING' } });
           }
         }, 5000);
       } catch (err) {
-        console.error("❌ Decode callback error:", err);
-        navigate("/cart/checkout/orderfailed");
+        console.error('❌ Decode callback error:', err);
+        navigate('/cart/checkout/orderfailed');
       }
       return; // ⛔ Quan trọng: không chạy tiếp logic orderConfirmed nữa
     }
@@ -160,28 +162,28 @@ export default function OrderSuccessPage() {
 
   // ------------------- ⭐ LOGIC ĐẶT HÀNG BÌNH THƯỜNG -------------------
   useEffect(() => {
-    if (status === "success" && encodedData) return; // tránh chạy trùng logic
+    if (status === 'success' && encodedData) return; // tránh chạy trùng logic
 
-    const orderConfirmed = localStorage.getItem("orderConfirmed");
+    const orderConfirmed = localStorage.getItem('orderConfirmed');
     if (!orderConfirmed) {
-      navigate("/cart", { replace: true });
+      navigate('/cart', { replace: true });
       return;
     }
 
     setValidated(true);
 
     const clearTimer = setTimeout(() => {
-      localStorage.removeItem("orderConfirmed");
+      localStorage.removeItem('orderConfirmed');
     }, 5000);
 
     const redirectTimer = setTimeout(() => {
-      if (order?.status === "DELIVERING") {
+      if (order?.status === 'DELIVERING') {
         navigate(`/track-order/${order.order_id}`, {
-          state: { order, from: "OrderSuccess" },
+          state: { order, from: 'OrderSuccess' },
         });
       } else {
-        alert("Đơn hàng chưa được xác nhận, không thể xem chi tiết vận chuyển.");
-        navigate("/my-orders", { state: { activeTab: "PENDING" } });
+        alert('Đơn hàng chưa được xác nhận, không thể xem chi tiết vận chuyển.');
+        navigate('/my-orders', { state: { activeTab: 'PENDING' } });
       }
     }, 5000);
 
@@ -199,7 +201,7 @@ export default function OrderSuccessPage() {
       <CheckCircle className="w-24 h-24 text-green-500 mb-4 animate-bounce" />
       <h1 className="text-2xl font-bold text-gray-800 mb-2">Đặt hàng thành công!</h1>
 
-      {order?.status === "CONFIRMED" || order?.status === "DELIVERING" ? (
+      {order?.status === 'CONFIRMED' || order?.status === 'DELIVERING' ? (
         <p className="mb-6 text-green-600 font-medium">
           Cảm ơn bạn đã đặt hàng. Chúng tôi sẽ giao hàng sớm nhất có thể!
         </p>

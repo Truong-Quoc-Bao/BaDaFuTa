@@ -925,7 +925,7 @@ export default function CheckOutPage() {
                 }
                 handleSaveOnCheckout();
               }}
-              className=" w-max  bg-orange-500 hover:bg-orange-600"
+              className="w-full max-w-full  bg-orange-500 hover:bg-orange-600"
               size="lg"
             >
               {selectedPaymentMethod?.type === 'COD' ? 'Đặt hàng' : 'Tiếp tục thanh toán'}
