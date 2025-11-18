@@ -1046,3 +1046,16 @@ useEffect(() => {
 
 <link rel="manifest" href="/manifest.json">
 <meta name="theme-color" content="#4a90e2">
+//
+</meta>
+//
+</link>
+app.use(cors({
+  origin: [
+    "https://ba-da-fu-ta-food.vercel.app",
+  ],
+  methods: ["GET", "POST", "PUT", "DELETE"],
+  credentials: true,
+}));
+DATABASE_URL="postgres://postgres:190404@localhost:54320/BaDaFuTa?schema=public"
+JWT_SECRET=bao_dep_trai_vo_dich_1904
