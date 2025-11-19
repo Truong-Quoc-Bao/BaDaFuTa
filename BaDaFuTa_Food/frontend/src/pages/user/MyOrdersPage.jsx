@@ -124,7 +124,8 @@ export const MyOrdersPage = () => {
 
     try {
       const token = localStorage.getItem('accessToken');
-      const res = await fetch(`/apiLocal/order/${order_id}/cancel`, {
+      // const res = await fetch(`/apiLocal/order/${order_id}/cancel`, {
+        const res = await fetch(`https://badafuta-production.up.railway.app/api/order/${order_id}/cancel`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -153,7 +154,8 @@ export const MyOrdersPage = () => {
         const token = localStorage.getItem('accessToken');
         const updatedOrders = await Promise.all(
           orders.map(async (order) => {
-            const res = await fetch(`/apiLocal/order/${order.order_id}/getRating`, {
+            const res = await fetch(`https://badafuta-production.up.railway.app/api/order/${order.order_id}/getRating`, { 
+            // const res = await fetch(`/apiLocal/order/${order.order_id}/getRating`, {
               headers: { ...(token ? { Authorization: `Bearer ${token}` } : {}) },
             });
             if (!res.ok) return order; // không có đánh giá thì giữ nguyên
@@ -189,7 +191,8 @@ export const MyOrdersPage = () => {
   const handleCreateRating = async (orderId, ratingValue, reviewText) => {
     try {
       const token = localStorage.getItem('accessToken');
-      const res = await fetch(`/apiLocal/order/${orderId}/createRating`, {
+      // const res = await fetch(`/apiLocal/order/${orderId}/createRating`, {
+        const res = await fetch(`https://badafuta-production.up.railway.app/api/order/${orderId}/createRating`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
