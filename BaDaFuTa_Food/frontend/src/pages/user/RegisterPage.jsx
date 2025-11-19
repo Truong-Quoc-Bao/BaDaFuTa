@@ -237,7 +237,7 @@ export default function RegisterPage() {
     //   // "/api/register", // fallback
     // ];
     const hosts = [
-      "https://badafuta-production.up.railway.app/api/api/register",
+      "https://badafuta-production.up.railway.app/api/register",
       // "/api192/register",
       // "/api172/register",
       // "/api/register", // fallback
