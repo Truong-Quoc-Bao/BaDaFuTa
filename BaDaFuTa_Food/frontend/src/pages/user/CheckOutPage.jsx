@@ -283,7 +283,7 @@ export default function CheckOutPage() {
     } else if (method === 'MOMO') {
       try {
         console.log('📤 Sending body to MoMo:', orderBody);
-        const res = await fetch('https://badafuta-production.up.railway.app/api/api/momo/create', {
+        const res = await fetch('https://badafuta-production.up.railway.app/api/momo/create', {
           // const res = await fetch('http://localhost:3000/api/momo/create', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -372,7 +372,7 @@ export default function CheckOutPage() {
           })),
         })),
       };
-      const res = await fetch('https://badafuta-production.up.railway.app/api/api/order', {
+      const res = await fetch('https://badafuta-production.up.railway.app/api/order', {
         // const res = await fetch('http://localhost:3000/api/order', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
