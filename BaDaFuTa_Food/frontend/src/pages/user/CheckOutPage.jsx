@@ -260,7 +260,8 @@ export default function CheckOutPage() {
     else if (method === 'VNPAY') {
       try {
         console.log('📤 Sending body to VNPay:', orderBody);
-        const res = await fetch('http://localhost:3000/api/payment/initiate', {
+        const res = await fetch('/apiPublic/api/payment/initiate', {
+          // const res = await fetch('http://localhost:3000/api/payment/initiate', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(orderBody),
@@ -282,7 +283,8 @@ export default function CheckOutPage() {
     } else if (method === 'MOMO') {
       try {
         console.log('📤 Sending body to MoMo:', orderBody);
-        const res = await fetch('http://localhost:3000/api/momo/create', {
+        const res = await fetch('/apiPublic/api/momo/create', {
+          // const res = await fetch('http://localhost:3000/api/momo/create', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(orderBody),
@@ -370,8 +372,8 @@ export default function CheckOutPage() {
           })),
         })),
       };
-
-      const res = await fetch('http://localhost:3000/api/order', {
+      const res = await fetch('/apiPublic/api/order', {
+        // const res = await fetch('http://localhost:3000/api/order', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(orderBody),
@@ -441,15 +443,15 @@ export default function CheckOutPage() {
   // ======================
   useEffect(() => {
     const params = new URLSearchParams(location.search);
-    const orderId = params.get("orderId");
+    const orderId = params.get('orderId');
 
     if (!orderId) return;
 
     setLoading(true);
 
     // Lưu lại để OrderSuccessPage dùng
-    localStorage.setItem("orderConfirmed", "true");
-    localStorage.setItem("lastOrderId", orderId);
+    localStorage.setItem('orderConfirmed', 'true');
+    localStorage.setItem('lastOrderId', orderId);
 
     clearCart();
     setLoading(false);
