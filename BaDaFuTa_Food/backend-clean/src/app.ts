@@ -36,7 +36,7 @@ export const createApp = () => {
   //     credentials: true,
   //   })
   // );
-
+  
   app.use(
     cors({
       origin: [
@@ -48,6 +48,7 @@ export const createApp = () => {
         "http://172.20.10.3:5174", // ➕ cho IP khác
         "https://unnibbed-unthrilled-averi.ngrok-free.dev",
         "https://ba-da-fu-ta-food.vercel.app",
+        "https://ba-da-fu-ta-food.vercel.app"
       ],
       methods: ["GET", "POST", "PUT", "DELETE"],
       credentials: true,

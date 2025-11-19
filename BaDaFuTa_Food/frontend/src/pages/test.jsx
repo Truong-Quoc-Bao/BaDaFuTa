@@ -1059,3 +1059,17 @@ app.use(cors({
 }));
 DATABASE_URL="postgres://postgres:190404@localhost:54320/BaDaFuTa?schema=public"
 JWT_SECRET=bao_dep_trai_vo_dich_1904
+
+
+fetch('https://badafuta-be.onrender.com/api/categories')
+{
+  "compilerOptions": {
+    "baseUrl": "./src",
+    "paths": {
+      "@/*": ["*"]
+    }
+  }
+}
+const BASE_URL = import.meta.env.VITE_API_BASE_URL;
+const url = `${BASE_URL}/restaurants${searchQuery ? `?search=${encodeURIComponent(searchQuery)}` : ""}`;
+const res = await fetch(url);
