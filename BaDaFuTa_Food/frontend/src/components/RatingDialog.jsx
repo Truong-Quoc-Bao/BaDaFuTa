@@ -125,13 +125,17 @@ export const RatingDialog = ({ open, onOpenChange, order, onSubmitRating }) => {
           </div>
         </div>
 
-        <DialogFooter className="flex space-x-2">
-          <Button variant="outline" onClick={handleCancel}>
+        <DialogFooter className="flex space-x-2 w-full flex-col-reverse space-y-2 space-y-reverse items-center sm:flex-row sm:justify-center sm:space-x-3 sm:space-y-0">
+          <Button
+            variant="outline"
+            className="w-full sm:w-32 px-6 py-2 bg-gray-200 text-gray-800 hover:bg-gray-300"
+            onClick={handleCancel}
+          >
             Hủy
           </Button>
           <Button
             onClick={handleSubmit}
-            className="bg-orange-500 w-max hover:bg-orange-600"
+            className="bg-orange-500 w-full sm:w-32 px-6 py-2 hover:bg-orange-600 text-white  disabled:opacity-50 disabled:cursor-not-allowed"
             disabled={rating === 0}
           >
             Gửi đánh giá
