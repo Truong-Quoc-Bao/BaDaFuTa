@@ -1,14 +1,14 @@
-import { Search, TrendingUp, MapPin } from "lucide-react";
-import { Input } from "../../components/ui/input";
-import { Button } from "../../components/ui/button";
-import RestaurantCard from "../../components/RestaurantCard";
-import { FeaturedRestaurant } from "../../components/FeaturedRestaurant";
-import { PromotionBanner } from "../../components/PromotionBanner";
-import { restaurants, featuredRestaurants, promotions } from "../../../data/mockData";
-import { useLocation } from "../../contexts/LocationContext";
+import { Search, TrendingUp, MapPin } from 'lucide-react';
+import { Input } from '../../components/ui/input';
+import { Button } from '../../components/ui/button';
+import RestaurantCard from '../../components/RestaurantCard';
+import { FeaturedRestaurant } from '../../components/FeaturedRestaurant';
+import { PromotionBanner } from '../../components/PromotionBanner';
+import { restaurants, featuredRestaurants, promotions } from '../../../data/mockData';
+import { useLocation } from '../../contexts/LocationContext';
 //import { useState, useMemo } from "react";
-import React, { useEffect, useState } from "react";
-export default function HomePage () {
+import React, { useEffect, useState } from 'react';
+export default function HomePage() {
   // const [searchQuery, setSearchQuery] = useState("");
   // const [selectedCuisine, setSelectedCuisine] = useState("Tất cả");
   // // const { state: locationState, calculateDistance } = useLocation();
@@ -56,10 +56,6 @@ export default function HomePage () {
   //         (restaurant) => restaurant.cuisine === selectedCuisine
   //       );
 
-
-
-
-
   // const [restaurants, setRestaurants] = useState([]);
   // useEffect(() => {
   //   const fetchRestaurants = async () => {
@@ -89,53 +85,50 @@ export default function HomePage () {
   //   fetchRestaurants();
   // }, []);
 
-
   const [restaurants, setRestaurants] = useState([]);
-  const [searchQuery, setSearchQuery] = useState("");
+  const [searchQuery, setSearchQuery] = useState('');
 
   useEffect(() => {
     const fetchRestaurants = async () => {
-      const hosts = [
-        // "/api/restaurants",
-        // "/api192/restaurants",
-        "/apiLocal/restaurants",
-        // "/api172/restaurants",
-      ];
+      // const hosts = [
+      //   // "/api/restaurants",
+      //   // "/api192/restaurants",
+      //   "/apiLocal/restaurants",
+      //   // "/api172/restaurants",
+      // ];
+      const hosts = ['https://badafuta-production.up.railway.app/api/restaurants'];
 
       for (const host of hosts) {
         try {
           // Nếu có search query thì thêm param ?search=...
-          const url = searchQuery
-            ? `${host}?search=${encodeURIComponent(searchQuery)}`
-            : host;
+          // const url = searchQuery
+          //   ? `${host}?search=${encodeURIComponent(searchQuery)}`
+          //   : host;
+
+          const url = searchQuery ? `${host}?search=${encodeURIComponent(searchQuery)}` : host;
 
           const res = await fetch(url);
           if (!res.ok) throw new Error(`Failed at ${url}`);
           const data = await res.json();
           setRestaurants(data);
-          console.log("Lấy dữ liệu từ:", url);
+          console.log('Lấy dữ liệu từ:', url);
           return; // nếu thành công thì thoát loop
         } catch (err) {
           console.warn(err.message);
         }
       }
 
-      console.error("Không thể lấy dữ liệu từ bất kỳ host nào");
+      console.error('Không thể lấy dữ liệu từ bất kỳ host nào');
     };
 
     fetchRestaurants();
   }, [searchQuery]);
 
-
-
-
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       {/* Hero Section */}
       <div className="text-center mb-8">
-        <h1 className="text-4xl font-bold text-gray-900 mb-4">
-          Đặt món yêu thích của bạn
-        </h1>
+        <h1 className="text-4xl font-bold text-gray-900 mb-4">Đặt món yêu thích của bạn</h1>
         <p className="text-xl text-gray-600 mb-8">
           Giao hàng nhanh chóng từ các nhà hàng tốt nhất trong khu vực
         </p>
@@ -267,19 +260,17 @@ export default function HomePage () {
         )} */}
         {restaurants.length > 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {" "}
+            {' '}
             {restaurants.map((r) => (
               <RestaurantCard key={r.id} restaurant={r} />
-            ))}{" "}
+            ))}{' '}
           </div>
         ) : (
           <div className="text-center py-12">
-            <p className="text-gray-500 text-lg">
-              Không tìm thấy nhà hàng nào phù hợp
-            </p>
+            <p className="text-gray-500 text-lg">Không tìm thấy nhà hàng nào phù hợp</p>
           </div>
-        )}{" "}
+        )}{' '}
       </div>
     </div>
   );
-};
+}
