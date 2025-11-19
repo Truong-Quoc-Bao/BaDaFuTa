@@ -80,7 +80,7 @@ export default function LoginPage() {
       // const res = await fetch("http://192.168.100.124:3000/api/login", {
 
       // const res = await fetch("/apiLocal/login", {
-      const res = await fetch('https://badafuta-production.up.railway.app/login', {
+      const res = await fetch('https://badafuta-production.up.railway.app/api/login', {
         method: 'POST',
         credentials: 'include', // ✅ gửi cookie
         headers: { 'Content-Type': 'application/json' },
