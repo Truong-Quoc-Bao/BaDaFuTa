@@ -260,7 +260,7 @@ export default function CheckOutPage() {
     else if (method === 'VNPAY') {
       try {
         console.log('📤 Sending body to VNPay:', orderBody);
-        const res = await fetch('https://badafuta-production.up.railway.app/api/api/payment/initiate', {
+        const res = await fetch('https://badafuta-production.up.railway.app/api/payment/initiate', {
           // const res = await fetch('http://localhost:3000/api/payment/initiate', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
