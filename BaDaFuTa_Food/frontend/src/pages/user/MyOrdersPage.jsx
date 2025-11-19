@@ -50,7 +50,8 @@ export const MyOrdersPage = () => {
     };
 
     const fetchOrders = async () => {
-      const hosts = ['/apiLocal/order/getOrder'];
+      // const hosts = ['/apiLocal/order/getOrder'];
+      const hosts = ['https://badafuta-production.up.railway.app/api/order/getOrder'];
       for (const host of hosts) {
         try {
           setLoading(true);
