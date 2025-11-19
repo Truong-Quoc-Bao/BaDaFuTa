@@ -70,7 +70,9 @@ export const RestaurantPage = () => {
     async function fetchMenu() {
       const hosts = [
         // `/api192/restaurants/${encodeURIComponent(id)}/menu`,
-        `/apiLocal/restaurants/${encodeURIComponent(id)}/menu`,
+        // `/apiLocal/restaurants/${encodeURIComponent(id)}/menu`,
+        `/apiPublic/restaurants/${encodeURIComponent(id)}/menu`,
+
         // `/api172/restaurants/${encodeURIComponent(id)}/menu`,
       ];
       setLoading(true);
