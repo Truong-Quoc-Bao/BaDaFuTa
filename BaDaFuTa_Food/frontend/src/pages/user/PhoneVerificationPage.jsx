@@ -45,7 +45,7 @@ export default function PhoneVerification() {
   //   // "/api172",
   //   "/apiLocal"];
 
-  const hosts = ['https://badafuta-production.up.railway.app'];
+  const hosts = ['https://badafuta-production.up.railway.app/api'];
 
   const fetchWithTimeout = (url, options, timeout = 5000) => {
     return Promise.race([
