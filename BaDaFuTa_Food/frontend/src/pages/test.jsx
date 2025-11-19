@@ -1073,3 +1073,25 @@ fetch('https://badafuta-be.onrender.com/api/categories')
 const BASE_URL = import.meta.env.VITE_API_BASE_URL;
 const url = `${BASE_URL}/restaurants${searchQuery ? `?search=${encodeURIComponent(searchQuery)}` : ""}`;
 const res = await fetch(url);
+
+
+<div className="flex justify-between items-center w-full">
+  <p className="text-base font-semibold text-gray-800 flex items-center gap-2">
+    <MapPin className="w-5 h-5 text-accent" />
+    <span>Địa chỉ giao hàng mặt định</span>
+  </p>
+
+  <div className="flex space-x-2">
+    <Button
+      variant="outline"
+      onClick={() => {
+        setFormData(selectedAddress);
+        setIsEditing(true);
+        setIsAdding(false);
+        setIsDialogOpen(true);
+      }}
+    >
+      <Edit /> Sửa
+    </Button>
+  </div>
+</div>

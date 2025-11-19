@@ -579,10 +579,26 @@ export default function CheckOutPage() {
             <CardContent>
               <div className="flex justify-between items-start p-4 rounded-xl border border-gray-200 bg-white shadow-sm mb-4">
                 <div className="space-y-2 w-full">
-                  <p className="text-base font-semibold text-gray-800 flex items-center gap-2">
-                    <MapPin className="w-5 h-5 text-accent" />
-                    <span>Địa chỉ giao hàng mặt định</span>
-                  </p>
+                  <div className="flex justify-between items-center w-full">
+                    <p className="text-base font-semibold text-gray-800 flex items-center gap-2">
+                      <MapPin className="w-5 h-5 text-accent" />
+                      <span>Địa chỉ giao hàng mặt định</span>
+                    </p>
+                    <div className="flex space-x-2">
+                      <Button
+                        variant="outline"
+                        onClick={() => {
+                          setFormData(selectedAddress); // ✅ nạp dữ liệu đang chọn
+                          setIsEditing(true); // ✅ bật chế độ sửa
+                          setIsAdding(false);
+                          setIsDialogOpen(true); // ✅ mở popup
+                        }}
+                      >
+                        <Edit /> Sửa
+                      </Button>
+                    </div>
+                  </div>
+                  
                   <p className="flex items-center gap-2 text-sm text-gray-500">
                     <User className="w-4 h-4 text-accent" />
                     <span>Tên khách hàng: </span>
@@ -662,19 +678,6 @@ export default function CheckOutPage() {
                       Xác nhận
                     </Button>
                   </div> */}
-                </div>
-                <div className="flex space-x-2">
-                  <Button
-                    variant="outline"
-                    onClick={() => {
-                      setFormData(selectedAddress); // ✅ nạp dữ liệu đang chọn
-                      setIsEditing(true); // ✅ bật chế độ sửa
-                      setIsAdding(false);
-                      setIsDialogOpen(true); // ✅ mở popup
-                    }}
-                  >
-                    <Edit /> Sửa
-                  </Button>
                 </div>
               </div>
 
