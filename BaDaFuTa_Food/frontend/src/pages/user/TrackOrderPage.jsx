@@ -666,7 +666,7 @@ export const TrackOrderPage = () => {
                 <FileText className="w-4 h-4 text-blue-500" />
                 <span>Mã đơn</span>
               </div>
-              <span className="text-gray-600">{order.order_id || 'Không có'}</span>
+              <span className="text-gray-600 text-right">{order.order_id || 'Không có'}</span>
             </div>
             {/* Thời gian đặt hàng */}
             <div className="flex justify-between items-center mt-3 text-sm text-gray-600 px-2">
@@ -674,7 +674,7 @@ export const TrackOrderPage = () => {
                 <Calendar className="w-4 h-4 text-green-500" />
                 <span>Thời gian đặt hàng</span>
               </div>
-              <span className="text-gray-600">{formatDateTime(order.created_at)}</span>
+              <span className="text-gray-600 text-right">{formatDateTime(order.created_at)}</span>
             </div>
 
             {/* Giao lúc (nếu có) */}
