@@ -229,7 +229,7 @@ export const OrderHistoryCard = ({ order, onRatingSubmit, onCancel }) => {
                       <Calendar className="w-4 h-4 text-green-500" />
                       <span>Thời gian đặt hàng</span>
                     </div>
-                    <span className="font-medium text-gray-800 ml-20">
+                    <span className="font-medium text-gray-800 text-right ml-20">
                       {formatDate(order.created_at)}
                     </span>
                   </div>
@@ -333,7 +333,7 @@ export const OrderHistoryCard = ({ order, onRatingSubmit, onCancel }) => {
                   variant="outline"
                   size="sm"
                   onClick={() => onCancel(order)} // mở dialog ở MyOrdersPage
-                  className="bg-red-500 hover:bg-red-600 max-w-xs text-white border-red-500"
+                  className="bg-red-500 hover:bg-red-600 w-full max-w-xs text-white border-red-500"
                 >
                   Huỷ đơn
                 </Button>
