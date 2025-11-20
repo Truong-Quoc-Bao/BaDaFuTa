@@ -345,7 +345,37 @@ export const orderRatingRepo = {
       },
     });
   },
+  async updateMerchantRating(merchantID: string, rating: number) {
+    const merchant = await prisma.merchant.findUnique({
+      where: { id: merchantID },
+      select: {
+        rating: true,
+        rating_count: true,
+      },
+    });
+    if (!merchant) {
+      throw new Error("nhà hàng không tồn tại!");
+    }
+    let oldRating = merchant.rating ?? 0;
+    let oldCount = merchant.rating_count ?? 0;
 
+    let newCount, newRating;
+
+    if (oldCount === 0) {
+      newRating = rating;
+      newCount = 1;
+    } else {
+      newCount = oldCount + 1;
+      newRating = (oldRating * oldCount + rating) / newCount;
+    }
+    await prisma.merchant.update({
+      where: { id: merchantID },
+      data: {
+        rating: parseFloat(newRating.toFixed(1)),
+        rating_count: newCount,
+      },
+    });
+  },
   updateRating(orderId: string, data: UpdateRating) {
     return prisma.order_rating.update({
       where: { order_id: orderId },

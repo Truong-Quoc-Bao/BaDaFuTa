@@ -35,6 +35,8 @@ model merchant {
   cover_image          Json?
   time_open            Json?
   cuisine              String?               @db.VarChar(255)
+  rating        Float   @default(0)
+  rating_count  Int     @default(0)
   categories           category[]
   menu_item            menu_item[]
   users                users                 @relation(fields: [user_id], references: [id], onDelete: Cascade, map: "fk_merchant_user")
