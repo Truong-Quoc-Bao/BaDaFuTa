@@ -1,5 +1,11 @@
-import { PrismaClient, Prisma, order_status, PaymentStatus, payment_method } from '@prisma/client';
-import { OrderItemInput, GetOrderInput, UpdateRating } from './order.type';
+import {
+  PrismaClient,
+  Prisma,
+  order_status,
+  PaymentStatus,
+  payment_method,
+} from "@prisma/client";
+import { OrderItemInput, GetOrderInput, UpdateRating } from "./order.type";
 
 const prisma = new PrismaClient();
 
@@ -18,22 +24,25 @@ export const CreateOrder = {
       total_amount: bigint;
       status?: string;
       status_payment?: string;
-    },
+    }
   ) {
     const normalized = {
       ...data,
       status:
-        ((data.status || 'PENDING').toUpperCase() as keyof typeof order_status) in order_status
-          ? ((data.status || 'PENDING').toUpperCase() as order_status)
+        ((
+          data.status || "PENDING"
+        ).toUpperCase() as keyof typeof order_status) in order_status
+          ? ((data.status || "PENDING").toUpperCase() as order_status)
           : order_status.PENDING,
 
       status_payment:
-        ((data.status_payment || 'PENDING').toUpperCase() as keyof typeof PaymentStatus) in
-        PaymentStatus
-          ? ((data.status_payment || 'PENDING').toUpperCase() as PaymentStatus)
+        ((
+          data.status_payment || "PENDING"
+        ).toUpperCase() as keyof typeof PaymentStatus) in PaymentStatus
+          ? ((data.status_payment || "PENDING").toUpperCase() as PaymentStatus)
           : PaymentStatus.PENDING,
 
-      payment_method: 'COD' as payment_method,
+      payment_method: "COD" as payment_method,
     };
 
     // Tạo order → return ID để service còn tạo items
@@ -46,7 +55,11 @@ export const CreateOrder = {
   },
 
   /** 2️⃣ Tạo món + option */
-  async createOrderItems(tx: Prisma.TransactionClient, order_id: string, items: OrderItemInput[]) {
+  async createOrderItems(
+    tx: Prisma.TransactionClient,
+    order_id: string,
+    items: OrderItemInput[]
+  ) {
     for (const i of items) {
       const orderItem = await tx.order_item.create({
         data: {
@@ -99,13 +112,14 @@ export const CreateOrder = {
       },
     });
 
-    if (!fullOrder) throw new Error('Không tìm thấy order');
+    if (!fullOrder) throw new Error("Không tìm thấy order");
 
-    const merchant_address = (fullOrder.merchant.location as any)?.address ?? 'Chưa có địa chỉ';
+    const merchant_address =
+      (fullOrder.merchant.location as any)?.address ?? "Chưa có địa chỉ";
 
     return {
       success: true,
-      message: 'Tạo đơn hàng thành công',
+      message: "Tạo đơn hàng thành công",
 
       order_id: fullOrder.id,
       merchant_id: fullOrder.merchant_id,
@@ -207,29 +221,29 @@ export const getOrder = {
           },
         },
       },
-      orderBy: { created_at: 'desc' },
+      orderBy: { created_at: "desc" },
     });
 
     return orders.map((order) => {
-      let merchant_address = 'Chưa có địa chỉ';
+      let merchant_address = "Chưa có địa chỉ";
       if (
-        typeof order.merchant?.location === 'object' &&
+        typeof order.merchant?.location === "object" &&
         order.merchant.location !== null &&
-        'address' in order.merchant.location
+        "address" in order.merchant.location
       ) {
         merchant_address = (order.merchant.location as any).address;
       }
 
       return {
         success: true,
-        message: 'Lấy thông tin đơn hàng thành công',
+        message: "Lấy thông tin đơn hàng thành công",
         order_id: order.id,
-        merchant_name: order.merchant?.merchant_name ?? 'Không xác định',
+        merchant_name: order.merchant?.merchant_name ?? "Không xác định",
         merchant_address,
         merchant_id: order.merchant_id,
         merchant_image: order.merchant.profile_image,
         merchant_phone: order.merchant?.phone ?? null,
-        receiver_name: order.user?.full_name ?? 'Không xác định',
+        receiver_name: order.user?.full_name ?? "Không xác định",
         receiver_phone: order.user?.phone ?? null,
         delivery_address: order.delivery_address,
         payment_method: order.payment_method,
@@ -264,7 +278,7 @@ export const getOrder = {
 export const updateOrderBody = {
   async updateStatus(
     orderId: string,
-    data: { status?: order_status; status_payment?: PaymentStatus },
+    data: { status?: order_status; status_payment?: PaymentStatus }
   ) {
     return prisma.order.update({
       where: { id: orderId },
@@ -279,8 +293,8 @@ export const updateOrder = {
     return prisma.order.update({
       where: { id: orderId },
       data: {
-        status: 'COMPLETED',
-        status_payment: 'SUCCESS',
+        status: "COMPLETED",
+        status_payment: "SUCCESS",
         updated_at: new Date(),
       },
       include: {
@@ -295,8 +309,8 @@ export const cancelOrder = {
     return prisma.order.update({
       where: { id: orderId },
       data: {
-        status: 'CANCELED',
-        status_payment: 'REFUNDED',
+        status: "CANCELED",
+        status_payment: "REFUNDED",
         updated_at: new Date(),
       },
       include: {
