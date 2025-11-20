@@ -532,86 +532,23 @@ app
   ))}
 </div>
 
-<div className="flex flex-wrap justify-center gap-2 md:gap-3 items-center">
-  {/* Existing Rating Display */}
-  {order.status === 'COMPLETED' && order.rating && (
-    <div className="flex items-center gap-1">
-      <Star className="w-4 h-4 fill-yellow-400 text-yellow-400" />
-      <span className="text-sm font-medium">{order.rating}</span>
-    </div>
-  )}
+const requiredGroups = menuItem.options?.filter((g) => g.require_select) || [];
 
-  {/* Rating Button */}
-  {order.status === 'COMPLETED' && order.canRate && (
-    <Button
-      variant="outline"
-      size="sm"
-      onClick={() => setShowRatingDialog(true)}
-      className="flex items-center gap-1 w-full sm:w-auto justify-center"
-    >
-      <Star className="w-4 h-4" />
-      <span>Đánh giá</span>
-    </Button>
-  )}
+const allRequiredSelected = requiredGroups.every((group) =>
+  selectedToppings.some((t) => t.option_group_id === group.option_id)
+);
 
-  {/* Nút xem chi tiết */}
-  <Button
-    variant="outline"
-    size="sm"
-    onClick={() => setShowDetails(!showDetails)}
-    className="w-full sm:w-auto justify-center"
-  >
-    {showDetails ? 'Thu gọn' : 'Xem chi tiết đơn'}
-  </Button>
+if (!allRequiredSelected) {
+  toast.error('Vui lòng chọn topping/tùy chọn đầy đủ.');
+  return;
+}
 
-  {/* Theo dõi / Huỷ / Đặt lại */}
-  {order.status === 'DELIVERING' || order.status === 'CONFIRMED' ? (
-    <Button
-      variant="default"
-      size="sm"
-      onClick={handleTrack}
-      className="w-full sm:w-auto bg-orange-500 text-white border-orange-500 hover:bg-orange-600 px-4 py-1 rounded-md flex items-center gap-2 justify-center transition"
-    >
-      <Truck className="w-4 h-4" />
-      <span>Theo dõi đơn hàng</span>
-    </Button>
-  ) : order.status === 'PENDING' ? (
-    <Button
-      variant="outline"
-      size="sm"
-      onClick={() => onCancel(order)}
-      className="w-full sm:w-auto bg-red-500 text-white border-red-500 hover:bg-red-600 justify-center"
-    >
-      Huỷ đơn
-    </Button>
-  ) : order.status === 'CONFIRMED' ? (
-    <Button
-      variant="outline"
-      size="sm"
-      disabled
-      className="w-full sm:w-auto bg-gray-300 text-gray-600 cursor-not-allowed justify-center"
-    >
-      Không thể huỷ
-    </Button>
-  ) : (
-    <Button
-      variant="outline"
-      size="sm"
-      onClick={handleReorder}
-      className="w-full sm:w-auto bg-orange-500 text-white border-orange-500 hover:bg-orange-600 justify-center"
-    >
-      Đặt lại
-    </Button>
-  )}
-</div>
-<div className="flex flex-wrap justify-center gap-2 md:gap-3 items-center w-full">
-  {/* Nút chung */}
-  <Button
-    variant="outline"
-    size="sm"
-    className="w-full max-w-xs sm:w-auto justify-center"
-    onClick={...}
-  >
-    Nội dung nút
-  </Button>
-</div>
+
+
+app.use('/api', routes); // API phải ở trên
+
+// fallback cho SPA
+app.use(express.static(path.join(__dirname, 'frontend/dist')));
+app.get('*', (_req, res) => {
+  res.sendFile(path.join(__dirname, 'frontend/dist', 'index.html'));
+});
