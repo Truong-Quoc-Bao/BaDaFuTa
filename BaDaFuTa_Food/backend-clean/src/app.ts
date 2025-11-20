@@ -60,15 +60,17 @@ export const createApp = () => {
   app.get('/api/health', (_req, res) => res.json({ ok: true }));
   app.use('/api', routes);
 
-  // Serve static files
-  app.use(express.static(path.join(__dirname, 'frontend/dist')));
+  // Serve static files from React build
+  const staticPath = path.join(__dirname, 'frontend/dist');
+  app.use(express.static(staticPath));
 
-  // SPA fallback: chỉ cho non-API
-  app.get(/^\/(?!api).*/, (_req, res) => {
-    res.sendFile(path.join(__dirname, 'frontend/dist', 'index.html'));
+  // SPA fallback: tất cả route không phải API trả index.html
+  app.get('*', (req, res, next) => {
+    if (req.path.startsWith('/api')) return next(); // bỏ qua API
+    res.sendFile(path.join(staticPath, 'index.html'));
   });
 
-  // 404 cho API
+  // 404 cho API chưa match
   app.use('/api', (_req, res) => res.status(404).json({ error: 'Not found' }));
 
   app.use((err: any, _req: any, res: any, _next: any) => {

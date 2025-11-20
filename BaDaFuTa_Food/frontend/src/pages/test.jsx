@@ -510,146 +510,23 @@ app
 //Mới nhất
 
 //
-<div className="space-y-4 sm:space-y-2">
-  {optionGroup.items.map((optItem) => (
-    <div
-      key={optItem.option_item_id}
-      className="flex items-center justify-between w-full py-2"
-    >
-      <div className="flex items-center space-x-3">
-        <Checkbox
-          id={optItem.option_item_id}
-          checked={Boolean(isChecked)}
-          onCheckedChange={(checked) => { ... }}
-          className="w-5 h-5 [&_svg]:scale-125"
-        />
-        <Label htmlFor={optItem.option_item_id}>{optItem.option_item_name}</Label>
-      </div>
-      <span className="text-sm font-medium text-gray-700">
-        +{Number(optItem.price).toLocaleString('vi-VN')}đ
-      </span>
-    </div>
-  ))}
-</div>
+import express from 'express';
+import helmet from 'helmet';
+import cors from 'cors';
+import compression from 'compression';
+import session from 'express-session';
+import dotenv from 'dotenv';
+import routes from './routes';
+import { bigIntJsonMiddleware } from './middlewares/bigint-json.middleware';
+import path from 'path';
 
-const requiredGroups = menuItem.options?.filter((g) => g.require_select) || [];
-
-const allRequiredSelected = requiredGroups.every((group) =>
-  selectedToppings.some((t) => t.option_group_id === group.option_id)
-);
-
-if (!allRequiredSelected) {
-  toast.error('Vui lòng chọn topping/tùy chọn đầy đủ.');
-  return;
-// 1. Middleware API
-app.use('/api', routes);
-
-// 2. Serve static files
-app.use(express.static(path.join(__dirname, 'frontend/dist')));
-
-// 3. SPA fallback (chỉ sau khi đã handle API & static)
-app.get('*', (_req, res) => {
-  res.sendFile(path.join(__dirname, 'frontend/dist', 'index.html'));
-});
-
-// 4. 404 thật sự (chỉ áp dụng khi cần, API ko match)
-app.use((_req, res) => res.status(404).json({ error: 'Not found' }));
-//
-// 1. API routes
-app.use('/api', routes);
-
-// 2. Serve static files
-app.use(express.static(path.join(__dirname, 'frontend/dist')));
-
-// 3. SPA fallback
-app.get('*', (_req, res) => {
-  res.sendFile(path.join(__dirname, 'frontend/dist', 'index.html'));
-});
-
-// 4. 404 thật sự (chỉ áp dụng khi cần, API ko match)
-// app.use((_req, res) => res.status(404).json({ error: 'Not found' }));
-
-<div
-  key={optionGroup.option_id}
-  className="space-y-2"
-  ref={(el) => (groupRefs.current[optionGroup.option_id] = el)}
->
-  ...
-</div>
-
-const handleSubmit = () => {
-  const firstErrorId = Object.keys(groupErrors).find(
-    (id) => groupErrors[id]
-  );
-
-  if (firstErrorId) {
-    const el = groupRefs.current[firstErrorId];
-    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
-  }
-};
-
-{menuItem.options.map((optionGroup) => (
-  <div
-    key={optionGroup.option_id}
-    className="space-y-2"
-    ref={(el) => (groupRefs.current[optionGroup.option_id] = el)} // gán ref
-  >
-    ...
-  </div>
-))}
-
-
-setGroupErrors(newErrors);
-
-// Nếu còn lỗi, focus vào group đầu tiên
-if (Object.keys(newErrors).length > 0) {
-  const firstErrorId = Object.keys(newErrors)[0];
-  const el = groupRefs.current[firstErrorId];
-  if (el) {
-    el.scrollIntoView({ behavior: 'smooth', block: 'center' });
-    el.classList.add('ring-2', 'ring-red-400'); // highlight viền đỏ
-    setTimeout(() => el.classList.remove('ring-2', 'ring-red-400'), 2000);
-  }
-  return;
-}
-
-
-{menuItem.options.map((optionGroup) => (
-  <div
-    key={optionGroup.option_id}
-    className="space-y-2"
-    ref={(el) => (groupRefs.current[optionGroup.option_id] = el)} // <-- thêm dòng này
-  >
-    <div className="mb-2">
-      <div className="flex items-center justify-between">
-        <Label className="font-semibold">{optionGroup.option_name}</Label>
-        {optionGroup.require_select && (
-          <Badge
-            variant="outline"
-            className={`text-xs ${
-              groupErrors[optionGroup.option_id] ? 'text-red-600 border-red-600' : ''
-            }`}
-          >
-            Bắt buộc
-          </Badge>
-        )}
-      </div>
-      {groupErrors[optionGroup.option_id] && (
-        <p className="text-red-600 text-sm mt-1 text-right">
-          {groupErrors[optionGroup.option_id]}
-        </p>
-      )}
-    </div>
-    {/* các topping items */}
-  </div>
-))}
-
+dotenv.config();
 
 export const createApp = () => {
   const app = express();
   const __dirname = path.resolve();
 
-  // Middleware setup
+  // Logging
   app.use((req, _res, next) => {
     console.log('→', req.method, req.originalUrl);
     next();
@@ -660,6 +537,7 @@ export const createApp = () => {
   app.use(express.json({ limit: '10mb', type: 'application/json' }));
   app.use(express.urlencoded({ extended: true }));
 
+  // CORS
   app.use(
     cors({
       origin: [
@@ -677,28 +555,37 @@ export const createApp = () => {
     }),
   );
 
+  // Session
   app.use(
     session({
       secret: process.env.SESSION_SECRET || 'abc123',
       resave: false,
       saveUninitialized: true,
-      cookie: { secure: false, httpOnly: true, sameSite: 'lax' },
+      cookie: {
+        secure: false,
+        httpOnly: true,
+        sameSite: 'lax',
+      },
     }),
   );
 
   app.use(bigIntJsonMiddleware);
+
+  // API routes
   app.get('/api/health', (_req, res) => res.json({ ok: true }));
   app.use('/api', routes);
 
-  // Serve static files
-  app.use(express.static(path.join(__dirname, 'frontend/dist')));
+  // Serve static files from React build
+  const staticPath = path.join(__dirname, 'frontend/dist');
+  app.use(express.static(staticPath));
 
-  // SPA fallback: chỉ cho non-API
-  app.get(/^\/(?!api).*/, (_req, res) => {
-    res.sendFile(path.join(__dirname, 'frontend/dist', 'index.html'));
+  // SPA fallback: tất cả route không phải API trả index.html
+  app.get('*', (req, res, next) => {
+    if (req.path.startsWith('/api')) return next(); // bỏ qua API
+    res.sendFile(path.join(staticPath, 'index.html'));
   });
 
-  // 404 cho API
+  // 404 cho API chưa match
   app.use('/api', (_req, res) => res.status(404).json({ error: 'Not found' }));
 
   // Error handler
@@ -707,5 +594,5 @@ export const createApp = () => {
     res.status(500).json({ error: 'Internal Server Error' });
   });
 
-  return app; // <- fix: return app đúng vị trí
+  return app;
 };
