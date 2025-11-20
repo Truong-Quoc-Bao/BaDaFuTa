@@ -643,3 +643,24 @@ if (Object.keys(newErrors).length > 0) {
     {/* các topping items */}
   </div>
 ))}
+
+
+// 1. API routes trước
+app.use('/api', routes);
+
+// 2. Serve static files
+app.use(express.static(path.join(__dirname, 'frontend/dist')));
+
+// 3. SPA fallback (chỉ cho non-API)
+app.get(/^\/(?!api).*/, (_req, res) => {
+  res.sendFile(path.join(__dirname, 'frontend/dist', 'index.html'));
+});
+
+// 4. 404 cho API
+app.use('/api', (_req, res) => res.status(404).json({ error: 'Not found' }));
+
+// 5. Error handler
+app.use((err: any, _req: any, res: any, _next: any) => {
+  console.error(err);
+  res.status(500).json({ error: 'Internal Server Error' });
+});

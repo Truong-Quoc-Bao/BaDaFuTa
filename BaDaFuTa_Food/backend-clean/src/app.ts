@@ -63,12 +63,13 @@ export const createApp = () => {
   // 2. Serve static files
   app.use(express.static(path.join(__dirname, 'frontend/dist')));
 
-  // 3. SPA fallback
-  app.get('*', (_req, res) => {
+  // 3. SPA fallback (chỉ cho non-API)
+  app.get(/^\/(?!api).*/, (_req, res) => {
     res.sendFile(path.join(__dirname, 'frontend/dist', 'index.html'));
   });
 
-  app.use((_req, res) => res.status(404).json({ error: 'Not found' }));
+  // 4. 404 cho API
+  app.use('/api', (_req, res) => res.status(404).json({ error: 'Not found' }));
 
   app.use((err: any, _req: any, res: any, _next: any) => {
     console.error(err);
