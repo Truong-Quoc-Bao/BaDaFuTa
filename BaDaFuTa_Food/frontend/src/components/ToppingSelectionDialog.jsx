@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -22,6 +22,7 @@ export const ToppingSelectionDialog = ({ isOpen, onClose, menuItem, restaurant, 
   const [selectedToppings, setSelectedToppings] = useState([]);
   const [specialInstructions, setSpecialInstructions] = useState('');
   const [groupErrors, setGroupErrors] = useState({});
+  const groupRefs = useRef({}); // lưu ref cho từng optionGroup
 
   // Check if item is available
   const isAvailable = menuItem.isAvailable !== false;
@@ -68,7 +69,14 @@ export const ToppingSelectionDialog = ({ isOpen, onClose, menuItem, restaurant, 
     setGroupErrors(newErrors);
 
     // Nếu còn lỗi, dừng thêm vào giỏ
-    if (Object.keys(newErrors).length > 0) return;
+    if (Object.keys(newErrors).length > 0) {
+      const firstErrorId = Object.keys(newErrors)[0];
+      const el = groupRefs.current[firstErrorId];
+      if (el) {
+        el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+      return;
+    }
 
     // Add to cart with selected toppings
     for (let i = 0; i < quantity; i++) {
@@ -171,7 +179,7 @@ export const ToppingSelectionDialog = ({ isOpen, onClose, menuItem, restaurant, 
               <h4 className="font-semibold">Tùy chọn thêm</h4>
 
               {menuItem.options.map((optionGroup) => (
-                <div key={optionGroup.option_id} className="space-y-2">
+                <div key={optionGroup.option_id} className="space-y-2" ref={(el) => (groupRefs.current[optionGroup.option_id] = el)}>
                   <div className="mb-2">
                     <div className="flex items-center justify-between">
                       <Label className="font-semibold">{optionGroup.option_name}</Label>

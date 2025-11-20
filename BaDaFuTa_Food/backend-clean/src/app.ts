@@ -60,8 +60,10 @@ export const createApp = () => {
   app.get('/api/health', (_req, res) => res.json({ ok: true }));
   app.use('/api', routes);
 
-  // fallback cho SPA
+  // 2. Serve static files
   app.use(express.static(path.join(__dirname, 'frontend/dist')));
+
+  // 3. SPA fallback
   app.get('*', (_req, res) => {
     res.sendFile(path.join(__dirname, 'frontend/dist', 'index.html'));
   });

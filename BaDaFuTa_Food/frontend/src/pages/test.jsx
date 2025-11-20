@@ -541,14 +541,105 @@ const allRequiredSelected = requiredGroups.every((group) =>
 if (!allRequiredSelected) {
   toast.error('Vui lòng chọn topping/tùy chọn đầy đủ.');
   return;
-}
+// 1. Middleware API
+app.use('/api', routes);
 
-
-
-app.use('/api', routes); // API phải ở trên
-
-// fallback cho SPA
+// 2. Serve static files
 app.use(express.static(path.join(__dirname, 'frontend/dist')));
+
+// 3. SPA fallback (chỉ sau khi đã handle API & static)
 app.get('*', (_req, res) => {
   res.sendFile(path.join(__dirname, 'frontend/dist', 'index.html'));
 });
+
+// 4. 404 thật sự (chỉ áp dụng khi cần, API ko match)
+app.use((_req, res) => res.status(404).json({ error: 'Not found' }));
+//
+// 1. API routes
+app.use('/api', routes);
+
+// 2. Serve static files
+app.use(express.static(path.join(__dirname, 'frontend/dist')));
+
+// 3. SPA fallback
+app.get('*', (_req, res) => {
+  res.sendFile(path.join(__dirname, 'frontend/dist', 'index.html'));
+});
+
+// 4. 404 thật sự (chỉ áp dụng khi cần, API ko match)
+// app.use((_req, res) => res.status(404).json({ error: 'Not found' }));
+
+<div
+  key={optionGroup.option_id}
+  className="space-y-2"
+  ref={(el) => (groupRefs.current[optionGroup.option_id] = el)}
+>
+  ...
+</div>
+
+const handleSubmit = () => {
+  const firstErrorId = Object.keys(groupErrors).find(
+    (id) => groupErrors[id]
+  );
+
+  if (firstErrorId) {
+    const el = groupRefs.current[firstErrorId];
+    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }
+};
+
+{menuItem.options.map((optionGroup) => (
+  <div
+    key={optionGroup.option_id}
+    className="space-y-2"
+    ref={(el) => (groupRefs.current[optionGroup.option_id] = el)} // gán ref
+  >
+    ...
+  </div>
+))}
+
+
+setGroupErrors(newErrors);
+
+// Nếu còn lỗi, focus vào group đầu tiên
+if (Object.keys(newErrors).length > 0) {
+  const firstErrorId = Object.keys(newErrors)[0];
+  const el = groupRefs.current[firstErrorId];
+  if (el) {
+    el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    el.classList.add('ring-2', 'ring-red-400'); // highlight viền đỏ
+    setTimeout(() => el.classList.remove('ring-2', 'ring-red-400'), 2000);
+  }
+  return;
+}
+
+
+{menuItem.options.map((optionGroup) => (
+  <div
+    key={optionGroup.option_id}
+    className="space-y-2"
+    ref={(el) => (groupRefs.current[optionGroup.option_id] = el)} // <-- thêm dòng này
+  >
+    <div className="mb-2">
+      <div className="flex items-center justify-between">
+        <Label className="font-semibold">{optionGroup.option_name}</Label>
+        {optionGroup.require_select && (
+          <Badge
+            variant="outline"
+            className={`text-xs ${
+              groupErrors[optionGroup.option_id] ? 'text-red-600 border-red-600' : ''
+            }`}
+          >
+            Bắt buộc
+          </Badge>
+        )}
+      </div>
+      {groupErrors[optionGroup.option_id] && (
+        <p className="text-red-600 text-sm mt-1 text-right">
+          {groupErrors[optionGroup.option_id]}
+        </p>
+      )}
+    </div>
+    {/* các topping items */}
+  </div>
+))}
