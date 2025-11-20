@@ -60,15 +60,15 @@ export const createApp = () => {
   app.get('/api/health', (_req, res) => res.json({ ok: true }));
   app.use('/api', routes);
 
-  // 2. Serve static files
+  // Serve static files
   app.use(express.static(path.join(__dirname, 'frontend/dist')));
 
-  // 3. SPA fallback (chỉ cho non-API)
+  // SPA fallback: chỉ cho non-API
   app.get(/^\/(?!api).*/, (_req, res) => {
     res.sendFile(path.join(__dirname, 'frontend/dist', 'index.html'));
   });
 
-  // 4. 404 cho API
+  // 404 cho API
   app.use('/api', (_req, res) => res.status(404).json({ error: 'Not found' }));
 
   app.use((err: any, _req: any, res: any, _next: any) => {

@@ -645,22 +645,67 @@ if (Object.keys(newErrors).length > 0) {
 ))}
 
 
-// 1. API routes trước
-app.use('/api', routes);
+export const createApp = () => {
+  const app = express();
+  const __dirname = path.resolve();
 
-// 2. Serve static files
-app.use(express.static(path.join(__dirname, 'frontend/dist')));
+  // Middleware setup
+  app.use((req, _res, next) => {
+    console.log('→', req.method, req.originalUrl);
+    next();
+  });
 
-// 3. SPA fallback (chỉ cho non-API)
-app.get(/^\/(?!api).*/, (_req, res) => {
-  res.sendFile(path.join(__dirname, 'frontend/dist', 'index.html'));
-});
+  app.use(helmet());
+  app.use(compression());
+  app.use(express.json({ limit: '10mb', type: 'application/json' }));
+  app.use(express.urlencoded({ extended: true }));
 
-// 4. 404 cho API
-app.use('/api', (_req, res) => res.status(404).json({ error: 'Not found' }));
+  app.use(
+    cors({
+      origin: [
+        'http://localhost:5173',
+        'http://localhost:5174',
+        'http://192.168.100.124:5173',
+        'http://192.168.100.124:5174',
+        'http://172.20.10.3:5173',
+        'http://172.20.10.3:5174',
+        'https://unnibbed-unthrilled-averi.ngrok-free.dev',
+        'https://ba-da-fu-ta-food.vercel.app',
+      ],
+      methods: ['GET', 'POST', 'PUT', 'DELETE'],
+      credentials: true,
+    }),
+  );
 
-// 5. Error handler
-app.use((err: any, _req: any, res: any, _next: any) => {
-  console.error(err);
-  res.status(500).json({ error: 'Internal Server Error' });
-});
+  app.use(
+    session({
+      secret: process.env.SESSION_SECRET || 'abc123',
+      resave: false,
+      saveUninitialized: true,
+      cookie: { secure: false, httpOnly: true, sameSite: 'lax' },
+    }),
+  );
+
+  app.use(bigIntJsonMiddleware);
+  app.get('/api/health', (_req, res) => res.json({ ok: true }));
+  app.use('/api', routes);
+
+  // Serve static files
+  app.use(express.static(path.join(__dirname, 'frontend/dist')));
+
+  // SPA fallback: chỉ cho non-API
+  app.get(/^\/(?!api).*/, (_req, res) => {
+    res.sendFile(path.join(__dirname, 'frontend/dist', 'index.html'));
+  });
+
+  // 404 cho API
+  app.use('/api', (_req, res) => res.status(404).json({ error: 'Not found' }));
+
+  // Error handler
+  app.use((err: any, _req: any, res: any, _next: any) => {
+    console.error(err);
+    res.status(500).json({ error: 'Internal Server Error' });
+  });
+
+  return app; // <- fix: return app đúng vị trí
+};
