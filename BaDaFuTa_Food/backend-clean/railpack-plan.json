@@ -2,8 +2,6 @@
     "build": {
       "builder": "nodejs",
       "buildCommand": "npm install && npm run build",
-      "startCommand": "npm run start",
-      "preDeploy": "npx prisma migrate deploy && npx prisma generate"
+      "startCommand": "npm run start"
     }
   }
-  
