@@ -1,4 +1,4 @@
-import { prisma } from '@/libs/prisma';
+import { prisma } from "@/libs/prisma";
 import {
   CreateOrder,
   getOrder,
@@ -6,8 +6,13 @@ import {
   updateOrderBody,
   cancelOrder,
   orderRatingRepo,
-} from './order.repository';
-import { CreateCODOrderInput, GetOrderInput, UpdateOrder, UpdateRating } from './order.type';
+} from "./order.repository";
+import {
+  CreateCODOrderInput,
+  GetOrderInput,
+  UpdateOrder,
+  UpdateRating,
+} from "./order.type";
 
 export const orderService = {
   async createCODOrder(data: CreateCODOrderInput) {
@@ -17,8 +22,9 @@ export const orderService = {
         where: { id: data.user_id },
         select: { id: true, phone: true, full_name: true },
       });
-      if (!user) throw new Error('User không tồn tại');
-      if (user.phone !== data.phone) throw new Error('Số điện thoại không khớp');
+      if (!user) throw new Error("User không tồn tại");
+      if (user.phone !== data.phone)
+        throw new Error("Số điện thoại không khớp");
 
       // 2️⃣ Kiểm tra món
       const itemIds = [...new Set(data.items.map((i) => i.menu_item_id))];
@@ -27,19 +33,23 @@ export const orderService = {
         select: { id: true, merchant_id: true, name_item: true },
       });
 
-      if (itemsFromDB.length !== itemIds.length) throw new Error('Một số món không tồn tại');
+      if (itemsFromDB.length !== itemIds.length)
+        throw new Error("Một số món không tồn tại");
 
-      const invalid = itemsFromDB.filter((i) => i.merchant_id !== data.merchant_id);
+      const invalid = itemsFromDB.filter(
+        (i) => i.merchant_id !== data.merchant_id
+      );
       if (invalid.length)
         throw new Error(
-          'Một số món không thuộc merchant: ' + invalid.map((i) => i.name_item).join(', '),
+          "Một số món không thuộc merchant: " +
+            invalid.map((i) => i.name_item).join(", ")
         );
 
       // 3️⃣ Tính total
       const totalItems = data.items.reduce((sum, item) => {
         const toppings = (item.selected_option_items ?? []).reduce(
           (t, op) => t + (op.price ?? 0),
-          0,
+          0
         );
         return sum + (item.price + toppings) * item.quantity;
       }, 0);
@@ -49,7 +59,7 @@ export const orderService = {
       const base = await CreateOrder.createOrder(tx, {
         user_id: data.user_id,
         merchant_id: data.merchant_id,
-        full_name: user.full_name ?? 'Khách COD',
+        full_name: user.full_name ?? "Khách COD",
         phone: user.phone,
         delivery_address: data.delivery_address,
         delivery_fee: BigInt(data.delivery_fee),
@@ -57,7 +67,7 @@ export const orderService = {
         total_amount: total,
         // status: 'PENDING',
         status: "DELIVERING",
-        status_payment: 'PENDING',
+        status_payment: "PENDING",
       });
 
       // 5️⃣ Tạo items + options
@@ -78,7 +88,7 @@ export const updateOrderService = {
     const updated = await updateOrderBody.updateStatus(orderId, data);
 
     if (io) {
-      io.emit('order:statusUpdated', {
+      io.emit("order:statusUpdated", {
         orderId,
         ...data,
         userId: updated.user_id,
@@ -88,7 +98,7 @@ export const updateOrderService = {
 
     return {
       success: true,
-      message: 'Cập nhật trạng thái đơn hàng thành công!',
+      message: "Cập nhật trạng thái đơn hàng thành công!",
       data: updated,
     };
   },
@@ -104,17 +114,19 @@ export async function cancelOrderStatus(orderId: string) {
 export const orderRatingService = {
   async create(orderId: string, data: UpdateRating, io?: any) {
     const order = await orderRatingRepo.findOrder(orderId);
-    if (!order) throw new Error('Không tìm thấy đơn hàng.');
+    if (!order) throw new Error("Không tìm thấy đơn hàng.");
 
     const existed = await orderRatingRepo.findRatingByOrderId(orderId);
-    if (existed) throw new Error('Đơn hàng này đã được đánh giá.');
+    if (existed) throw new Error("Đơn hàng này đã được đánh giá.");
 
     // tạo rating
     const created = await orderRatingRepo.createRating(orderId, data);
 
+    await orderRatingRepo.updateMerchantRating(order.merchant_id, data.rating);
+
     // emit socket
     if (io) {
-      io.emit('order:ratingCreated', {
+      io.emit("order:ratingCreated", {
         orderId,
         ...data,
       });
@@ -122,7 +134,7 @@ export const orderRatingService = {
 
     return {
       success: true,
-      message: 'Đánh giá đơn hàng thành công!',
+      message: "Đánh giá đơn hàng thành công!",
       data: created,
     };
   },
@@ -130,7 +142,7 @@ export const orderRatingService = {
   async update(orderId: string, data: UpdateRating, io?: any) {
     const existed = await orderRatingRepo.findRatingByOrderId(orderId);
     if (!existed) {
-      throw new Error('Bạn chưa đánh giá đơn hàng này.');
+      throw new Error("Bạn chưa đánh giá đơn hàng này.");
     }
 
     //update
@@ -138,7 +150,7 @@ export const orderRatingService = {
 
     //emit socket
     if (io) {
-      io.emit('order:ratingUpdated', {
+      io.emit("order:ratingUpdated", {
         orderId,
         ...data,
       });
@@ -146,7 +158,7 @@ export const orderRatingService = {
 
     return {
       success: true,
-      message: 'Cập nhật đánh giá đơn hàng thành công!',
+      message: "Cập nhật đánh giá đơn hàng thành công!",
       data: updated,
     };
   },
@@ -156,7 +168,9 @@ export const orderRatingService = {
 
     return {
       success: true,
-      message: rating ? 'Lấy đánh giá đơn hàng thành công!' : 'Đơn hàng này chưa được đánh giá',
+      message: rating
+        ? "Lấy đánh giá đơn hàng thành công!"
+        : "Đơn hàng này chưa được đánh giá",
       data: rating ?? null,
     };
   },
@@ -164,13 +178,13 @@ export const orderRatingService = {
     const existed = await orderRatingRepo.findRatingByOrderId(orderId);
 
     if (!existed) {
-      throw new Error('Đơn hàng này chưa có đánh giá để xoá.');
+      throw new Error("Đơn hàng này chưa có đánh giá để xoá.");
     }
 
     const deleted = await orderRatingRepo.deleteRating(orderId);
     return {
       success: true,
-      message: 'Xoá đánh giá thành công!',
+      message: "Xoá đánh giá thành công!",
     };
   },
 };
