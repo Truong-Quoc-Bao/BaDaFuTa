@@ -64,11 +64,11 @@ export const createApp = () => {
   const staticPath = path.join(__dirname, 'frontend/dist');
   app.use(express.static(staticPath));
 
-  // SPA fallback: tất cả route không phải API trả index.html
-  app.get('*', (req, res, next) => {
-    if (req.path.startsWith('/api')) return next(); // bỏ qua API
-    res.sendFile(path.join(staticPath, 'index.html'));
-  });
+  // // SPA fallback: tất cả route không phải API trả index.html
+  // app.get('*', (req, res, next) => {
+  //   if (req.path.startsWith('/api')) return next(); // bỏ qua API
+  //   res.sendFile(path.join(staticPath, 'index.html'));
+  // });
 
   // 404 cho API chưa match
   app.use('/api', (_req, res) => res.status(404).json({ error: 'Not found' }));

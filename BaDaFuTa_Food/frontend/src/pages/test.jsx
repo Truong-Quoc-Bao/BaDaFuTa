@@ -636,3 +636,59 @@ useEffect(() => {
 
   fetchRestaurants();
 }, [searchQuery, selectedCuisine]);
+
+
+const filteredRestaurants = restaurantsWithDistance.filter((restaurant) => {
+  const name = restaurant?.name?.toLowerCase() || '';
+  const cuisine = restaurant?.cuisine?.toLowerCase() || '';
+  const query = searchQuery.toLowerCase();
+
+  return name.includes(query) || cuisine.includes(query);
+});
+{finalFilteredRestaurants.map((r) => (
+  <RestaurantCard key={r.id} restaurant={r} />
+))}
+
+
+export const LocationProvider = ({ children }) => {
+  const [state, dispatch] = useReducer(locationReducer, initialState);
+
+  const setLocation = (location) => {
+    dispatch({ type: "SET_LOCATION", payload: location });
+    localStorage.setItem("badafuta_location", JSON.stringify(location));
+  };
+
+  const getCurrentLocation = async () => {
+    // ... code hiện tại
+  };
+
+  // ⭐ Hàm tính khoảng cách giữa 2 tọa độ
+  const calculateDistance = (lat1, lng1, lat2, lng2) => {
+    const R = 6371; // km
+    const dLat = ((lat2 - lat1) * Math.PI) / 180;
+    const dLng = ((lng2 - lng1) * Math.PI) / 180;
+    const a =
+      Math.sin(dLat / 2) ** 2 +
+      Math.cos((lat1 * Math.PI) / 180) *
+        Math.cos((lat2 * Math.PI) / 180) *
+        Math.sin(dLng / 2) ** 2;
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    return R * c; // km
+  };
+
+  return (
+    <LocationContext.Provider
+      value={{ state, setLocation, getCurrentLocation, calculateDistance }}
+    >
+      {children}
+    </LocationContext.Provider>
+  );
+};
+// Serve static files
+app.use(express.static(staticPath));
+
+// SPA fallback
+app.use((req, res, next) => {
+  if (req.path.startsWith('/api')) return next();
+  res.sendFile(path.join(staticPath, 'index.html'));
+});
