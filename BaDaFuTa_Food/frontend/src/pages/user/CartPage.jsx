@@ -139,9 +139,9 @@ export default function CartPage() {
 
                         {/* Display selected toppings */}
                         {item.selectedToppings && item.selectedToppings.length > 0 && (
-                          <div className="mt-2 flex flex-wrap gap-1">
+                          <div className="mt-2 flex flex-wrap gap-1 ">
                             {item.selectedToppings.map((topping) => (
-                              <Badge key={topping.id} variant="outline" className="text-xs">
+                              <Badge key={topping.id} variant="outline" className="text-xs border border-gray-300">
                                 {/* Có thể chỉ hiện tên item hoặc kèm group */}
                                 {topping.option_group_name
                                   ? `${topping.option_group_name}: ${topping.option_item_name}`

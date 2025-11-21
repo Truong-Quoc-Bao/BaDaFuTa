@@ -142,7 +142,8 @@ export const TrackOrderPage = () => {
 
     // else try fetch by route param id (most cases)
     if (id) {
-      fetch(`/apiLocal/order/getOrder/${id}`)
+      fetch(`https://badafuta-production.up.railway.app/api/order/getOrder/${id}`) 
+      // fetch(`/apiLocal/order/getOrder/${id}`)
         .then((res) => {
           if (!res.ok) throw new Error('Fetch order failed');
           return res.json();
@@ -229,8 +230,8 @@ export const TrackOrderPage = () => {
             console.error('No order id available for update');
             return;
           }
-
-          const res = await fetch(`/apiLocal/order/${apiId}/updateBody`, {
+          const res = await fetch(`https://badafuta-production.up.railway.app/api/order/${apiId}/updateBody`, {
+          // const res = await fetch(`/apiLocal/order/${apiId}/updateBody`, {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -665,7 +666,7 @@ export const TrackOrderPage = () => {
                 <FileText className="w-4 h-4 text-blue-500" />
                 <span>Mã đơn</span>
               </div>
-              <span className="text-gray-600">{order.order_id || 'Không có'}</span>
+              <span className="text-gray-600 text-right">{order.order_id || 'Không có'}</span>
             </div>
             {/* Thời gian đặt hàng */}
             <div className="flex justify-between items-center mt-3 text-sm text-gray-600 px-2">
@@ -673,7 +674,7 @@ export const TrackOrderPage = () => {
                 <Calendar className="w-4 h-4 text-green-500" />
                 <span>Thời gian đặt hàng</span>
               </div>
-              <span className="text-gray-600">{formatDateTime(order.created_at)}</span>
+              <span className="text-gray-600 text-right">{formatDateTime(order.created_at)}</span>
             </div>
 
             {/* Giao lúc (nếu có) */}

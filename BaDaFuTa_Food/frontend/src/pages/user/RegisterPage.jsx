@@ -230,8 +230,14 @@ export default function RegisterPage() {
     setError("");
     setShowPhoneExists(false);
 
+    // const hosts = [
+    //   "/apiLocal/register",
+    //   // "/api192/register",
+    //   // "/api172/register",
+    //   // "/api/register", // fallback
+    // ];
     const hosts = [
-      "/apiLocal/register",
+      "https://badafuta-production.up.railway.app/api/register",
       // "/api192/register",
       // "/api172/register",
       // "/api/register", // fallback

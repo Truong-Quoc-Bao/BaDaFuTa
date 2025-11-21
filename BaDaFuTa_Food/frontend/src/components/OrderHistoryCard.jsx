@@ -229,7 +229,7 @@ export const OrderHistoryCard = ({ order, onRatingSubmit, onCancel }) => {
                       <Calendar className="w-4 h-4 text-green-500" />
                       <span>Thời gian đặt hàng</span>
                     </div>
-                    <span className="font-medium text-gray-800 ml-20">
+                    <span className="font-medium text-gray-800 text-right ml-20">
                       {formatDate(order.created_at)}
                     </span>
                   </div>
@@ -286,7 +286,7 @@ export const OrderHistoryCard = ({ order, onRatingSubmit, onCancel }) => {
               </p>
             </div>
 
-            <div className="flex flex-wrap gap-2 md:gap-3 items-center">
+            <div className="flex flex-wrap gap-2 justify-center md:gap-3 items-center w-full sm:w-max">
               {/* Existing Rating Display */}
               {order.status === 'COMPLETED' && order.rating && (
                 <div className="flex items-center gap-1">
@@ -301,7 +301,7 @@ export const OrderHistoryCard = ({ order, onRatingSubmit, onCancel }) => {
                   variant="outline"
                   size="sm"
                   onClick={() => setShowRatingDialog(true)}
-                  className="flex items-center gap-1"
+                  className="flex max-w-xs items-center gap-1 w-full sm:w-auto justify-center"
                 >
                   <Star className="w-4 h-4" />
                   <span>Đánh giá</span>
@@ -313,7 +313,7 @@ export const OrderHistoryCard = ({ order, onRatingSubmit, onCancel }) => {
                 variant="outline"
                 size="sm"
                 onClick={() => setShowDetails(!showDetails)}
-                className=""
+                className="w-full max-w-xs sm:w-auto justify-center"
               >
                 {showDetails ? 'Thu gọn' : 'Xem chi tiết đơn'}
               </Button>
@@ -323,7 +323,7 @@ export const OrderHistoryCard = ({ order, onRatingSubmit, onCancel }) => {
                   variant="default"
                   size="sm"
                   onClick={handleTrack}
-                  className="bg-orange-500 text-white border-orange-500 hover:bg-orange-600 px-4 py-1 rounded-md w-max flex items-center gap-2 transition"
+                  className="w-full max-w-xs sm:w-auto bg-orange-500 text-white border-orange-500 hover:bg-orange-600 px-4 py-1 rounded-md flex items-center gap-2 justify-center transition"
                 >
                   <Truck className="w-4 h-4" />
                   <span>Theo dõi đơn hàng</span>
@@ -333,7 +333,7 @@ export const OrderHistoryCard = ({ order, onRatingSubmit, onCancel }) => {
                   variant="outline"
                   size="sm"
                   onClick={() => onCancel(order)} // mở dialog ở MyOrdersPage
-                  className="bg-red-500 hover:bg-red-600 text-white border-red-500"
+                  className="bg-red-500 hover:bg-red-600 w-full max-w-xs text-white border-red-500"
                 >
                   Huỷ đơn
                 </Button>
@@ -342,7 +342,7 @@ export const OrderHistoryCard = ({ order, onRatingSubmit, onCancel }) => {
                   variant="outline"
                   size="sm"
                   disabled
-                  className="bg-gray-300 text-gray-600 cursor-not-allowed"
+                  className="w-full max-w-xs sm:w-auto bg-gray-300 text-gray-600 cursor-not-allowed justify-center"
                 >
                   Không thể huỷ
                 </Button>
@@ -351,7 +351,7 @@ export const OrderHistoryCard = ({ order, onRatingSubmit, onCancel }) => {
                   variant="outline"
                   size="sm"
                   onClick={handleReorder}
-                  className="bg-orange-500 w-max hover:bg-orange-600 text-white border-orange-500"
+                  className="w-full max-w-xs sm:w-auto bg-orange-500 hover:bg-orange-600 text-white border-orange-500 justify-center"
                 >
                   Đặt lại
                 </Button>

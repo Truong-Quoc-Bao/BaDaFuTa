@@ -260,7 +260,8 @@ export default function CheckOutPage() {
     else if (method === 'VNPAY') {
       try {
         console.log('📤 Sending body to VNPay:', orderBody);
-        const res = await fetch('http://localhost:3000/api/payment/initiate', {
+        const res = await fetch('https://badafuta-production.up.railway.app/api/payment/initiate', {
+          // const res = await fetch('http://localhost:3000/api/payment/initiate', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(orderBody),
@@ -282,7 +283,8 @@ export default function CheckOutPage() {
     } else if (method === 'MOMO') {
       try {
         console.log('📤 Sending body to MoMo:', orderBody);
-        const res = await fetch('http://localhost:3000/api/momo/create', {
+        const res = await fetch('https://badafuta-production.up.railway.app/api/momo/create', {
+          // const res = await fetch('http://localhost:3000/api/momo/create', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(orderBody),
@@ -370,8 +372,8 @@ export default function CheckOutPage() {
           })),
         })),
       };
-
-      const res = await fetch('http://localhost:3000/api/order', {
+      const res = await fetch('https://badafuta-production.up.railway.app/api/order', {
+        // const res = await fetch('http://localhost:3000/api/order', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(orderBody),
@@ -441,15 +443,15 @@ export default function CheckOutPage() {
   // ======================
   useEffect(() => {
     const params = new URLSearchParams(location.search);
-    const orderId = params.get("orderId");
+    const orderId = params.get('orderId');
 
     if (!orderId) return;
 
     setLoading(true);
 
     // Lưu lại để OrderSuccessPage dùng
-    localStorage.setItem("orderConfirmed", "true");
-    localStorage.setItem("lastOrderId", orderId);
+    localStorage.setItem('orderConfirmed', 'true');
+    localStorage.setItem('lastOrderId', orderId);
 
     clearCart();
     setLoading(false);
@@ -577,10 +579,26 @@ export default function CheckOutPage() {
             <CardContent>
               <div className="flex justify-between items-start p-4 rounded-xl border border-gray-200 bg-white shadow-sm mb-4">
                 <div className="space-y-2 w-full">
-                  <p className="text-base font-semibold text-gray-800 flex items-center gap-2">
-                    <MapPin className="w-5 h-5 text-accent" />
-                    <span>Địa chỉ giao hàng mặt định</span>
-                  </p>
+                  <div className="flex justify-between items-center w-full">
+                    <p className="text-base font-semibold text-gray-800 flex items-center gap-2">
+                      <MapPin className="w-5 h-5 text-accent" />
+                      <span>Địa chỉ giao hàng mặt định</span>
+                    </p>
+                    <div className="flex space-x-2">
+                      <Button
+                        variant="outline"
+                        onClick={() => {
+                          setFormData(selectedAddress); // ✅ nạp dữ liệu đang chọn
+                          setIsEditing(true); // ✅ bật chế độ sửa
+                          setIsAdding(false);
+                          setIsDialogOpen(true); // ✅ mở popup
+                        }}
+                      >
+                        <Edit /> Sửa
+                      </Button>
+                    </div>
+                  </div>
+                  
                   <p className="flex items-center gap-2 text-sm text-gray-500">
                     <User className="w-4 h-4 text-accent" />
                     <span>Tên khách hàng: </span>
@@ -660,19 +678,6 @@ export default function CheckOutPage() {
                       Xác nhận
                     </Button>
                   </div> */}
-                </div>
-                <div className="flex space-x-2">
-                  <Button
-                    variant="outline"
-                    onClick={() => {
-                      setFormData(selectedAddress); // ✅ nạp dữ liệu đang chọn
-                      setIsEditing(true); // ✅ bật chế độ sửa
-                      setIsAdding(false);
-                      setIsDialogOpen(true); // ✅ mở popup
-                    }}
-                  >
-                    <Edit /> Sửa
-                  </Button>
                 </div>
               </div>
 
