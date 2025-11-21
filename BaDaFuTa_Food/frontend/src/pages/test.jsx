@@ -596,3 +596,43 @@ export const createApp = () => {
 
   return app;
 };
+//
+//
+//
+//
+useEffect(() => {
+  const fetchRestaurants = async () => {
+    const host = "https://badafuta-production.up.railway.app/api/restaurants";
+
+    const params = new URLSearchParams();
+
+    // Search param
+    if (searchQuery.trim() !== "") {
+      params.append("search", searchQuery);
+    }
+
+    // Cuisine param
+    if (selectedCuisine !== "Tất cả") {
+      params.append("cuisine", selectedCuisine);
+    }
+
+    let url = host;
+
+    if (params.toString() !== "") {
+      url = `${host}?${params.toString()}`;
+    }
+
+    try {
+      const res = await fetch(url);
+      if (!res.ok) throw new Error("Fetch failed");
+
+      const data = await res.json();
+      setRestaurants(data);
+      console.log("Fetch:", url);
+    } catch (err) {
+      console.error("Error:", err.message);
+    }
+  };
+
+  fetchRestaurants();
+}, [searchQuery, selectedCuisine]);
