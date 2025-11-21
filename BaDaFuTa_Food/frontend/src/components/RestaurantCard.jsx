@@ -87,7 +87,7 @@ export default function RestaurantCard({ restaurant }) {
             <div className="flex items-center space-x-1 bg-white/90 backdrop-blur-sm px-2 py-1 rounded-lg shadow-lg">
               <Star className="w-4 h-4 text-yellow-400 fill-current" />
               <span className="text-sm font-medium text-gray-800">
-                {restaurant.rating}
+                {restaurant.rating || '0'}
                 {/* <p>4 sao</p> */}
               </span>
             </div>
