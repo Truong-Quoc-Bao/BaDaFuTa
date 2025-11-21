@@ -167,6 +167,7 @@ const cartReducer = (state = initialCart, action) => {
         menuItem,
         restaurant,
         quantity,
+        deliveryFee: restaurant.deliveryFee || 0,
         selectedToppings: normalizedToppings,
         selectedOptions: normalizedToppings,
         specialInstructions,

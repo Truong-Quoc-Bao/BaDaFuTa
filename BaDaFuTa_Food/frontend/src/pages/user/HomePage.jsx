@@ -9,42 +9,59 @@ import { useLocation } from '../../contexts/LocationContext';
 //import { useState, useMemo } from "react";
 import React, { useEffect, useState, useMemo } from 'react';
 export default function HomePage() {
-  // const [searchQuery, setSearchQuery] = useState("");
   const [selectedCuisine, setSelectedCuisine] = useState('Tất cả');
+  const [selectedDistrict, setSelectedDistrict] = useState('Tất cả');
+
   const { state: locationState, calculateDistance } = useLocation();
 
   const [restaurants, setRestaurants] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
 
-  // ⭐ Chuẩn hóa dữ liệu backend -> format FE dùng được
-  const normalizedRestaurants = restaurants.map((r) => ({
-    id: r.id,
-    name: r.merchant_name || '',
-    cuisine: r.cuisine || '',
-    coordinates: r.location ? { lat: r.location.lat, lng: r.location.lng } : null,
-    profile_image: r.profile_image?.url,
-    cover_image: r.cover_image?.url,
-  }));
+  const [restaurantList, setRestaurantList] = useState([]);
+  const [maxDistance, setMaxDistance] = useState(2); // km
+  // Chuẩn hóa dữ liệu
+  const normalizedRestaurants = restaurantList.map((r) => {
+    let district = 'Không xác định';
+    if (r.location?.address) {
+      const parts = r.location.address.split(',');
+      if (parts.length >= 2) district = parts[1].trim();
+    }
+    return {
+      ...r,
+      coordinates: r.location ? { lat: r.location.lat, lng: r.location.lng } : null,
+      district,
+    };
+  });
 
   // ⭐ Tính khoảng cách
   const restaurantsWithDistance = useMemo(() => {
-    if (!locationState.currentLocation) return restaurants;
+    if (!locationState.currentLocation) return normalizedRestaurants;
 
-    return restaurants
-      .map((restaurant) => {
-        if (!restaurant.coordinates) return { ...restaurant, distance: 0 };
-
+    return normalizedRestaurants
+      .map((r) => {
+        if (!r.coordinates) return { ...r, distance: Infinity };
         const distance = calculateDistance(
           locationState.currentLocation.coordinates.lat,
           locationState.currentLocation.coordinates.lng,
-          restaurant.coordinates.lat,
-          restaurant.coordinates.lng,
+          r.coordinates.lat,
+          r.coordinates.lng,
         );
-
-        return { ...restaurant, distance: Math.round(distance * 10) / 10 };
+        return { ...r, distance: Math.round(distance * 10) / 10 };
       })
+      .filter((r) => r.distance <= maxDistance)
+      .filter(
+        (r) =>
+          selectedDistrict === 'Tất cả' ||
+          r.district.toLowerCase() === selectedDistrict.toLowerCase(),
+      )
       .sort((a, b) => (a.distance || 0) - (b.distance || 0));
-  }, [locationState.currentLocation, calculateDistance]);
+  }, [
+    normalizedRestaurants,
+    locationState.currentLocation,
+    calculateDistance,
+    maxDistance,
+    selectedDistrict,
+  ]);
 
   // ⭐ Lọc theo search
   const filteredRestaurants = restaurantsWithDistance.filter((restaurant) => {
@@ -55,7 +72,7 @@ export default function HomePage() {
     return name.includes(query) || cuisine.includes(query);
   });
 
-  const cuisineTypes = ['Tất cả', 'Việt Nam', 'Ý', 'Nhật Bản', 'Thái Lan', 'Hàn Quốc', 'Mỹ'];
+  const cuisineTypes = ['Tất cả', 'Việt Nam', 'Coffee', 'Philippin', 'Thái Lan', 'Hàn Quốc', 'Mỹ'];
 
   const finalFilteredRestaurants =
     selectedCuisine === 'Tất cả'
@@ -89,7 +106,8 @@ export default function HomePage() {
         if (!res.ok) throw new Error('Fetch failed');
 
         const data = await res.json();
-        setRestaurants(data);
+        setRestaurantList(data); // ✅ set vào list chuẩn để tính khoảng cách
+        setRestaurants(data); // ✅ set vào list để hiển thị "All Restaurants"
         console.log('Fetch:', url);
       } catch (err) {
         console.error('Error:', err.message);
@@ -98,6 +116,7 @@ export default function HomePage() {
 
     fetchRestaurants();
   }, [searchQuery, selectedCuisine]);
+  console.log(normalizedRestaurants.map((r) => r.district));
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -123,7 +142,7 @@ export default function HomePage() {
 
       {/* Promotions */}
       <div className="mb-8">
-        <h2 className="text-2xl font-bold mb-4">Ưu đãi hôm nay</h2>
+        <h2 className="text-xl md:text-2xl font-bold mb-4">Ưu đãi hôm nay</h2>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {promotions.map((promotion) => (
             <PromotionBanner key={promotion.id} promotion={promotion} />
@@ -135,7 +154,7 @@ export default function HomePage() {
       <div className="mb-8">
         <div className="flex items-center space-x-2 mb-6">
           <TrendingUp className="w-6 h-6 text-orange-500" />
-          <h2 className="text-2xl font-bold">Nhà hàng nổi bật</h2>
+          <h2 className="text-xl md:text-2xl font-bold">Nhà hàng nổi bật</h2>
         </div>
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
           {featuredRestaurants.map((restaurant, index) => (
@@ -156,25 +175,50 @@ export default function HomePage() {
       </div>
 
       {/* Restaurants Near You */}
-      {locationState.currentLocation && finalFilteredRestaurants.length > 0 && (
+      {locationState.currentLocation && (
         <div className="mb-8">
           <div className="flex items-center space-x-2 mb-6">
             <MapPin className="w-6 h-6 text-orange-500" />
-            <h2 className="text-2xl font-bold">
+            <h2 className="text-xl md:text-2xl font-bold">
               Nhà hàng gần bạn tại {locationState.currentLocation.name}
             </h2>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {finalFilteredRestaurants.slice(0, 6).map((restaurant) => (
-              <RestaurantCard key={restaurant.id} restaurant={restaurant} />
-            ))}
-          </div>
+
+          {finalFilteredRestaurants.length > 0 ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {finalFilteredRestaurants.slice(0, 6).map((r) => {
+                const distance = r.distance || 0; // km
+                const deliveryFee = Math.round(distance * 12000); // 10.000 VND/km
+                const deliveryTime = Math.max(10, Math.round(distance * 8));
+
+                return (
+                  <RestaurantCard
+                    key={r.id}
+                    restaurant={{
+                      ...r,
+                      cover_image: { url: r.cover_image?.url },
+                      profile_image: { url: r.profile_image?.url },
+                      distance,
+                      deliveryFee,
+                      deliveryTime,
+                    }}
+                  />
+                );
+              })}
+            </div>
+          ) : (
+            <div className="text-center py-12">
+              <p className="text-gray-500 text-lg">
+                Không có nhà hàng nào ở {locationState.currentLocation.name}
+              </p>
+            </div>
+          )}
         </div>
       )}
 
       {/* {/* Cuisine Filter */}
       <div className="mb-8">
-        <h2 className="text-2xl font-bold mb-4">Lọc theo loại ẩm thực</h2>
+        <h2 className="text-xl md:text-2xl font-bold mb-4">Lọc theo loại ẩm thực</h2>
         <div className="flex flex-wrap gap-2">
           {cuisineTypes.map((cuisine) => (
             <Button
@@ -196,13 +240,39 @@ export default function HomePage() {
 
       {/* All Restaurants */}
       <div className="mb-8">
-        <h2 className="text-2xl font-bold mb-6">Tất cả nhà hàng</h2>
+        <h2 className="text-xl md:text-2xl font-bold mb-6">Tất cả nhà hàng</h2>
         {restaurants.length > 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {' '}
-            {restaurants.map((r) => (
-              <RestaurantCard key={r.id} restaurant={r} />
-            ))}{' '}
+            {normalizedRestaurants.map((r) => {
+              const distance =
+                r.coordinates && locationState.currentLocation
+                  ? Math.round(
+                      calculateDistance(
+                        locationState.currentLocation.coordinates.lat,
+                        locationState.currentLocation.coordinates.lng,
+                        r.coordinates.lat,
+                        r.coordinates.lng,
+                      ) * 10,
+                    ) / 10
+                  : 0;
+
+              const deliveryFee = Math.round(distance * 12000); // 10.000 VND/km
+              const deliveryTime = Math.max(10, Math.round(distance * 8));
+
+              return (
+                <RestaurantCard
+                  key={r.id}
+                  restaurant={{
+                    ...r,
+                    cover_image: { url: r.cover_image?.url },
+                    profile_image: { url: r.profile_image?.url },
+                    distance,
+                    deliveryFee,
+                    deliveryTime,
+                  }}
+                />
+              );
+            })}
           </div>
         ) : (
           <div className="text-center py-12">

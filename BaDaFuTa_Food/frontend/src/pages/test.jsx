@@ -509,200 +509,44 @@ app
 //
 //Mới nhất
 
-//
-import express from 'express';
-import helmet from 'helmet';
-import cors from 'cors';
-import compression from 'compression';
-import session from 'express-session';
-import dotenv from 'dotenv';
-import routes from './routes';
-import { bigIntJsonMiddleware } from './middlewares/bigint-json.middleware';
-import path from 'path';
-
-dotenv.config();
-
-export const createApp = () => {
-  const app = express();
-  const __dirname = path.resolve();
-
-  // Logging
-  app.use((req, _res, next) => {
-    console.log('→', req.method, req.originalUrl);
-    next();
-  });
-
-  app.use(helmet());
-  app.use(compression());
-  app.use(express.json({ limit: '10mb', type: 'application/json' }));
-  app.use(express.urlencoded({ extended: true }));
-
-  // CORS
-  app.use(
-    cors({
-      origin: [
-        'http://localhost:5173',
-        'http://localhost:5174',
-        'http://192.168.100.124:5173',
-        'http://192.168.100.124:5174',
-        'http://172.20.10.3:5173',
-        'http://172.20.10.3:5174',
-        'https://unnibbed-unthrilled-averi.ngrok-free.dev',
-        'https://ba-da-fu-ta-food.vercel.app',
-      ],
-      methods: ['GET', 'POST', 'PUT', 'DELETE'],
-      credentials: true,
-    }),
-  );
-
-  // Session
-  app.use(
-    session({
-      secret: process.env.SESSION_SECRET || 'abc123',
-      resave: false,
-      saveUninitialized: true,
-      cookie: {
-        secure: false,
-        httpOnly: true,
-        sameSite: 'lax',
-      },
-    }),
-  );
-
-  app.use(bigIntJsonMiddleware);
-
-  // API routes
-  app.get('/api/health', (_req, res) => res.json({ ok: true }));
-  app.use('/api', routes);
-
-  // Serve static files from React build
-  const staticPath = path.join(__dirname, 'frontend/dist');
-  app.use(express.static(staticPath));
-
-  // SPA fallback: tất cả route không phải API trả index.html
-  app.get('*', (req, res, next) => {
-    if (req.path.startsWith('/api')) return next(); // bỏ qua API
-    res.sendFile(path.join(staticPath, 'index.html'));
-  });
-
-  // 404 cho API chưa match
-  app.use('/api', (_req, res) => res.status(404).json({ error: 'Not found' }));
-
-  // Error handler
-  app.use((err: any, _req: any, res: any, _next: any) => {
-    console.error(err);
-    res.status(500).json({ error: 'Internal Server Error' });
-  });
-
-  return app;
-};
-//
-//
-//
-//
-useEffect(() => {
-  const fetchRestaurants = async () => {
-    const host = "https://badafuta-production.up.railway.app/api/restaurants";
-
-    const params = new URLSearchParams();
-
-    // Search param
-    if (searchQuery.trim() !== "") {
-      params.append("search", searchQuery);
-    }
-
-    // Cuisine param
-    if (selectedCuisine !== "Tất cả") {
-      params.append("cuisine", selectedCuisine);
-    }
-
-    let url = host;
-
-    if (params.toString() !== "") {
-      url = `${host}?${params.toString()}`;
-    }
-
-    try {
-      const res = await fetch(url);
-      if (!res.ok) throw new Error("Fetch failed");
-
-      const data = await res.json();
-      setRestaurants(data);
-      console.log("Fetch:", url);
-    } catch (err) {
-      console.error("Error:", err.message);
-    }
-  };
-
-  fetchRestaurants();
-}, [searchQuery, selectedCuisine]);
+<Button
+  variant="default"
+  className="mb-6"
+  onClick={() => {
+    // Chuyển toàn bộ normalizedRestaurants sang JSON và lưu vào localStorage
+    localStorage.setItem('allRestaurants', JSON.stringify(normalizedRestaurants));
+    alert('Đã lưu tất cả nhà hàng vào localStorage!');
+  }}
+>
+  Lưu tất cả nhà hàng
+</Button>
 
 
-const filteredRestaurants = restaurantsWithDistance.filter((restaurant) => {
-  const name = restaurant?.name?.toLowerCase() || '';
-  const cuisine = restaurant?.cuisine?.toLowerCase() || '';
-  const query = searchQuery.toLowerCase();
+const addToCart = (restaurant, item, quantity = 1) => {
+  const cart = JSON.parse(localStorage.getItem("cart")) || [];
 
-  return name.includes(query) || cuisine.includes(query);
-});
-{finalFilteredRestaurants.map((r) => (
-  <RestaurantCard key={r.id} restaurant={r} />
-))}
+  // Tìm xem đã có nhà hàng trong cart chưa
+  let restaurantEntry = cart.find(r => r.restaurantId === restaurant.id);
 
-
-export const LocationProvider = ({ children }) => {
-  const [state, dispatch] = useReducer(locationReducer, initialState);
-
-  const setLocation = (location) => {
-    dispatch({ type: "SET_LOCATION", payload: location });
-    localStorage.setItem("badafuta_location", JSON.stringify(location));
-  };
-
-  const getCurrentLocation = async () => {
-    // ... code hiện tại
-  };
-
-  // ⭐ Hàm tính khoảng cách giữa 2 tọa độ
-  const calculateDistance = (lat1, lng1, lat2, lng2) => {
-    const R = 6371; // km
-    const dLat = ((lat2 - lat1) * Math.PI) / 180;
-    const dLng = ((lng2 - lng1) * Math.PI) / 180;
-    const a =
-      Math.sin(dLat / 2) ** 2 +
-      Math.cos((lat1 * Math.PI) / 180) *
-        Math.cos((lat2 * Math.PI) / 180) *
-        Math.sin(dLng / 2) ** 2;
-    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-    return R * c; // km
-  };
-
-  return (
-    <LocationContext.Provider
-      value={{ state, setLocation, getCurrentLocation, calculateDistance }}
-    >
-      {children}
-    </LocationContext.Provider>
-  );
-};
-// Serve static files
-app.use(express.static(staticPath));
-
-// SPA fallback
-app.use((req, res, next) => {
-  if (req.path.startsWith('/api')) return next();
-  res.sendFile(path.join(staticPath, 'index.html'));
-});
-
-{
-  "scripts": {
-    "dev": "tsx watch src/server.ts",
-    "build": "prisma generate && tsc",
-    "postinstall": "prisma generate",
-    "start": "node dist/server.js"
+  if (!restaurantEntry) {
+    // Nếu chưa có, tạo mới
+    restaurantEntry = {
+      restaurantId: restaurant.id,
+      merchant_name: restaurant.merchant_name,
+      deliveryFee: restaurant.deliveryFee || 0, // ✅ lưu luôn phí ship
+      items: [],
+    };
+    cart.push(restaurantEntry);
   }
-}
 
-"scripts": {
-  "generate": "prisma generate",
-  "build": "npm run generate && tsc" 
-}
+  // Thêm món
+  restaurantEntry.items.push({
+    itemId: item.id,
+    name: item.name,
+    price: item.price,
+    quantity,
+  });
+
+  localStorage.setItem("cart", JSON.stringify(cart));
+  toast.success(`${item.name} đã được thêm vào giỏ hàng!`);
+};

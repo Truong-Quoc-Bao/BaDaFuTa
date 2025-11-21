@@ -108,17 +108,16 @@ export default function RestaurantCard({ restaurant }) {
             <div className="flex  items-center justify-between text-sm">
               <div className="flex items-center space-x-1 text-gray-500">
                 <Clock className="w-4 h-4" />
-                {/* <span>{restaurant.deliveryTime}</span> */}
-                <span> 15-20 phút</span>
+                <span>{restaurant.deliveryTime} phút</span>
+                
               </div>
 
-              {/* {restaurant.distance !== undefined && ( */}
+              {restaurant.distance !== undefined && (
               <div className="flex items-center space-x-1 text-gray-500">
                 <MapPin className="w-4 h-4" />
-                {/* <span>{restaurant.distance}</span> */}
-                <span>10km</span>
+                <span>{restaurant.distance} km</span>
               </div>
-              {/* )} */}
+              )}
             </div>
 
             {/* Delivery fee */}
