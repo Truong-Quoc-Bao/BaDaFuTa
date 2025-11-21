@@ -701,3 +701,8 @@ app.use((req, res, next) => {
     "start": "node dist/server.js"
   }
 }
+
+"scripts": {
+  "generate": "prisma generate",
+  "build": "npm run generate && tsc" 
+}
