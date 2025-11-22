@@ -21,6 +21,7 @@ model users {
   address              address[]
   orders               order[]
   payment_transactions payment_transaction[]
+  voucher_user         voucher_user[]
 }
 
 /// ============ merchant ============
@@ -35,11 +36,14 @@ model merchant {
   cover_image          Json?
   time_open            Json?
   cuisine              String?               @db.VarChar(255)
+  rating               Float                 @default(0)
+  rating_count         Int                   @default(0)
   categories           category[]
   menu_item            menu_item[]
   option               option[]
   orders               order[]
   payment_transactions payment_transaction[]
+  voucher_merchant    voucher_merchant[]
 }
 
 /// ============ category ============
@@ -119,6 +123,7 @@ model order {
   status           order_status          @default(PENDING)
   payment_method   payment_method        @default(COD)
   status_payment   status_payment        @default(PENDING)
+  need_utensils    Boolean               @default(false)
   merchant         merchant              @relation(fields: [merchant_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_order_merchant")
   user             users                 @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_order_user")
   items            order_item[]
@@ -202,6 +207,51 @@ model otp_verifications {
   expires_at  DateTime  @db.Timestamp(6)
   is_verified Boolean?  @default(false)
 }
+model voucher {
+  id             String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  code           String       @unique @db.VarChar(50)
+  title          String       @db.VarChar(255)
+  description    String?
+  discount_type  String       @db.VarChar(20) // PERCENT | AMOUNT | FREESHIP
+  discount_value Int
+  max_discount   Int?
+  min_order_value Int?        @default(0)
+  start_date     DateTime     @db.Timestamp(6)
+  end_date       DateTime     @db.Timestamp(6)
+  usage_limit    Int?         // số lượng giới hạn
+  used_count     Int?         @default(0)
+  is_active      Boolean      @default(true)
+
+  // Quan hệ
+  merchant_targets voucher_merchant[]
+  user_targets      voucher_user[]
+}
+model voucher_merchant {
+  id         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  voucher_id String   @db.Uuid
+  merchant_id String  @db.Uuid
+
+  voucher     voucher  @relation(fields: [voucher_id], references: [id], onDelete: Cascade)
+  merchant    merchant @relation(fields: [merchant_id], references: [id], onDelete: Cascade)
+
+  @@index([voucher_id])
+  @@index([merchant_id])
+  @@map("voucher_merchant")
+}
+model voucher_user {
+  id         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  voucher_id String   @db.Uuid
+  user_id    String   @db.Uuid
+  used       Boolean  @default(false)
+
+  voucher   voucher @relation(fields: [voucher_id], references: [id], onDelete: Cascade)
+  user      users   @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@index([voucher_id])
+  @@index([user_id])
+  @@map("voucher_user")
+}
+
 
 enum PaymentStatus {
   PENDING

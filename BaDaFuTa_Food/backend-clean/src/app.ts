@@ -1,12 +1,12 @@
-import express from 'express';
-import helmet from 'helmet';
-import cors from 'cors';
-import compression from 'compression';
-import session from 'express-session';
-import dotenv from 'dotenv';
-import routes from './routes';
-import { bigIntJsonMiddleware } from './middlewares/bigint-json.middleware';
-import path from 'path';
+import express from "express";
+import helmet from "helmet";
+import cors from "cors";
+import compression from "compression";
+import session from "express-session";
+import dotenv from "dotenv";
+import routes from "./routes";
+import { bigIntJsonMiddleware } from "./middlewares/bigint-json.middleware";
+import path from "path";
 
 dotenv.config();
 
@@ -16,66 +16,66 @@ export const createApp = () => {
 
   // Middleware setup
   app.use((req, _res, next) => {
-    console.log('→', req.method, req.originalUrl);
+    console.log("→", req.method, req.originalUrl);
     next();
   });
 
   app.use(helmet());
   app.use(compression());
   app.use(express.json());
-  app.use(express.json({ limit: '10mb', type: 'application/json' }));
+  app.use(express.json({ limit: "10mb", type: "application/json" }));
   app.use(express.urlencoded({ extended: true }));
 
   app.use(
     cors({
       origin: [
-        'http://localhost:5173', // customer
-        'http://localhost:5174', // ➕ thêm merchant
-        'http://192.168.100.124:5173',
-        'http://192.168.100.124:5174', // ➕ nếu merchant chạy cùng mạng LAN
-        'http://172.20.10.3:5173',
-        'http://172.20.10.3:5174', // ➕ cho IP khác
-        'https://unnibbed-unthrilled-averi.ngrok-free.dev',
-        'https://ba-da-fu-ta-food.vercel.app',
+        "http://localhost:5173", // customer
+        "http://localhost:5174", // ➕ thêm merchant
+        "http://192.168.100.124:5173",
+        "http://192.168.100.124:5174", // ➕ nếu merchant chạy cùng mạng LAN
+        "http://172.20.10.3:5173",
+        "http://172.20.10.3:5174", // ➕ cho IP khác
+        "https://unnibbed-unthrilled-averi.ngrok-free.dev",
+        "https://ba-da-fu-ta-food.vercel.app",
       ],
-      methods: ['GET', 'POST', 'PUT', 'DELETE'],
+      methods: ["GET", "POST", "PUT", "DELETE"],
       credentials: true,
-    }),
+    })
   );
 
   app.use(
     session({
-      secret: process.env.SESSION_SECRET || 'abc123',
+      secret: process.env.SESSION_SECRET || "abc123",
       resave: false,
       saveUninitialized: true,
       cookie: {
         secure: false,
         httpOnly: true,
-        sameSite: 'lax',
+        sameSite: "lax",
       },
-    }),
+    })
   );
 
   app.use(bigIntJsonMiddleware);
-  app.get('/api/health', (_req, res) => res.json({ ok: true }));
-  app.use('/api', routes);
+  app.get("/api/health", (_req, res) => res.json({ ok: true }));
+  app.use("/api", routes);
 
   // Serve static files from React build
-  const staticPath = path.join(__dirname, 'frontend/dist');
+  const staticPath = path.join(__dirname, "frontend/dist");
   app.use(express.static(staticPath));
 
-  // SPA fallback: tất cả route không phải API trả index.html
-  app.get('*', (req, res, next) => {
-    if (req.path.startsWith('/api')) return next(); // bỏ qua API
-    res.sendFile(path.join(staticPath, 'index.html'));
+  // SPA Fallback
+  app.get(/.*/, (req, res, next) => {
+    if (req.path.startsWith("/api")) return next();
+    res.sendFile(path.join(staticPath, "index.html"));
   });
 
   // 404 cho API chưa match
-  app.use('/api', (_req, res) => res.status(404).json({ error: 'Not found' }));
+  app.use("/api", (_req, res) => res.status(404).json({ error: "Not found" }));
 
   app.use((err: any, _req: any, res: any, _next: any) => {
     console.error(err);
-    res.status(500).json({ error: 'Internal Server Error' });
+    res.status(500).json({ error: "Internal Server Error" });
   });
 
   return app;
