@@ -1,3 +1,221 @@
+// import { createContext, useContext, useReducer, useEffect } from 'react';
+
+// const initialState = {
+//   currentLocation: null,
+//   availableLocations: [], 
+//   isLoading: false,
+//   error: null,
+// };
+
+// const locationReducer = (state, action) => {
+//   switch (action.type) {
+//     case 'SET_LOCATION':
+//       return { ...state, currentLocation: action.payload, error: null };
+//     case 'SET_LOADING':
+//       return { ...state, isLoading: action.payload };
+//     case 'SET_ERROR':
+//       return { ...state, error: action.payload, isLoading: false };
+//     case 'SET_AVAILABLE_LOCATIONS':
+//       return { ...state, availableLocations: action.payload };
+//     default:
+//       return state;
+//   }
+// };
+
+// const LocationContext = createContext(undefined);
+
+// // Reverse geocoding từ GPS
+// const getDistrictFromGPS = async (lat, lng) => {
+//   try {
+//     const res = await fetch(
+//       `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=json`
+//     );
+//     const data = await res.json();
+//     if (!data.address) throw new Error('Không tìm thấy địa chỉ');
+
+//     const districtName =
+//       data.address.city_district || data.address.suburb || data.address.county || null;
+
+//     return districtName;
+//   } catch (err) {
+//     console.error('Reverse geocode error:', err);
+//     return null;
+//   }
+// };
+
+// // Load dữ liệu Việt Nam
+// const fetchVietnamData = async () => {
+//   try {
+//     const res = await fetch('https://provinces.open-api.vn/api/?depth=3');
+//     const data = await res.json();
+//     return data;
+//   } catch (err) {
+//     console.error('Lỗi fetch dữ liệu Việt Nam:', err);
+//     return [];
+//   }
+// };
+
+// // Tính khoảng cách giữa 2 tọa độ
+// const calculateDistance = (lat1, lng1, lat2, lng2) => {
+//   const R = 6371;
+//   const dLat = ((lat2 - lat1) * Math.PI) / 180;
+//   const dLng = ((lng2 - lng1) * Math.PI) / 180;
+//   const a =
+//     Math.sin(dLat / 2) ** 2 +
+//     Math.cos((lat1 * Math.PI) / 180) *
+//       Math.cos((lat2 * Math.PI) / 180) *
+//       Math.sin(dLng / 2) ** 2;
+//   const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+//   return R * c;
+// };
+
+// // Tìm xã/phường gần nhất
+// const findNearestLocation = (lat, lng, locations) => {
+//   if (!locations || locations.length === 0) return null;
+
+//   let nearest = locations[0];
+//   let minDistance = calculateDistance(lat, lng, nearest.coordinates.lat, nearest.coordinates.lng);
+
+//   for (let i = 1; i < locations.length; i++) {
+//     const loc = locations[i];
+//     const dist = calculateDistance(lat, lng, loc.coordinates.lat, loc.coordinates.lng);
+//     if (dist < minDistance) {
+//       nearest = loc;
+//       minDistance = dist;
+//     }
+//   }
+
+//   return nearest;
+// };
+
+// export const LocationProvider = ({ children }) => {
+//   const [state, dispatch] = useReducer(locationReducer, initialState);
+
+//   const setLocation = (location) => {
+//     dispatch({ type: 'SET_LOCATION', payload: location });
+//     localStorage.setItem('badafuta_location', JSON.stringify(location));
+//   };
+
+//   // Load địa phương Việt Nam
+//   useEffect(() => {
+//     const loadLocations = async () => {
+//       dispatch({ type: 'SET_LOADING', payload: true });
+//       const data = await fetchVietnamData();
+
+//       if (data.length > 0) {
+//         // Lấy toàn bộ xã/phường TP.HCM (code 79)
+//         // const hcmWards = data
+//         //   .find((p) => p.code === 79)
+//         //   ?.districts.flatMap((d) =>
+//         //     d.wards.map((w) => ({
+//         //       id: w.code,
+//         //       name: w.name,
+//         //       district: d.name,
+//         //       city: 'TP. Hồ Chí Minh',
+//         //       coordinates: { lat: w.location?.lat || 0, lng: w.location?.lng || 0 },
+//         //     }))
+//         //   ) || [];
+
+//         // dispatch({ type: 'SET_AVAILABLE_LOCATIONS', payload: hcmWards });
+//         const allWards = data.flatMap((province) =>
+//         province.districts.flatMap((district) =>
+//           district.wards.map((ward) => ({
+//             id: ward.code,
+//             name: ward.name,
+//             district: district.name,
+//             city: province.name,
+//             coordinates: { lat: ward.location?.lat || 0, lng: ward.location?.lng || 0 },
+//           }))
+//         )
+//         );
+//         dispatch({ type: 'SET_AVAILABLE_LOCATIONS', payload: allWards });
+//         // Load từ localStorage nếu có
+//         const stored = localStorage.getItem('badafuta_location');
+//         if (stored) {
+//           dispatch({ type: 'SET_LOCATION', payload: JSON.parse(stored) });
+//         }
+//       } else {
+//         dispatch({ type: 'SET_ERROR', payload: 'Không thể load dữ liệu Việt Nam' });
+//       }
+
+//       dispatch({ type: 'SET_LOADING', payload: false });
+//     };
+
+//     loadLocations();
+//   }, []);
+
+//   const getCurrentLocation = async () => {
+//     dispatch({ type: 'SET_LOADING', payload: true });
+
+//     if (!('geolocation' in navigator)) {
+//       dispatch({ type: 'SET_ERROR', payload: 'Trình duyệt không hỗ trợ định vị' });
+//       dispatch({ type: 'SET_LOADING', payload: false });
+//       return;
+//     }
+
+//     navigator.geolocation.getCurrentPosition(
+//       async (pos) => {
+//         const { latitude, longitude } = pos.coords;
+
+//         try {
+//           const wardNameRaw = await getDistrictFromGPS(latitude, longitude);
+
+//           let locationSet = null;
+
+//           if (wardNameRaw) {
+//             const normalizedWard = wardNameRaw
+//               .toLowerCase()
+//               .normalize('NFD')
+//               .replace(/[\u0300-\u036f]/g, '')
+//               .trim();
+
+//             locationSet = state.availableLocations.find(
+//               (loc) =>
+//                 loc.name.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim() ===
+//                 normalizedWard
+//             );
+//           }
+
+//           // fallback: xã/phường gần nhất
+//           if (!locationSet) {
+//             locationSet = findNearestLocation(latitude, longitude, state.availableLocations);
+//           }
+
+//           if (locationSet) {
+//             setLocation(locationSet);
+//           } else {
+//             throw new Error('Không tìm thấy vị trí gần nhất');
+//           }
+//         } catch (error) {
+//           dispatch({ type: 'SET_ERROR', payload: error.message });
+//         } finally {
+//           dispatch({ type: 'SET_LOADING', payload: false });
+//         }
+//       },
+//       (err) => {
+//         dispatch({ type: 'SET_ERROR', payload: 'Không thể lấy vị trí hiện tại' });
+//         dispatch({ type: 'SET_LOADING', payload: false });
+//       },
+//       { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+//     );
+//   };
+
+//   return (
+//     <LocationContext.Provider
+//       value={{ state, setLocation, getCurrentLocation, calculateDistance }}
+//     >
+//       {children}
+//     </LocationContext.Provider>
+//   );
+// };
+
+// export const useLocation = () => {
+//   const context = useContext(LocationContext);
+//   if (!context) throw new Error('useLocation must be used within a LocationProvider');
+//   return context;
+// };
+
+
 import { createContext, useContext, useReducer, useEffect } from 'react';
 
 // Danh sách tất cả quận/huyện TP. Hồ Chí Minh

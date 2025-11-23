@@ -72,7 +72,15 @@ export default function HomePage() {
     return name.includes(query) || cuisine.includes(query);
   });
 
-  const cuisineTypes = ['Tất cả', 'Việt Nam', 'Coffee', 'Philippin', 'Thái Lan', 'Hàn Quốc', 'Mỹ'];
+  const cuisineTypes = [
+    'Tất cả',
+    'Việt Nam',
+    'Coffee',
+    'Philippines',
+    'Thái Lan',
+    'Hàn Quốc',
+    'Mỹ',
+  ];
 
   const finalFilteredRestaurants =
     selectedCuisine === 'Tất cả'
@@ -188,7 +196,14 @@ export default function HomePage() {
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {finalFilteredRestaurants.slice(0, 6).map((r) => {
                 const distance = r.distance || 0; // km
-                const deliveryFee = Math.round(distance * 26667); // 10.000 VND/km
+                let deliveryFee = 0;
+
+                if (distance <= 3) {
+                  deliveryFee = 16000; // 3 km đầu
+                } else {
+                  deliveryFee = 16000 + Math.ceil(distance - 3) * 4000; // km > 3
+                }
+
                 const deliveryTime = Math.max(10, Math.round(distance * 8));
 
                 return (
@@ -256,8 +271,16 @@ export default function HomePage() {
                     ) / 10
                   : 0;
 
-              const deliveryFee = Math.round(distance * 26667); // 10.000 VND/km
-              const deliveryTime = Math.max(10, Math.round(distance * 8));
+              // Tính phí giao hàng: 3 km đầu 16k, km tiếp theo 4k/km
+              let deliveryFee = 0;
+              if (distance <= 3) {
+                deliveryFee = 16000;
+              } else {
+                deliveryFee = 16000 + Math.ceil(distance - 3) * 4000;
+              }
+
+              // Tính thời gian giao hàng: 10 phút cơ bản + 8 phút mỗi km
+              const deliveryTime = 10 + Math.round(distance * 8);
 
               return (
                 <RestaurantCard

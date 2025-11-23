@@ -18,11 +18,13 @@ export const LocationSelector = () => {
   const [isOpen, setIsOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
 
-  const filteredLocations = state.availableLocations.filter(
-    (location) =>
-      location.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      location.district.toLowerCase().includes(searchQuery.toLowerCase()),
-  );
+  const filteredLocations = state.availableLocations
+    .filter((location) => location && (location.name || location.district))
+    .filter(
+      (location) =>
+        location.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        location.district?.toLowerCase().includes(searchQuery.toLowerCase()),
+    );
 
   const handleLocationSelect = (location) => {
     setLocation(location);
@@ -74,7 +76,7 @@ export const LocationSelector = () => {
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
             <Input
               type="text"
-              placeholder="Tìm kiếm quận, huyện..."
+              placeholder="Tìm kiếm phường, xã..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="pl-10"
