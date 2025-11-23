@@ -188,7 +188,7 @@ export default function HomePage() {
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {finalFilteredRestaurants.slice(0, 6).map((r) => {
                 const distance = r.distance || 0; // km
-                const deliveryFee = Math.round(distance * 12000); // 10.000 VND/km
+                const deliveryFee = Math.round(distance * 26667); // 10.000 VND/km
                 const deliveryTime = Math.max(10, Math.round(distance * 8));
 
                 return (
@@ -256,7 +256,7 @@ export default function HomePage() {
                     ) / 10
                   : 0;
 
-              const deliveryFee = Math.round(distance * 12000); // 10.000 VND/km
+              const deliveryFee = Math.round(distance * 26667); // 10.000 VND/km
               const deliveryTime = Math.max(10, Math.round(distance * 8));
 
               return (

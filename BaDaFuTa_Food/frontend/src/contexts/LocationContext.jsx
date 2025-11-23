@@ -182,18 +182,23 @@ const LocationContext = createContext(undefined);
 
 // Hàm reverse geocoding lấy quận/huyện từ GPS
 const getDistrictFromGPS = async (lat, lng) => {
-  const API_KEY = 'YOUR_GOOGLE_MAPS_API_KEY'; // Thay bằng key thật
-  const res = await fetch(
-    `https://maps.googleapis.com/maps/api/geocode/json?latlng=${lat},${lng}&key=${API_KEY}`,
-  );
-  const data = await res.json();
-  if (!data.results.length) throw new Error('Không tìm thấy địa chỉ');
+  try {
+    const res = await fetch(
+      `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=json`,
+    );
+    const data = await res.json();
 
-  const addressComponents = data.results[0].address_components;
-  const districtComponent = addressComponents.find((c) =>
-    c.types.includes('administrative_area_level_2'),
-  );
-  return districtComponent ? districtComponent.long_name : null;
+    if (!data.address) throw new Error('Không tìm thấy địa chỉ');
+
+    // Lấy quận/huyện từ address
+    const districtName =
+      data.address.city_district || data.address.suburb || data.address.county || null;
+
+    return districtName;
+  } catch (err) {
+    console.error('Reverse geocode error:', err);
+    return null;
+  }
 };
 
 export const LocationProvider = ({ children }) => {
@@ -204,43 +209,65 @@ export const LocationProvider = ({ children }) => {
     localStorage.setItem('badafuta_location', JSON.stringify(location));
   };
 
+  const normalizeDistrict = (name) =>
+    name
+      ?.toLowerCase()
+      .replace('quận', '')
+      .replace('huyện', '')
+      .replace(',', '')
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '') // bỏ dấu
+      .trim();
+
   const getCurrentLocation = async () => {
     dispatch({ type: 'SET_LOADING', payload: true });
-    try {
-      if (!('geolocation' in navigator)) throw new Error('Trình duyệt không hỗ trợ định vị');
 
-      navigator.geolocation.getCurrentPosition(
-        async (pos) => {
-          const { latitude, longitude } = pos.coords;
-          try {
-            const districtName = await getDistrictFromGPS(latitude, longitude);
-
-            // So khớp với availableLocations
-            const matched = state.availableLocations.find((loc) => loc.district === districtName);
-
-            if (matched) setLocation(matched);
-            else setLocation(state.availableLocations[0]); // fallback Quận 1
-          } catch (error) {
-            dispatch({
-              type: 'SET_ERROR',
-              payload: 'Không xác định được quận/huyện',
-            });
-          } finally {
-            dispatch({ type: 'SET_LOADING', payload: false });
-          }
-        },
-        (err) => {
-          dispatch({
-            type: 'SET_ERROR',
-            payload: 'Không thể lấy vị trí hiện tại',
-          });
-          dispatch({ type: 'SET_LOADING', payload: false });
-        },
-      );
-    } catch (error) {
-      dispatch({ type: 'SET_ERROR', payload: error.message });
+    if (!('geolocation' in navigator)) {
+      dispatch({ type: 'SET_ERROR', payload: 'Trình duyệt không hỗ trợ định vị' });
       dispatch({ type: 'SET_LOADING', payload: false });
+      return;
     }
+
+    navigator.geolocation.getCurrentPosition(
+      async (pos) => {
+        const { latitude, longitude } = pos.coords;
+
+        try {
+          const wardNameRaw = await getDistrictFromGPS(latitude, longitude);
+          if (!wardNameRaw) throw new Error('Không xác định được xã/phường');
+
+          const normalizedWard = wardNameRaw
+            .toLowerCase()
+            .normalize('NFD')
+            .replace(/[\u0300-\u036f]/g, '') // bỏ dấu
+            .trim();
+
+          console.log('Ward from GPS raw:', wardNameRaw);
+          console.log('Normalized ward:', normalizedWard);
+
+          // Tạo object location mới chỉ dùng xã/phường
+          const newLocation = {
+            id: 'gps',
+            name: wardNameRaw,
+            ward: wardNameRaw,
+            city: 'TP. Hồ Chí Minh',
+            coordinates: { lat: latitude, lng: longitude },
+          };
+
+          setLocation(newLocation);
+        } catch (error) {
+          dispatch({ type: 'SET_ERROR', payload: error.message });
+          setLocation(initialState.availableLocations[0]); // fallback Quận 1
+        } finally {
+          dispatch({ type: 'SET_LOADING', payload: false });
+        }
+      },
+      (err) => {
+        dispatch({ type: 'SET_ERROR', payload: 'Không thể lấy vị trí hiện tại' });
+        dispatch({ type: 'SET_LOADING', payload: false });
+      },
+      { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 },
+    );
   };
 
   // ⭐ Hàm tính khoảng cách giữa 2 tọa độ
@@ -254,18 +281,6 @@ export const LocationProvider = ({ children }) => {
     const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
     return R * c; // km
   };
-
-  useEffect(() => {
-    const savedLocation = localStorage.getItem('badafuta_location');
-    if (savedLocation) {
-      try {
-        const location = JSON.parse(savedLocation);
-        dispatch({ type: 'SET_LOCATION', payload: location });
-      } catch (error) {
-        console.error('Error loading saved location:', error);
-      }
-    }
-  }, []);
 
   return (
     <LocationContext.Provider value={{ state, setLocation, getCurrentLocation, calculateDistance }}>

@@ -337,6 +337,7 @@ export const RestaurantPage = () => {
                     originalPrice: rawItem.originalPrice ?? rawItem.price,
                     // Thêm
                     categoryId: category.id ?? category.category_id,
+                    categoryName: category.category_name,
                     restaurantId: restaurant?.id,
                     sku: rawItem.sku ?? null,
                     tags: rawItem.tags ?? [],

@@ -78,6 +78,8 @@ export default function MenuItemDetailPage() {
   const [showToppingDialog, setShowToppingDialog] = useState(false);
   const [toppingSelected, setToppingSelected] = useState(false);
 
+  console.log('Restaurant fee:', restaurant.deliveryFee); // ✅ sẽ ra giá trị thực
+  console.log('Restaurant fee:', restaurant.deliveryTime);
   useEffect(() => {
     window.scrollTo(0, 0);
     const ac = new AbortController();
@@ -270,11 +272,15 @@ export default function MenuItemDetailPage() {
                   <div className="flex items-center space-x-3 text-xs text-gray-600 mt-1">
                     <div className="flex items-center gap-1">
                       <Star className="w-3 h-3 text-yellow-400 fill-current" />
-                      <span>4.8</span>
+                      <span>
+                        {restaurant?.rating != null
+                          ? restaurant.rating + ' sao'
+                          : 'Chưa có đánh giá nhà hàng'}
+                      </span>
                     </div>
                     <div className="flex items-center gap-1">
                       <Clock className="w-3 h-3" />
-                      <span>25-35 phút</span>
+                      <span>{restaurant.deliveryTime || '25 - 30'} phút</span>
                     </div>
                     <div className="hidden sm:flex items-center gap-1">
                       <Users className="w-3 h-3" />
@@ -318,7 +324,7 @@ export default function MenuItemDetailPage() {
               {/* bottom-left */}
               <div className="flex justify-end">
                 <div className="text-white drop-shadow-lg text-right">
-                  <Badge className="bg-white/90 text-gray-800 mb-2">{item.categoryName}</Badge>
+                  {/* <Badge className="bg-white/90 text-gray-800 mb-2">{item.categoryName}</Badge> */}
                   <h2 className="text-2xl font-bold">{item.name}</h2>
                 </div>
               </div>
@@ -352,7 +358,7 @@ export default function MenuItemDetailPage() {
               )}
             </div>
             <div className="flex flex-wrap gap-2">
-              <Badge variant="outline" className="text-sm">
+              <Badge variant="outline" className="text-sm border border-gray-300 bg-gray-200 mt-2.5">
                 {item.categoryName}
               </Badge>
               {hasDiscount(item) && (
@@ -376,19 +382,29 @@ export default function MenuItemDetailPage() {
           {/* Restaurant Info */}
           <div className="bg-gray-50 rounded-xl p-5">
             <h3 className="font-bold text-lg text-gray-900 mb-3">Nhà hàng</h3>
-            <h4 className="font-semibold text-base text-orange-600 mb-2">{restaurant.merchant_name}</h4>
+            <h4 className="font-semibold text-base text-orange-600 mb-2">
+              {restaurant.merchant_name}
+            </h4>
             <div className="flex items-center space-x-4 text-sm text-gray-600">
               <div className="flex items-center space-x-1">
                 <Star className="w-4 h-4 text-yellow-400 fill-current" />
-                <span>{restaurant.rating}  5 sao</span>
+                <span>
+                  {restaurant?.rating != null
+                    ? restaurant.rating + ' sao'
+                    : 'Chưa có đánh giá nhà hàng'}
+                </span>
               </div>
               <div className="flex items-center space-x-1">
                 <Clock className="w-4 h-4" />
-                <span>{restaurant.deliveryTime} 25 - 30 phút</span>
+                <span>{restaurant.deliveryTime || '25 - 30'} phút</span>
               </div>
               <div className="flex items-center space-x-1">
                 <Users className="w-4 h-4" />
-                <span>1000+ đánh giá</span>
+                <span>
+                  {restaurant?.reviewCount != null
+                    ? `${restaurant.reviewCount}+ đánh giá`
+                    : 'Chưa có đánh giá'}
+                </span>
               </div>
             </div>
           </div>
@@ -478,6 +494,8 @@ export default function MenuItemDetailPage() {
 }
 
 function normalizeItem(raw) {
+  console.log('Normalizing item:', raw);
+
   const parseIngredients = (src) => {
     if (!src) return [];
     try {
@@ -504,6 +522,11 @@ function normalizeItem(raw) {
     options: raw.options ?? [],
     isAvailable: raw.status !== false && raw.isAvailable !== false,
     ingredients: parseIngredients(raw.ingredients) || [],
-    categoryName: raw.category_name ?? 'Món',
+    categoryName:
+      raw.categoryName ??
+      raw.category_name ??
+      raw.category?.category_name ??
+      raw.category?.name ??
+      'Món',
   };
 }

@@ -508,45 +508,44 @@ app
 //
 //
 //Mới nhất
+navigator.geolocation.getCurrentPosition(
+  async (pos) => {
+    const { latitude, longitude } = pos.coords;
 
-<Button
-  variant="default"
-  className="mb-6"
-  onClick={() => {
-    // Chuyển toàn bộ normalizedRestaurants sang JSON và lưu vào localStorage
-    localStorage.setItem('allRestaurants', JSON.stringify(normalizedRestaurants));
-    alert('Đã lưu tất cả nhà hàng vào localStorage!');
-  }}
->
-  Lưu tất cả nhà hàng
-</Button>
+    try {
+      const wardNameRaw = await getDistrictFromGPS(latitude, longitude);
+      if (!wardNameRaw) throw new Error('Không xác định được xã/phường');
 
+      const normalizedWard = wardNameRaw
+        .toLowerCase()
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '') // bỏ dấu
+        .trim();
 
-const addToCart = (restaurant, item, quantity = 1) => {
-  const cart = JSON.parse(localStorage.getItem("cart")) || [];
+      console.log('Ward from GPS raw:', wardNameRaw);
+      console.log('Normalized ward:', normalizedWard);
 
-  // Tìm xem đã có nhà hàng trong cart chưa
-  let restaurantEntry = cart.find(r => r.restaurantId === restaurant.id);
+      // Tạo object location mới chỉ dùng xã/phường
+      const newLocation = {
+        id: 'gps',
+        name: wardNameRaw,
+        ward: wardNameRaw,
+        city: 'TP. Hồ Chí Minh',
+        coordinates: { lat: latitude, lng: longitude },
+      };
 
-  if (!restaurantEntry) {
-    // Nếu chưa có, tạo mới
-    restaurantEntry = {
-      restaurantId: restaurant.id,
-      merchant_name: restaurant.merchant_name,
-      deliveryFee: restaurant.deliveryFee || 0, // ✅ lưu luôn phí ship
-      items: [],
-    };
-    cart.push(restaurantEntry);
-  }
+      setLocation(newLocation);
 
-  // Thêm món
-  restaurantEntry.items.push({
-    itemId: item.id,
-    name: item.name,
-    price: item.price,
-    quantity,
-  });
-
-  localStorage.setItem("cart", JSON.stringify(cart));
-  toast.success(`${item.name} đã được thêm vào giỏ hàng!`);
-};
+    } catch (error) {
+      dispatch({ type: 'SET_ERROR', payload: error.message });
+      setLocation(initialState.availableLocations[0]); // fallback Quận 1
+    } finally {
+      dispatch({ type: 'SET_LOADING', payload: false });
+    }
+  },
+  (err) => {
+    dispatch({ type: 'SET_ERROR', payload: 'Không thể lấy vị trí hiện tại' });
+    dispatch({ type: 'SET_LOADING', payload: false });
+  },
+  { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+);

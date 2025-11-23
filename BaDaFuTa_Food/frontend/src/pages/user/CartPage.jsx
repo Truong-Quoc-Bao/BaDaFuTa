@@ -35,7 +35,15 @@ export default function CartPage() {
         navigate('/login');
         return;
       }
-      navigate('/cart/checkout');
+      // navigate('/cart/checkout');
+      navigate('/cart/checkout', {
+        state: {
+          deliveryFee: deliveryFee, // đây là phí giao hàng
+          subtotal: subtotal,
+          total: total,
+          items: state.items,
+        },
+      });
     }
   };
 
@@ -141,7 +149,11 @@ export default function CartPage() {
                         {item.selectedToppings && item.selectedToppings.length > 0 && (
                           <div className="mt-2 flex flex-wrap gap-1 ">
                             {item.selectedToppings.map((topping) => (
-                              <Badge key={topping.id} variant="outline" className="text-xs border border-gray-300">
+                              <Badge
+                                key={topping.id}
+                                variant="outline"
+                                className="text-xs border border-gray-300"
+                              >
                                 {/* Có thể chỉ hiện tên item hoặc kèm group */}
                                 {topping.option_group_name
                                   ? `${topping.option_group_name}: ${topping.option_item_name}`
