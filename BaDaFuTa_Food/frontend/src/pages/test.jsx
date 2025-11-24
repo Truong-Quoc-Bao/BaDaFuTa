@@ -508,51 +508,26 @@ app
 //
 //
 //Mới nhất
-navigator.geolocation.getCurrentPosition(
-  (pos) => {
-    const { latitude, longitude } = pos.coords;
-    console.log(latitude, longitude);
+if (!res.ok) {
+  console.log(data);
+  let message = 'Đăng nhập thất bại! Vui lòng thử lại.';
 
-    // bây giờ mới dùng latitude/lng để tìm xã/phường gần nhất
-    const nearest = findNearestLocation(latitude, longitude, state.availableLocations);
-    console.log('Nearest ward:', nearest);
-  },
-  (err) => console.error(err),
-  { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
-);
+  // parse lỗi server
+  try {
+    const errorDetail = JSON.parse(data.error);
+    if (Array.isArray(errorDetail) && errorDetail[0]?.message) {
+      message = errorDetail[0].message; // lấy thông điệp chính xác
+    }
+  } catch (e) {
+    // nếu parse thất bại thì giữ message mặc định
+  }
 
-// Tạm thời bỏ tìm lat/lng — tránh crash
-const lat = 0;
-const lng = 0;
+  setError(message);
 
-let { lat, lng } = ward.location || { lat: 0, lng: 0 };
-
-if (!lat || !lng || lat === 0 || lng === 0) {
-  const coords = await fetchLatLngFromNominatim(
-    ward.name,
-    district.name,
-    province.name,
-  );
-  lat = coords.lat;
-  lng = coords.lng;
+  // focus input theo lỗi
+  if (message.toLowerCase().includes('số điện thoại') || message.toLowerCase().includes('email')) {
+    document.getElementById('email').focus();
+  } else if (message.toLowerCase().includes('mật khẩu')) {
+    document.getElementById('password').focus();
+  }
 }
-console.log("Normalized ward:", normalizedWard);
-state.availableLocations.forEach(loc => {
-  console.log("Check:", loc.name.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,''));
-});
-<div
-  className="block md:hidden w-9 h-8 border border-gray-200 rounded-lg flex justify-center items-center"
->
-  <div className="flex justify-center items-center w-full h-full">
-   
-      <LocationSelector isIconOnly />
-   
-  </div>
-</div>
-
-<div className="relative w-9 pl-2 h-8 border border-gray-200 rounded-lg bg-white flex justify-center items-center">
-<LocationSelector
-  isIconOnly
-  className="w-4 h-4 block" // thêm block để flex căn giữa
-/>
-</div>

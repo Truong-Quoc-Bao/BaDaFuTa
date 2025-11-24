@@ -89,33 +89,55 @@ export default function LoginPage() {
 
       const data = await res.json();
 
+      // if (!res.ok) {
+      //   console.log(data);
+      //   const errMsg = (data.error || '').toLowerCase();
+
+      //   if (
+      //     errMsg.includes('not found') ||
+      //     errMsg.includes('không tồn tại') ||
+      //     errMsg.includes('email') ||
+      //     errMsg.includes('phone')
+      //   ) {
+      //     setError('Email hoặc số điện thoại không tồn tại!');
+      //     document.getElementById('email').focus();
+      //   } else if (errMsg.includes('wrong password') || errMsg.includes('mật khẩu')) {
+      //     setError('Mật khẩu không chính xác!');
+      //     document.getElementById('password').focus();
+      //   } else {
+      //     setError('Đăng nhập thất bại! Vui lòng thử lại.');
+      //   }
+      // } 
       if (!res.ok) {
-        const errMsg = (data.error || '').toLowerCase();
-
-        if (
-          errMsg.includes('not found') ||
-          errMsg.includes('không tồn tại') ||
-          errMsg.includes('email') ||
-          errMsg.includes('phone')
-        ) {
-          setError('Email hoặc số điện thoại không tồn tại!');
-          document.getElementById('email').focus();
-        } else if (errMsg.includes('wrong password') || errMsg.includes('mật khẩu')) {
-          setError('Mật khẩu không chính xác!');
-          document.getElementById('password').focus();
-        } else {
-          setError('Đăng nhập thất bại! Vui lòng thử lại.');
+        console.log(data);
+      
+        let errMsg = 'Đăng nhập thất bại! Vui lòng thử lại.';
+      
+        // Nếu server trả về data.error là JSON string, parse nó
+        try {
+          const errorDetail = JSON.parse(data.error);
+          if (Array.isArray(errorDetail) && errorDetail[0]?.message) {
+            errMsg = errorDetail[0].message; // lấy thông báo lỗi chính xác từ server
+          } else if (typeof data.error === 'string') {
+            errMsg = data.error;
+          }
+        } catch (e) {
+          // parse thất bại, giữ nguyên errMsg mặc định
+          if (data.error) errMsg = data.error;
         }
-      } else {
-        //  localStorage.setItem("token", data.token);
-        //  localStorage.setItem("user", JSON.stringify(data.user));
-        //  //  dispatch({ type: "LOGIN_SUCCESS", payload: data.user });
-        //  navigate("/homepage");
-        //  window.location.reload(); // reload page để đọc localStorage
-
-        //Hoặc
-        //window.location.href = "/"; // reload và đi thẳng homepage
-
+      
+        setError(errMsg);
+      
+        // focus input phù hợp với loại lỗi
+        const lowerMsg = errMsg.toLowerCase();
+        if (lowerMsg.includes('email') || lowerMsg.includes('số điện thoại')) {
+          document.getElementById('email').focus();
+        } else if (lowerMsg.includes('mật khẩu')) {
+          document.getElementById('password').focus();
+        }
+      }
+      
+      else {
         //cách này lưu vào context nên là ko gây load trang mượt hơn
         localStorage.setItem('token', data.token);
         localStorage.setItem('user', JSON.stringify(data.user));
