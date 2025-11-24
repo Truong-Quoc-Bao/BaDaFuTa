@@ -835,33 +835,105 @@ export default function HomePage() {
   );
 }
 
-import React from "react";
-import { CashIcon, VnPayIcon, MomoIcon } from "./PaymentIcons";
+{timelineSteps.map((step, index) => {
+  const StepIcon = step.icon;
+  const isCompleted = index + 1 < currentStep;
+  const isActive = index + 1 === currentStep;
 
-<div className="grid gap-3">
-  {['COD', 'VNPAY', 'MOMO'].map((type) => (
-    <label
-      key={type}
-      className={`flex items-center justify-between p-3 border rounded-lg cursor-pointer transition
-        ${
-          selectedPaymentMethod?.type === type
-            ? 'bg-gray-100 border-gray-100 text-black shadow-lg'
-            : 'bg-white border-gray-300 text-gray-700 hover:bg-gray-100'
-        }`}
+  const stepDuration = 20000;
+  const now = Date.now();
+  const elapsed = Math.max(0, now - stepStartTime);
+  const stepProgress = Math.min(elapsed / stepDuration, 1);
+
+  return (
+    <div
+      key={step.id}
+      className="flex md:flex-1 flex-col items-center text-center relative"
     >
-      <span className="font-medium flex items-center gap-2">
-        {type === 'COD' && <CashIcon className="w-6 h-6 text-green-500" />}
-        {type === 'VNPAY' && <VnPayIcon className="w-6 h-6 text-blue-500" />}
-        {type === 'MOMO' && <MomoIcon className="w-6 h-6 text-pink-500" />}
-        {type === 'COD' ? 'Tiền mặt' : type === 'VNPAY' ? 'VNPay' : 'Ví Momo'}
-      </span>
-      <input
-        type="radio"
-        name="payment"
-        className="w-5 h-5 text-orange-500"
-        checked={selectedPaymentMethod?.type === type}
-        onChange={() => handlePaymentMethodSelect({ type })}
-      />
-    </label>
-  ))}
-</div>
+      {/* Line between steps */}
+      {index < timelineSteps.length - 1 && (
+        <div
+          className="hidden md:block absolute top-5 left-2/2 transform -translate-x-1/2 h-1 z-0 bg-gray-300 overflow-visible"
+          style={{ width: '100%' }}
+        >
+          <motion.div
+            key={`progress-${currentStep}`}
+            className="h-full bg-orange-500 origin-left"
+            initial={{ scaleX: isCompleted ? 1 : stepProgress }}
+            animate={{ scaleX: isCompleted ? 1 : isActive ? 1 : 0 }}
+            transition={{
+              duration: isActive ? (1 - stepProgress) * 20 : 0,
+              ease: 'linear',
+            }}
+          />
+          
+          {/* Drone animation chỉ hiện từ bước 2 */}
+          {isActive && currentStep >= 2 && (
+            <motion.div
+              className="absolute top-[-40px] z-10"
+              initial={{ left: `${stepProgress * 100}%` }}
+              animate={{ left: '100%' }}
+              transition={{ duration: (1 - stepProgress) * 20, ease: 'linear' }}
+            >
+              <DeliveryDrone size={120} autoPlay={true} />
+            </motion.div>
+          )}
+        </div>
+      )}
+
+      {/* Icon */}
+      <motion.div
+        className="w-10 h-10 md:w-12 md:h-12 flex items-center justify-center rounded-full border-2 mb-2 z-10"
+        initial={{
+          backgroundColor: '#f3f3f3',
+          borderColor: '#d1d5db',
+          color: '#9ca3af',
+        }}
+        animate={{
+          backgroundColor: isCompleted
+            ? '#f97316'
+            : isActive
+            ? ['#f3f3f3', '#f97316']
+            : '#f3f3f3',
+          borderColor: isCompleted
+            ? '#f97316'
+            : isActive
+            ? ['#d1d5db', '#fb923c']
+            : '#d1d5db',
+          color: isCompleted
+            ? '#ffffff'
+            : isActive
+            ? ['#9ca3af', '#f97316']
+            : '#9ca3af',
+        }}
+        transition={{
+          duration: isActive ? 3 : 0,
+          ease: 'easeInOut',
+        }}
+      >
+        <StepIcon
+          className="w-5 h-5 md:w-6 md:h-6"
+          style={{
+            stroke: isCompleted || isActive ? '#ffffff' : '#9ca3af',
+          }}
+        />
+      </motion.div>
+
+      {/* Label */}
+      <motion.span
+        className="text-xs md:text-sm font-medium"
+        initial={{ color: '#9ca3af' }}
+        animate={{
+          color: isCompleted
+            ? '#f97316'
+            : isActive
+            ? ['#9ca3af', '#f97316']
+            : '#9ca3af',
+        }}
+        transition={{ duration: isActive ? 3 : 0, ease: 'easeInOut' }}
+      >
+        {step.label}
+      </motion.span>
+    </div>
+  );
+})}

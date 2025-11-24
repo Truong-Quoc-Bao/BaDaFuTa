@@ -24,7 +24,8 @@ import {
 } from 'lucide-react';
 import 'leaflet/dist/leaflet.css';
 import { motion } from 'framer-motion';
-import TruckAnimated from '../../components/TruckAnimated'; // đường dẫn tùy dự án
+// import TruckAnimated from '../../components/TruckAnimated'; // đường dẫn tùy dự án
+import DeliveryDrone from '../../components/DroneAnimated'; // bạn cần tạo component DroneAnimated
 
 // Fix icon mặc định Leaflet
 delete L.Icon.Default.prototype._getIconUrl;
@@ -36,9 +37,9 @@ L.Icon.Default.mergeOptions({
 
 const timelineSteps = [
   { id: 1, label: 'Đã đặt đơn', icon: Check },
-  { id: 2, label: 'Tài xế nhận đơn', icon: Truck },
-  { id: 3, label: 'Tới quán', icon: MapPin },
-  { id: 4, label: 'Đã lấy đơn', icon: Package },
+  { id: 2, label: 'Drone cất cánh', icon: Truck }, // cần import Drone hoặc dùng DroneAnimated
+  { id: 3, label: 'Drone tới quán', icon: MapPin },
+  { id: 4, label: 'Drone vận chuyển', icon: Package },
   { id: 5, label: 'Giao thành công', icon: Home },
 ];
 
@@ -65,7 +66,32 @@ export const TrackOrderPage = () => {
     });
   }
 
-  // console.log('Received Order ID:', orderId); // kiểm tra
+  // Hàm tính khoảng cách giữa 2 điểm lat/lng (km)
+  function haversineDistance(lat1, lng1, lat2, lng2) {
+    const toRad = (x) => (x * Math.PI) / 180;
+    const R = 6371; // bán kính Trái Đất km
+    const dLat = toRad(lat2 - lat1);
+    const dLng = toRad(lng2 - lng1);
+    const a =
+      Math.sin(dLat / 2) ** 2 +
+      Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLng / 2) ** 2;
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    return R * c;
+  }
+
+  // Khoảng cách từ quán → người nhận
+  const distanceKm =
+    order?.merchant_location && order?.delivery_location
+      ? haversineDistance(
+          order.merchant_location.lat,
+          order.merchant_location.lng,
+          order.delivery_location.lat,
+          order.delivery_location.lng,
+        )
+      : 0;
+
+  // Chúng ta có thể map distance → thời gian bay drone (ví dụ 1km = 10s)
+  const droneTravelTime = distanceKm * 10000; // ms
 
   // --- Helpers: orderKey (dùng để lưu localStorage) và apiId (dùng cho API) ---
   const orderKey = useMemo(() => {
@@ -142,8 +168,8 @@ export const TrackOrderPage = () => {
 
     // else try fetch by route param id (most cases)
     if (id) {
-      fetch(`https://badafuta-production.up.railway.app/api/order/getOrder/${id}`) 
-      // fetch(`/apiLocal/order/getOrder/${id}`)
+      fetch(`https://badafuta-production.up.railway.app/api/order/getOrder/${id}`)
+        // fetch(`/apiLocal/order/getOrder/${id}`)
         .then((res) => {
           if (!res.ok) throw new Error('Fetch order failed');
           return res.json();
@@ -196,85 +222,6 @@ export const TrackOrderPage = () => {
       }
     };
   }, []);
-
-  // -------- Auto increment step logic (robust — resumes using saved start time) --------
-  useEffect(() => {
-    if (!order || !isAutoTracking) return;
-
-    // ensure we don't double-update when currentStep already past final
-    if (currentStep > timelineSteps.length) return;
-
-    // compute stepDuration and remaining
-    const stepDuration = 20000; // 20s per step
-    const now = Date.now();
-
-    // If saved start time is in future or not a number, reset to now
-    const start = Number(stepStartTime) || now;
-    // elapsed in current step
-    const elapsed = Math.max(0, now - start);
-    const remaining = Math.max(stepDuration - elapsed, 0);
-
-    // If we're already at final step, run completion flow
-    if (currentStep >= timelineSteps.length) {
-      localStorage.removeItem(`order_${orderKey}_step`);
-      localStorage.removeItem(`order_${orderKey}_step_start`);
-      // completion
-      (async () => {
-        if (hasUpdatedRef.current) return; // already handled
-        hasUpdatedRef.current = true;
-
-        try {
-          // choose api identifier (order.id || order.order_id || id)
-          const apiId = order.id || order._id || order.order_id || id;
-          if (!apiId) {
-            console.error('No order id available for update');
-            return;
-          }
-          const res = await fetch(`https://badafuta-production.up.railway.app/api/order/${apiId}/updateBody`, {
-          // const res = await fetch(`/apiLocal/order/${apiId}/updateBody`, {
-            method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              status: 'COMPLETED',
-              status_payment: 'SUCCESS',
-              delivered_at: new Date().toISOString(),
-            }),
-          });
-
-          if (!res.ok) throw new Error('Update failed');
-          const data = await res.json();
-
-          // cleanup + navigate
-          setIsAutoTracking(false);
-          setIsDelivered(true);
-          localStorage.removeItem(`order_${apiId}_step`);
-          localStorage.removeItem(`order_${apiId}_step_start`);
-
-          navigate('/my-orders', {
-            state: { activeTab: 'COMPLETED', updatedOrder: data },
-          });
-        } catch (err) {
-          console.error('❌ Error updating order on completion:', err);
-        }
-      })();
-
-      return;
-    }
-
-    // Otherwise schedule increment after remaining milliseconds
-    timerRef.current = setTimeout(() => {
-      setCurrentStep((prev) => Math.min(prev + 1, timelineSteps.length));
-      setStepStartTime(Date.now());
-    }, remaining);
-
-    return () => {
-      if (timerRef.current) {
-        clearTimeout(timerRef.current);
-        timerRef.current = null;
-      }
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [order, isAutoTracking, currentStep, stepStartTime, id]);
 
   if (!order) return <p className="text-center mt-10">Đang tải đơn hàng...</p>;
 
@@ -347,9 +294,9 @@ export const TrackOrderPage = () => {
           <Truck className={`w-6 h-6 flex-shrink-0 ${truckColor()}`} />
           <p className="text-gray-600 text-sm md:text-base break-words">
             {currentStep === 1 && 'Đơn hàng đang chuẩn bị...'}
-            {currentStep === 2 && 'Tài xế đã nhận đơn và đang trên đường tới quán...'}
-            {currentStep === 3 && 'Tài xế đã tới quán và đang lấy đơn...'}
-            {currentStep === 4 && 'Đơn hàng đang được vận chuyển...'}
+            {currentStep === 2 && 'Drone đang bay tới quán...'}
+            {currentStep === 3 && 'Drone đã tới quán, lấy đơn...'}
+            {currentStep === 4 && 'Drone đang vận chuyển đơn hàng...'}
             {currentStep === 5 && 'Đơn đã giao thành công 🎉'}
           </p>
         </div>
@@ -391,16 +338,15 @@ export const TrackOrderPage = () => {
                       ease: 'linear',
                     }}
                   />
-
-                  {/* 🚚 Xe chạy trên line */}
-                  {isActive && (
+                  {/* Drone animation chỉ hiện từ bước 2 */}
+                  {isActive && currentStep >= 2 && (
                     <motion.div
-                      className="absolute top-[-20px] z-10"
+                      className="absolute top-[-40px] z-10"
                       initial={{ left: `${stepProgress * 100}%` }}
                       animate={{ left: '100%' }}
                       transition={{ duration: (1 - stepProgress) * 20, ease: 'linear' }}
                     >
-                      <TruckAnimated />
+                      <DeliveryDrone size={120} autoPlay={true} />
                     </motion.div>
                   )}
                 </div>
@@ -464,42 +410,31 @@ export const TrackOrderPage = () => {
         })}
       </div>
       {/* ✅ Driver Info chỉ hiện khi currentStep ≥ 2 */}
-      {testOrder.driver && currentStep >= 2 && (
-        // <div className="mt-4 text-sm text-gray-700 flex items-center space-x-2 bg-gray-50 p-3 rounded-xl shadow-sm">
+      {currentStep >= 2 && (
         <div className="mt-4 bg-gray-50 p-4 md:p-3 rounded-xl shadow-sm flex flex-col md:flex-row md:items-center space-y-2 md:space-y-0 md:space-x-3 text-gray-700 text-sm">
-          <span className="font-medium ">Tài xế:</span>
+          <span className="font-medium ">Drone giao hàng:</span>
           {/* Ảnh + thông tin */}
           <div className="flex items-center space-x-2 md:space-x-3 flex-wrap">
             <img
-              src={
-                testOrder.driver?.avatar ||
-                'https://scontent.fsgn2-10.fna.fbcdn.net/v/t39.30808-6/487326873_1887063878796318_9080709797256676382_n.jpg?_nc_cat=109&ccb=1-7&_nc_sid=94e2a3&_nc_ohc=treCi7K2T6YQ7kNvwFF10Nh&_nc_oc=AdlUuTytQt-R2TK52H5r46SC9Nau9ZJ6fyIbujyuF5NoIxATLgChqysYBgd7qvsKSrUhietYcqIt_5zpoKol9Mwv&_nc_zt=23&_nc_ht=scontent.fsgn2-10.fna&_nc_gid=exNZjuM-vVhrNERk1uvp-w&oh=00_AfhqOXRDKIUgDydZ8TKCkLNEEfkX0S1GZT9HnZrpt1q0rQ&oe=69137A79'
-              }
-              alt="Driver avatar"
+              src="https://cdn-icons-png.flaticon.com/512/3159/3159100.png" // icon drone
+              alt="Drone avatar"
               className="w-8 h-8 rounded-full border border-gray-300"
             />
             <div className="flex flex-col md:flex-row md:items-center md:space-x-4 space-y-1 md:space-y-0">
-              {/* Tên tài xế */}
-              <span className="text-gray-500">{testOrder.driver?.name} |</span>
-              {/* Biển số xe */}
+              {/* Tên drone */}
+              <span className="text-gray-500">Drone A1 |</span>
+              {/* Loại drone */}
               <span className="text-gray-500 flex items-center">
-                <Bike className="w-4 h-4 mr-1 text-orange-500" />
-                Biển số: {testOrder.driver?.BS}
+                {/* <DeliveryDrone className="w-4 h-4 mr-1 text-orange-500" /> */}
+                Loại: QuadCopter
               </span>
               {/* Rating */}
-              <span className=" text-gray-500">5.0</span>
+              <span className="text-gray-500">5.0</span>
               <Star className="w-4 h-4 text-yellow-500" />
             </div>
           </div>
 
-          {/* SĐT */}
-          {testOrder.driver?.SĐT && (
-            <span className="flex items-center text-gray-500">
-              | <Phone className="w-4 h-4 mx-2 text-orange-500" /> {testOrder.driver.SĐT}
-            </span>
-          )}
-          {/* Icon tin nhắn */}
-          {/* 💬 Icon tin nhắn */}
+          {/* Nút nhắn tin */}
           <button
             onClick={() => navigate(`/chat-driver/${testOrder.driver?.id}`)}
             className="mt-2 md:mt-0 ml-0 md:ml-auto flex items-center gap-1 text-gray-500 hover:text-orange-600 transition"
@@ -508,6 +443,53 @@ export const TrackOrderPage = () => {
             <span>Nhắn tin</span>
           </button>
         </div>
+      )}
+      {currentStep === timelineSteps.length && !isDelivered && (
+       <div className="mt-6 flex border flex-col items-center gap-2 px-4">
+       {/* Text nằm trên nút */}
+       <p className="text-gray-500 text-center text-sm max-w-xs">
+         Đơn hàng đã được giao đến, vui lòng nhấn "Đã nhận hàng"
+       </p>
+     
+       {/* Nút */}
+       <Button
+         variant="default"
+         className="bg-green-500 hover:bg-green-600 text-white px-6 py-2 rounded-lg shadow-md transition-all duration-300 w-full sm:w-auto flex items-center justify-center"
+         onClick={async () => {
+           try {
+             const apiId = order.id || order._id || order.order_id || id;
+             if (!apiId) return;
+     
+             const res = await fetch(
+               `https://badafuta-production.up.railway.app/api/order/${apiId}/updateBody`,
+               {
+                 method: 'PUT',
+                 headers: { 'Content-Type': 'application/json' },
+                 body: JSON.stringify({
+                   status: 'COMPLETED',
+                   status_payment: 'SUCCESS',
+                   delivered_at: new Date().toISOString(),
+                 }),
+               },
+             );
+     
+             if (!res.ok) throw new Error('Update failed');
+             const data = await res.json();
+     
+             setIsDelivered(true);
+             navigate('/my-orders', {
+               state: { activeTab: 'COMPLETED', updatedOrder: data },
+             });
+           } catch (err) {
+             console.error('❌ Lỗi khi xác nhận đã nhận hàng:', err);
+           }
+         }}
+       >
+         <Check className="w-5 h-5 mr-2" />
+         Đã nhận hàng
+       </Button>
+     </div>
+     
       )}
 
       {/* Order info responsive */}
