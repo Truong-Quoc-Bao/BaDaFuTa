@@ -571,30 +571,54 @@ if (!res.ok) {
 
 
 
-useEffect(() => {
-  if (status === 'success' && !momoHandled.current) {
-    momoHandled.current = true;
+<div className="flex flex-wrap gap-2 sm:flex-nowrap justify-start">
+  {/* Nút xem chi tiết */}
+  <Button
+    variant="outline"
+    size="sm"
+    onClick={() => setShowDetails(!showDetails)}
+    className="flex-1 sm:flex-none justify-center"
+  >
+    {showDetails ? 'Thu gọn' : 'Xem chi tiết đơn'}
+  </Button>
 
-    try {
-      const decodedData = encodedData
-        ? JSON.parse(atob(decodeURIComponent(encodedData)))
-        : null;
-
-      setValidated(true);
-      clearCart(); // ✅ Xoá cart luôn
-
-      if (decodedData?.status === 'DELIVERING') {
-        navigate(`/track-order/${decodedData.order_id}`, {
-          state: { order: decodedData, from: 'OrderSuccess' },
-        });
-      } else {
-        alert('Đơn hàng chưa được xác nhận, không thể xem chi tiết vận chuyển.');
-        navigate('/my-orders', { state: { activeTab: 'PENDING' } });
-      }
-    } catch {
-      setValidated(true);
-      clearCart(); // fallback xoá cart
-      navigate('/my-orders', { state: { activeTab: 'PENDING' } });
-    }
-  }
-}, [status, encodedData, clearCart, navigate]);
+  {/* Nút Huỷ / Theo dõi / Đặt lại */}
+  {order.status === 'DELIVERING' || order.status === 'CONFIRMED' ? (
+    <Button
+      variant="default"
+      size="sm"
+      onClick={handleTrack}
+      className="flex-1 sm:flex-none bg-orange-500 text-white border-orange-500 hover:bg-orange-600 justify-center"
+    >
+      <Truck className="w-4 h-4" />
+      <span>Theo dõi đơn hàng</span>
+    </Button>
+  ) : order.status === 'PENDING' ? (
+    <Button
+      variant="outline"
+      size="sm"
+      onClick={() => onCancel(order)}
+      className="flex-1 sm:flex-none bg-red-500 text-white border-red-500 hover:bg-red-600 justify-center"
+    >
+      Huỷ đơn
+    </Button>
+  ) : order.status === 'CONFIRMED' ? (
+    <Button
+      variant="outline"
+      size="sm"
+      disabled
+      className="flex-1 sm:flex-none bg-gray-300 text-gray-600 cursor-not-allowed justify-center"
+    >
+      Không thể huỷ
+    </Button>
+  ) : (
+    <Button
+      variant="outline"
+      size="sm"
+      onClick={handleReorder}
+      className="flex-1 sm:flex-none bg-orange-500 hover:bg-orange-600 text-white border-orange-500 justify-center"
+    >
+      Đặt lại
+    </Button>
+  )}
+</div>
