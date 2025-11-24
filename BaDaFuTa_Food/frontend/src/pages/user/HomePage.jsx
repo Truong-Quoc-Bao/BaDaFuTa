@@ -1,4 +1,3 @@
-
 import { Search, TrendingUp, MapPin } from 'lucide-react';
 import { Input } from '../../components/ui/input';
 import { Button } from '../../components/ui/button';
@@ -176,9 +175,11 @@ export default function HomePage() {
         <h2 className="text-2xl font-bold mb-4">Ưu đãi hôm nay</h2>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {vouchers.map((voucher) => (
-            <PromotionBanner key={voucher.id} promotion={voucher} />
-          ))}
+          {vouchers?.length > 0 ? (
+            vouchers.map((voucher) => <PromotionBanner key={voucher.id} promotion={voucher} />)
+          ) : (
+            <p>Không có Vouchers</p>
+          )}
         </div>
       </div>
 
