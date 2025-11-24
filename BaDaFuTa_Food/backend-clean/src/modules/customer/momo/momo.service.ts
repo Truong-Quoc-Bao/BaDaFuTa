@@ -420,7 +420,8 @@ export const momoService = {
 
       await prisma.order.update({
         where: { id: txn.order_id },
-        data: { status_payment: 'SUCCESS', status: 'PENDING' },
+        // data: { status_payment: 'SUCCESS', status: 'PENDING' },
+        data: { status_payment: 'SUCCESS', status: 'DELIVERING' },
       });
 
       await prisma.payment_transaction.updateMany({
