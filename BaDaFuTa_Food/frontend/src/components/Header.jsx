@@ -138,11 +138,17 @@ export const Header = () => {
           {/* Location & Actions */}
           <div className="flex items-center space-x-2 md:space-x-4">
             {/* Location Selector */}
-            <div className="hidden md:block"><LocationSelector /></div>
+            <div className="hidden md:block">
+              <LocationSelector />
+            </div>
 
             {/* Icon mobile */}
-            <div className="block md:hidden w-10 h-10">
-              <LocationSelector isIconOnly />
+            <div
+              variant="outline"
+              size="sm"
+              className="relative flex justify-center items-center pl-2 md:hidden w-9 h-8 border border-gray-200 rounded-lg"
+            >
+              <LocationSelector isIconOnly className="w-4 h-4 block" />
             </div>
 
             {/* Cart */}

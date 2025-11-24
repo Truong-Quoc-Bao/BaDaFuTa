@@ -508,215 +508,51 @@ app
 //
 //
 //Mới nhất
-const availableLocationsNew = [
-  // danh sách trước đó...
-  {
-    id: 'ward_cho_quan',
-    name: 'Phường Chợ Quán',
-    type: 'ward',
-    city: 'TP. Hồ Chí Minh',
-    oldDistrict: 'Quận 5',
-    coordinates: { lat: 10.7594, lng: 106.6833 },
+navigator.geolocation.getCurrentPosition(
+  (pos) => {
+    const { latitude, longitude } = pos.coords;
+    console.log(latitude, longitude);
+
+    // bây giờ mới dùng latitude/lng để tìm xã/phường gần nhất
+    const nearest = findNearestLocation(latitude, longitude, state.availableLocations);
+    console.log('Nearest ward:', nearest);
   },
-  {
-    id: 'ward_an_dong',
-    name: 'Phường An Đông',
-    type: 'ward',
-    city: 'TP. Hồ Chí Minh',
-    oldDistrict: 'Quận 5',
-    coordinates: { lat: 10.7594, lng: 106.6833 },
-  },
-  {
-    id: 'ward_cho_lon',
-    name: 'Phường Chợ Lớn',
-    type: 'ward',
-    city: 'TP. Hồ Chí Minh',
-    oldDistrict: 'Quận 5',
-    coordinates: { lat: 10.7594, lng: 106.6833 },
-  },
-  {
-    id: 'ward_binh_tay',
-    name: 'Phường Bình Tây',
-    type: 'ward',
-    city: 'TP. Hồ Chí Minh',
-    oldDistrict: 'Quận 6',
-    coordinates: { lat: 10.748, lng: 106.652 },
-  },
-  {
-    id: 'ward_binh_tien',
-    name: 'Phường Bình Tiên',
-    type: 'ward',
-    city: 'TP. Hồ Chí Minh',
-    oldDistrict: 'Quận 6',
-    coordinates: { lat: 10.748, lng: 106.652 },
-  },
-  {
-    id: 'ward_binh_phu',
-    name: 'Phường Bình Phú',
-    type: 'ward',
-    city: 'TP. Hồ Chí Minh',
-    oldDistrict: 'Quận 6 / Quận 8', // theo nguồn gộp từ 6 & 8 :contentReference[oaicite:0]{index=0}
-    coordinates: { lat: 10.748, lng: 106.652 },
-  },
-  {
-    id: 'ward_phu_lam',
-    name: 'Phường Phú Lâm',
-    type: 'ward',
-    city: 'TP. Hồ Chí Minh',
-    oldDistrict: 'Quận 6',
-    coordinates: { lat: 10.748, lng: 106.652 },
-  },
-  {
-    id: 'ward_tan_thuan',
-    name: 'Phường Tân Thuận',
-    type: 'ward',
-    city: 'TP. Hồ Chí Minh',
-    oldDistrict: 'Quận 7',
-    coordinates: { lat: 10.7336, lng: 106.7219 },
-  },
-  {
-    id: 'ward_phu_thuan',
-    name: 'Phường Phú Thuận',
-    type: 'ward',
-    city: 'TP. Hồ Chí Minh',
-    oldDistrict: 'Quận 7',
-    coordinates: { lat: 10.7336, lng: 106.7219 },
-  },
-  {
-    id: 'ward_tan_my',
-    name: 'Phường Tân Mỹ',
-    type: 'ward',
-    city: 'TP. Hồ Chí Minh',
-    oldDistrict: 'Quận 7',
-    coordinates: { lat: 10.7336, lng: 106.7219 },
-  },
-  {
-    id: 'ward_tan_hung',
-    name: 'Phường Tân Hưng',
-    type: 'ward',
-    city: 'TP. Hồ Chí Minh',
-    oldDistrict: 'Quận 7',
-    coordinates: { lat: 10.7336, lng: 106.7219 },
-  },
-  {
-    id: 'ward_binh_thuan',
-    name: 'Phường Bình Thuận',
-    type: 'ward',
-    city: 'TP. Hồ Chí Minh',
-    oldDistrict: 'Quận 7',
-    coordinates: { lat: 10.7336, lng: 106.7219 },
-  },
-  {
-    id: 'ward_binh_thoi',
-    name: 'Phường Bình Thới',
-    type: 'ward',
-    city: 'TP. Hồ Chí Minh',
-    oldDistrict: 'Quận 12 / Quận 8 / Quận 11', // gộp nhiều phường cũ :contentReference[oaicite:1]{index=1}
-    coordinates: { lat: 10.8576, lng: 106.628 },
-  },
-  {
-    id: 'ward_thoi_an',
-    name: 'Phường Thới An',
-    type: 'ward',
-    city: 'TP. Hồ Chí Minh',
-    oldDistrict: 'Quận 12',
-    coordinates: { lat: 10.8576, lng: 106.628 },
-  },
-  {
-    id: 'ward_an_phu_dong',
-    name: 'Phường An Phú Đông',
-    type: 'ward',
-    city: 'TP. Hồ Chí Minh',
-    oldDistrict: 'Quận 12',
-    coordinates: { lat: 10.8576, lng: 106.628 },
-  },
-  {
-    id: 'ward_an_lac',
-    name: 'Phường An Lạc',
-    type: 'ward',
-    city: 'TP. Hồ Chí Minh',
-    oldDistrict: 'Quận Bình Tân',
-    coordinates: { lat: 10.8, lng: 106.65 },
-  },
-  {
-    id: 'ward_binh_tan',
-    name: 'Phường Bình Tân',
-    type: 'ward',
-    city: 'TP. Hồ Chí Minh',
-    oldDistrict: 'Quận Bình Tân',
-    coordinates: { lat: 10.8, lng: 106.65 },
-  },
-  {
-    id: 'ward_tan_tao',
-    name: 'Phường Tân Tạo',
-    type: 'ward',
-    city: 'TP. Hồ Chí Minh',
-    oldDistrict: 'Quận Bình Tân',
-    coordinates: { lat: 10.8, lng: 106.65 },
-  },
-  {
-    id: 'ward_binh_tri_dong',
-    name: 'Phường Bình Tri Đông',
-    type: 'ward',
-    city: 'TP. Hồ Chí Minh',
-    oldDistrict: 'Quận Bình Tân',
-    coordinates: { lat: 10.8, lng: 106.65 },
-  },
-  {
-    id: 'ward_binh_hung_hoa',
-    name: 'Phường Bình Hưng Hòa',
-    type: 'ward',
-    city: 'TP. Hồ Chí Minh',
-    oldDistrict: 'Quận Bình Tân',
-    coordinates: { lat: 10.8, lng: 106.65 },
-  },
-  {
-    id: 'ward_gia_dinh',
-    name: 'Phường Gia Định',
-    type: 'ward',
-    city: 'TP. Hồ Chí Minh',
-    oldDistrict: 'Quận Bình Thạnh',
-    coordinates: { lat: 10.8017, lng: 106.7148 },
-  },
-  {
-    id: 'ward_binh_loi_trung',
-    name: 'Phường Bình Lợi Trung',
-    type: 'ward',
-    city: 'TP. Hồ Chí Minh',
-    oldDistrict: 'Quận Bình Thạnh',
-    coordinates: { lat: 10.8017, lng: 106.7148 },
-  },
-  {
-    id: 'ward_thanh_my_tay',
-    name: 'Phường Thanh Mỹ Tây',
-    type: 'ward',
-    city: 'TP. Hồ Chí Minh',
-    oldDistrict: 'Quận Bình Thạnh',
-    coordinates: { lat: 10.8017, lng: 106.7148 },
-  },
-  {
-    id: 'ward_binh_quoi',
-    name: 'Phường Bình Qui',
-    type: 'ward',
-    city: 'TP. Hồ Chí Minh',
-    oldDistrict: 'Quận Bình Thạnh',
-    coordinates: { lat: 10.8017, lng: 106.7148 },
-  },
-  {
-    id: 'ward_hiep_binh',
-    name: 'Phường Hiệp Bình',
-    type: 'ward',
-    city: 'TP. Hồ Chí Minh',
-    oldDistrict: 'Thủ Đức cũ', // theo sắp xếp :contentReference[oaicite:2]{index=2}
-    coordinates: { lat: 10.8708, lng: 106.803 },
-  },
-  {
-    id: 'ward_ba_diem',
-    name: 'Xã Ba Diêm',
-    type: 'commune',
-    city: 'TP. Hồ Chí Minh',
-    oldDistrict: 'Huyện Hóc Môn',
-    coordinates: { lat: 10.8973, lng: 106.6183 },
-  },
-  // … tiếp tục nếu cần
-];
+  (err) => console.error(err),
+  { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+);
+
+// Tạm thời bỏ tìm lat/lng — tránh crash
+const lat = 0;
+const lng = 0;
+
+let { lat, lng } = ward.location || { lat: 0, lng: 0 };
+
+if (!lat || !lng || lat === 0 || lng === 0) {
+  const coords = await fetchLatLngFromNominatim(
+    ward.name,
+    district.name,
+    province.name,
+  );
+  lat = coords.lat;
+  lng = coords.lng;
+}
+console.log("Normalized ward:", normalizedWard);
+state.availableLocations.forEach(loc => {
+  console.log("Check:", loc.name.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,''));
+});
+<div
+  className="block md:hidden w-9 h-8 border border-gray-200 rounded-lg flex justify-center items-center"
+>
+  <div className="flex justify-center items-center w-full h-full">
+   
+      <LocationSelector isIconOnly />
+   
+  </div>
+</div>
+
+<div className="relative w-9 pl-2 h-8 border border-gray-200 rounded-lg bg-white flex justify-center items-center">
+<LocationSelector
+  isIconOnly
+  className="w-4 h-4 block" // thêm block để flex căn giữa
+/>
+</div>

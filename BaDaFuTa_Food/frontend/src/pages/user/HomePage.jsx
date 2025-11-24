@@ -76,7 +76,7 @@ export default function HomePage() {
     'Tất cả',
     'Việt Nam',
     'Coffee',
-    'Philippines',
+    'Philippin',
     'Thái Lan',
     'Hàn Quốc',
     'Mỹ',
