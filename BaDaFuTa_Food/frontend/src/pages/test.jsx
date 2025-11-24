@@ -572,30 +572,29 @@ if (!res.ok) {
 
 
 useEffect(() => {
-  if (status === 'success' && encodedData && !momoHandled.current) {
+  if (status === 'success' && !momoHandled.current) {
     momoHandled.current = true;
+
     try {
-      const decodedJson = atob(decodeURIComponent(encodedData));
-      const decodedData = JSON.parse(decodedJson);
+      const decodedData = encodedData
+        ? JSON.parse(atob(decodeURIComponent(encodedData)))
+        : null;
 
       setValidated(true);
+      clearCart(); // ✅ Xoá cart luôn
 
-      // ⚡ Xóa cart ngay lập tức trước khi navigate
-      clearCart();
-
-      setTimeout(() => {
-        if (decodedData?.status === 'DELIVERING') {
-          navigate(`/track-order/${decodedData.order_id}`, {
-            state: { order: decodedData, from: 'OrderSuccess' },
-          });
-        } else {
-          alert('Đơn hàng chưa được xác nhận, không thể xem chi tiết vận chuyển.');
-          navigate('/my-orders', { state: { activeTab: 'PENDING' } });
-        }
-      }, 5000);
-    } catch (err) {
-      console.error('❌ Decode callback error:', err);
-      navigate('/cart/checkout/orderfailed');
+      if (decodedData?.status === 'DELIVERING') {
+        navigate(`/track-order/${decodedData.order_id}`, {
+          state: { order: decodedData, from: 'OrderSuccess' },
+        });
+      } else {
+        alert('Đơn hàng chưa được xác nhận, không thể xem chi tiết vận chuyển.');
+        navigate('/my-orders', { state: { activeTab: 'PENDING' } });
+      }
+    } catch {
+      setValidated(true);
+      clearCart(); // fallback xoá cart
+      navigate('/my-orders', { state: { activeTab: 'PENDING' } });
     }
   }
-}, [status, encodedData, navigate, clearCart]);
+}, [status, encodedData, clearCart, navigate]);

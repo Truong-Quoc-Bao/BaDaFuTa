@@ -162,37 +162,31 @@ export default function OrderSuccessPage() {
 
   // ------------------- ⭐ LOGIC ĐẶT HÀNG BÌNH THƯỜNG -------------------
   useEffect(() => {
-    if (status === 'success' && encodedData) return; // tránh chạy trùng logic
+    if (status === 'success' && !momoHandled.current) {
+      momoHandled.current = true;
 
-    const orderConfirmed = localStorage.getItem('orderConfirmed');
-    if (!orderConfirmed) {
-      navigate('/cart', { replace: true });
-      return;
-    }
+      try {
+        const decodedData = encodedData ? JSON.parse(atob(decodeURIComponent(encodedData))) : null;
 
-    setValidated(true);
-    clearCart();
+        setValidated(true);
+        clearCart(); // ✅ Xoá cart luôn
 
-    const clearTimer = setTimeout(() => {
-      localStorage.removeItem('orderConfirmed');
-    }, 5000);
-
-    const redirectTimer = setTimeout(() => {
-      if (order?.status === 'DELIVERING') {
-        navigate(`/track-order/${order.order_id}`, {
-          state: { order, from: 'OrderSuccess' },
-        });
-      } else {
-        alert('Đơn hàng chưa được xác nhận, không thể xem chi tiết vận chuyển.');
+        if (decodedData?.status === 'DELIVERING') {
+          navigate(`/track-order/${decodedData.order_id}`, {
+            state: { order: decodedData, from: 'OrderSuccess' },
+          });
+        } else {
+          alert('Đơn hàng chưa được xác nhận, không thể xem chi tiết vận chuyển.');
+          navigate('/my-orders', { state: { activeTab: 'PENDING' } });
+        }
+      } catch {
+        setValidated(true);
+        clearCart(); // fallback xoá cart
         navigate('/my-orders', { state: { activeTab: 'PENDING' } });
       }
-    }, 5000);
+    }
+  }, [status, encodedData, clearCart, navigate]);
 
-    return () => {
-      clearTimeout(clearTimer);
-      clearTimeout(redirectTimer);
-    };
-  }, [navigate, order]);
   // --------------------------------------------------------------------
 
   if (!validated) return null;
