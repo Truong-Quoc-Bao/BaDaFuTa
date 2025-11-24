@@ -45,7 +45,7 @@ export const momoController = {
       // ❌ THẤT BẠI
       if (!callbackData || callbackData.status !== "success") {
         return res.redirect(
-          `${process.env.FRONTEND_URL || "http://localhost:5173"}/cart/checkout`
+          `${process.env.FRONTEND_URL || "https://ba-da-fu-ta-food.vercel.app"}/cart/checkout`
         );
       }
 
@@ -59,14 +59,14 @@ export const momoController = {
 
       return res.redirect(
         `${
-          process.env.FRONTEND_URL || "http://localhost:5173"
+          process.env.FRONTEND_URL || "https://ba-da-fu-ta-food.vercel.app"
         }/cart/checkout/ordersuccess?status=success&data=${base64}`
       );
     } catch (err) {
       console.error("❌ [MoMo Redirect Error]:", err);
       return res.redirect(
         `${
-          process.env.FRONTEND_URL || "http://localhost:5173"
+          process.env.FRONTEND_URL || "https://ba-da-fu-ta-food.vercel.app"
         }/cart/checkout/orderfailed`
       );
     }
