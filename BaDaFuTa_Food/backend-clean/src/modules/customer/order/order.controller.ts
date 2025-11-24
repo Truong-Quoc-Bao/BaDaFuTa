@@ -1,44 +1,31 @@
 import { Request, Response } from 'express';
-import { CreateCODOrderSchema, GetOrderSchema, UpdateOrderSchema } from './order.validation';
+import {
+  CreateCODOrderSchema,
+  GetOrderSchema,
+  UpdateOrderSchema,
+  UpdateRating,
+} from './order.validation';
 import {
   orderService,
   getOrderService,
   updateOrderService,
   updateOrderStatus,
+  cancelOrderStatus,
+  orderRatingService,
 } from './order.service';
 
 export const createCODOrder = async (req: Request, res: Response) => {
   try {
-    //Validate body
     const data = CreateCODOrderSchema.parse(req.body);
 
-    // Gọi service
+    // Service trả về JSON FULL như repo template
     const order = await orderService.createCODOrder(data);
 
-    // kết quả
-    // kết quả
-    return res.status(201).json({
-      success: true,
-      message: 'Tạo đơn hàng thành công',
-      order_id: order.id,
-      merchant_name: order.merchant_name,
-      merchant_address: order.merchant_address,
-      merchant_phone: order.merchant.phone,
-      receiver_name: order.customer_name,
-      receiver_phone: order.customer_phone,
-      delivery_address: order.delivery_address,
-      payment_method: order.payment_method,
-      status_payment: order.status_payment,
-      delivery_fee: order.delivery_fee,
-      total_amount: order.total_amount,
-      status: order.status,
-      created_at: order.created_at,
-    });
+    return res.status(201).json(order);
   } catch (err: any) {
     console.error('Create COD Order Error:', err);
 
     if (err.name === 'ZodError') {
-      console.log('');
       return res.status(400).json({
         success: false,
         message: 'Dữ liệu không hợp lệ',
@@ -59,6 +46,7 @@ export const createCODOrder = async (req: Request, res: Response) => {
     });
   }
 };
+
 export async function getOrder(req: Request, res: Response) {
   try {
     // Validate body
@@ -101,3 +89,95 @@ export async function updateOrder(req: Request, res: Response) {
     res.status(400).json({ success: false, error: err.message });
   }
 }
+
+export async function cancelOrder(req: Request, res: Response) {
+  try {
+    const { orderId } = req.params;
+    const result = await cancelOrderStatus(orderId);
+    res.json({ success: true, data: result });
+  } catch (err: any) {
+    res.status(400).json({ success: false, error: err.message });
+  }
+}
+export const updateRatingOrder = async (req: Request, res: Response) => {
+  try {
+    const { orderId } = req.params;
+
+    const data = UpdateRating.parse(req.body);
+
+    const result = await orderRatingService.update(orderId, data, req.app.get('io'));
+
+    return res.json(result);
+  } catch (err: any) {
+    console.error('ratingOrder error:', err);
+
+    if (err.errors) {
+      return res.status(400).json({
+        success: false,
+        message: 'Dữ liệu không hợp lệ!',
+        errors: err.errors,
+      });
+    }
+
+    return res.status(500).json({
+      success: false,
+      message: err.message,
+    });
+  }
+};
+export const createRatingOrder = async (req: Request, res: Response) => {
+  try {
+    const { orderId } = req.params;
+
+    const data = UpdateRating.parse(req.body);
+
+    const result = await orderRatingService.create(orderId, data, req.app.get('io'));
+
+    return res.json(result);
+  } catch (err: any) {
+    console.error('ratingOrder error:', err);
+
+    if (err.errors) {
+      return res.status(400).json({
+        success: false,
+        message: 'Dữ liệu không hợp lệ!',
+        errors: err.errors,
+      });
+    }
+
+    return res.status(500).json({
+      success: false,
+      message: err.message,
+    });
+  }
+};
+
+export const getRatingOrder = async (req: Request, res: Response) => {
+  try {
+    const { orderId } = req.params;
+    const result = await orderRatingService.get(orderId);
+    return res.json(result);
+  } catch (err: any) {
+    console.error('lấy Rating lỗi:', err);
+
+    return res.status(500).json({
+      success: false,
+      message: err.message || 'Lỗi server!',
+    });
+  }
+};
+
+export const deleteRatingOrder = async (req: Request, res: Response) => {
+  try {
+    const { orderId } = req.params;
+    const result = await orderRatingService.delete(orderId);
+    return res.json(result);
+  } catch (err: any) {
+    console.error('lỗi xoá đánh giá:', err);
+
+    return res.status(500).json({
+      success: false,
+      message: err.message || 'Lỗi server!',
+    });
+  }
+};

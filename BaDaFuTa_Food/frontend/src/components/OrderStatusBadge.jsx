@@ -4,6 +4,12 @@ import { Package, Truck, CheckCircle, XCircle, Clock } from "lucide-react";
 export const OrderStatusBadge = ({ status, showIcon = false }) => {
   const getStatusConfig = (status) => {
     switch (status) {
+      case "PENDING": // trạng thái mới
+        return {
+          color: "bg-yellow-100 text-yellow-800 border-yellow-200",
+          text: "Đang chờ",
+          icon: Clock,
+        };
       case "COMPLETED":
         return {
           color: "bg-green-100 text-green-800 border-green-200",

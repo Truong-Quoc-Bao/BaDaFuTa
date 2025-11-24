@@ -12,6 +12,8 @@ import {
   Plus,
   Edit3,
   FileText,
+  Ticket,
+  X,
 } from 'lucide-react';
 import { ImageWithFallback } from '../../components/figma/ImageWithFallback';
 import { Textarea } from '../../components/ui/textarea';
@@ -29,6 +31,9 @@ import {
 } from '../../components/ui/dialog';
 import { Clock } from 'lucide-react';
 import { getDistanceKm, calculateDeliveryFee } from '../../utils/distanceUtils';
+import { Badge } from '../../components/ui/badge';
+import PopupVoucher from '@/components/VoucherDialog';
+import { CashIcon, VnPayIcon, MomoIcon } from '../../components/PaymentIcons';
 
 export default function CheckOutPage() {
   // 🧩 Lấy user từ AuthContext
@@ -46,6 +51,13 @@ export default function CheckOutPage() {
   const [isEditing, setIsEditing] = useState(false);
   const [isAdding, setIsAdding] = useState(false);
   const [error, setError] = useState(null);
+  const [voucherPopup, setVoucherPopup] = useState(false);
+  const [vouchers, setVouchers] = useState([]);
+  const [selectedVoucher, setSelectedVoucher] = useState(null);
+
+  console.log('ORDER SEND VOUCHER:', selectedVoucher?.code || null);
+  console.log('TYPE:', typeof selectedVoucher);
+
   // merchant
   const merchant =
     state.items.length > 0 ? state.items[0].restaurant || state.items[0].merchant : null;
@@ -100,6 +112,7 @@ export default function CheckOutPage() {
     phone: '',
     address: '',
     note: '',
+    utensils: '',
   });
 
   const handleSelectAddress = (addr) => {
@@ -130,6 +143,7 @@ export default function CheckOutPage() {
       phone: user?.phone ?? '',
       address: '', // để trống nếu GPS bị từ chối
       note: '',
+      utensils: '',
     };
 
     // Hàm fetch địa chỉ từ GPS
@@ -225,22 +239,23 @@ export default function CheckOutPage() {
       merchant_id: merchant.id,
       phone: finalAddress.phone,
       delivery_address: finalAddress.address,
+      voucher: selectedVoucher ? selectedVoucher.code : null,
       delivery_fee: deliveryFee,
-      note: finalAddress?.note,
+      note: note,
+      utensils: true,
       payment_method: selectedPaymentMethod.type, // COD / VNPAY / MOMO
 
       items: state.items.map((i) => ({
         menu_item_id: i.menu_item_id ?? i.menuItem?.id,
         quantity: i.quantity,
         price: i.price ?? i.menuItem?.price,
+        note: i.note ?? '', // <-- thêm dòng này
 
-        selected_option_items: (i.selectedOptions ?? []).flatMap((opt) =>
-          opt.items.map((oi) => ({
-            option_item_id: oi.option_item_id,
-            option_item_name: oi.option_item_name,
-            price: oi.price,
-          })),
-        ),
+        selected_option_items: (i.selectedToppings ?? []).map((t) => ({
+          option_item_id: t.option_item_id ?? t.id,
+          option_item_name: t.option_item_name ?? t.name,
+          price: t.price,
+        })),
       })),
     };
 
@@ -257,7 +272,8 @@ export default function CheckOutPage() {
     else if (method === 'VNPAY') {
       try {
         console.log('📤 Sending body to VNPay:', orderBody);
-        const res = await fetch('http://localhost:3000/api/payment/initiate', {
+        const res = await fetch('https://badafuta-production.up.railway.app/api/payment/initiate', {
+          // const res = await fetch("http://localhost:3000/api/payment/initiate", {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(orderBody),
@@ -267,6 +283,29 @@ export default function CheckOutPage() {
         if (!res.ok) throw new Error(JSON.stringify(data));
 
         console.log('📦 VNPay payment data:', data);
+
+        // ✅ redirect đúng field backend trả về
+        window.location.href = data.payment_url;
+        // Clear giỏ hàng
+        // clearCart();
+      } catch (err) {
+        console.error('❌ Lỗi tạo đơn VNPay:', err);
+        alert('Không thể chuyển sang VNPay!');
+      }
+    } else if (method === 'MOMO') {
+      try {
+        console.log('📤 Sending body to MoMo:', orderBody);
+        const res = await fetch('https://badafuta-production.up.railway.app/api/momo/create', {
+          // const res = await fetch("http://localhost:3000/api/momo/create", {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(orderBody),
+        });
+
+        const data = await res.json();
+        if (!res.ok) throw new Error(JSON.stringify(data));
+
+        console.log('📦 momo payment data:', data);
 
         // ✅ redirect đúng field backend trả về
         window.location.href = data.payment_url;
@@ -328,25 +367,27 @@ export default function CheckOutPage() {
         merchant_id: merchant.id,
         phone: selectedAddress.phone,
         delivery_address: selectedAddress.address,
+        voucher: selectedVoucher ? selectedVoucher.code : null,
         delivery_fee: deliveryFee,
         payment_method: 'COD', // ✅ đồng bộ với backend
         note: selectedAddress?.note,
+        utensils: true,
         items: state.items.map((i) => ({
           menu_item_id: i.menu_item_id ?? i.menuItem?.id,
           quantity: i.quantity,
           price: i.price ?? i.menuItem?.price,
+          note: i.note ?? '', // <-- thêm dòng này
 
-          selected_option_items: (i.selectedOptions ?? []).flatMap((opt) =>
-            opt.items.map((oi) => ({
-              option_item_id: oi.option_item_id,
-              option_item_name: oi.option_item_name,
-              price: oi.price,
-            })),
-          ),
+          selected_option_items: (i.selectedToppings ?? []).map((t) => ({
+            option_item_id: t.option_item_id ?? t.id,
+            option_item_name: t.option_item_name ?? t.name,
+            price: t.price,
+          })),
         })),
       };
-
-      const res = await fetch('http://localhost:3000/api/order', {
+      console.log('ORDER SEND VOUCHER:', selectedVoucher);
+      const res = await fetch('https://badafuta-production.up.railway.app/api/order', {
+        // const res = await fetch('http://localhost:3000/api/order', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(orderBody),
@@ -369,47 +410,70 @@ export default function CheckOutPage() {
 
   const [loading, setLoading] = useState(false);
   // ======================
-  // 🧭 VNPay Callback
+  // 🧭 VNPay Redirect Handler (giống MoMo)
   // ======================
   useEffect(() => {
     const params = new URLSearchParams(location.search);
-    const dataEncoded = params.get('data');
     const status = params.get('status');
+    const base64 = params.get('data');
 
-    if (!status) return;
+    // Nếu không phải callback VNPay → bỏ qua
+    if (!status || !base64) return;
 
-    const processVNPay = async () => {
+    // FAILED → quay về checkout
+    if (status !== 'success') {
+      navigate('/cart/checkout/orderfailed');
+      return;
+    }
+
+    try {
       setLoading(true);
-      try {
-        switch (status) {
-          case 'success':
-            if (!dataEncoded) throw new Error('Không có dữ liệu đơn hàng');
 
-            localStorage.setItem('orderConfirmed', 'true');
-            clearCart();
-            navigate('/cart/checkout/ordersuccess');
-            break;
+      // 🔹 Decode base64 → JSON
+      const jsonString = atob(decodeURIComponent(base64));
+      const fullOrder = JSON.parse(jsonString);
 
-          case 'canceled':
-            navigate('/cart/pending');
-            break;
+      // 🔹 Lấy orderId
+      const orderId = fullOrder?.order_id || fullOrder?.id;
 
-          default:
-            clearCart();
-            alert('❌ Thanh toán thất bại, vui lòng thử lại!');
-            navigate('/cart/checkout/orderfailed');
-            break;
-        }
-      } catch (err) {
-        console.error(err);
-        alert('❌ Lỗi xử lý VNPay!');
-      } finally {
-        setLoading(false);
-      }
-    };
+      // 🔹 Lưu vào localStorage (giống MoMo)
+      localStorage.setItem('orderConfirmed', 'true');
+      localStorage.setItem('lastOrderId', orderId);
 
-    processVNPay();
-  }, [location.search, navigate]);
+      // 🔹 Clear cart
+      clearCart();
+
+      setLoading(false);
+
+      // 🔹 Điều hướng sang trang success (gửi full data luôn)
+      navigate(`/cart/checkout/ordersuccess?status=success&data=${encodeURIComponent(base64)}`);
+    } catch (err) {
+      console.error('VNPay callback decode error:', err);
+      navigate('/cart/checkout/orderfailed');
+    }
+  }, [location.search]);
+
+  // ======================
+  // 🧭 MoMo Redirect Handler
+  // ======================
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const orderId = params.get('orderId');
+
+    if (!orderId) return;
+
+    setLoading(true);
+
+    // Lưu lại để OrderSuccessPage dùng
+    localStorage.setItem('orderConfirmed', 'true');
+    localStorage.setItem('lastOrderId', orderId);
+
+    clearCart();
+    setLoading(false);
+
+    // Điều hướng sang trang thành công – CHỈ GỬI orderId
+    navigate(`/cart/checkout/ordersuccess?orderId=${orderId}`);
+  }, [location.search]);
 
   // 🧾 Hàm thay đổi input
   const handleInputChange = (e) => {
@@ -425,7 +489,6 @@ export default function CheckOutPage() {
   };
 
   // ➕ Thêm địa chỉ mới
-
   const handleAddNewAddress = () => {
     setIsAdding(true);
     setIsEditing(false);
@@ -505,6 +568,32 @@ export default function CheckOutPage() {
   if (!user) return <p>Đang tải thông tin người dùng...</p>;
   if (!selectedAddress) return <p>Đang tải địa chỉ giao hàng...</p>;
 
+  async function loadVouchers() {
+    try {
+      const res = await fetch('https://badafuta-production.up.railway.app/api/voucher/getAll', {
+        // const res = await fetch('http://localhost:3000/api/voucher/getAll', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          user_id: user.id,
+          merchant_id: merchant.id,
+        }),
+      });
+
+      const json = await res.json();
+
+      const list = [
+        ...(json.data?.appVouchers || []),
+        ...(json.data?.merchantVouchers || []),
+        ...(json.data?.userVouchers || []),
+      ];
+
+      setVouchers(list);
+    } catch (error) {
+      console.error('Lỗi load voucher:', error);
+    }
+  }
+
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       <Button variant="outline" onClick={() => navigate('/cart')} className="mb-6">
@@ -531,10 +620,26 @@ export default function CheckOutPage() {
             <CardContent>
               <div className="flex justify-between items-start p-4 rounded-xl border border-gray-200 bg-white shadow-sm mb-4">
                 <div className="space-y-2 w-full">
-                  <p className="text-base font-semibold text-gray-800 flex items-center gap-2">
-                    <MapPin className="w-5 h-5 text-accent" />
-                    <span>Địa chỉ giao hàng mặt định</span>
-                  </p>
+                  <div className="flex justify-between items-center w-full">
+                    <p className="text-base font-semibold text-gray-800 flex items-center gap-2">
+                      <MapPin className="w-5 h-5 text-accent" />
+                      <span>Địa chỉ giao hàng mặt định</span>
+                    </p>
+                    <div className="flex space-x-2">
+                      <Button
+                        variant="outline"
+                        onClick={() => {
+                          setFormData(selectedAddress); // ✅ nạp dữ liệu đang chọn
+                          setIsEditing(true); // ✅ bật chế độ sửa
+                          setIsAdding(false);
+                          setIsDialogOpen(true); // ✅ mở popup
+                        }}
+                      >
+                        <Edit /> Sửa
+                      </Button>
+                    </div>
+                  </div>
+
                   <p className="flex items-center gap-2 text-sm text-gray-500">
                     <User className="w-4 h-4 text-accent" />
                     <span>Tên khách hàng: </span>
@@ -596,24 +701,27 @@ export default function CheckOutPage() {
                     />
                   </div>
 
+                  {/* ✅ Checkbox utensils */}
+                  <label className="flex items-center gap-2 text-sm mt-1">
+                    <input
+                      type="checkbox"
+                      checked={formData.utensils || false}
+                      onChange={(e) => {
+                        setFormData((prev) => ({
+                          ...prev,
+                          utensils: e.target.checked,
+                        }));
+                      }}
+                      className="w-4 h-4 text-orange-600 border-gray-300 rounded"
+                    />
+                    Dụng cụ ăn uống
+                  </label>
+
                   {/* <div className="mt-3 flex">
                     <Button className="" onClick={handleConfirmNote}>
                       Xác nhận
                     </Button>
                   </div> */}
-                </div>
-                <div className="flex space-x-2">
-                  <Button
-                    variant="outline"
-                    onClick={() => {
-                      setFormData(selectedAddress); // ✅ nạp dữ liệu đang chọn
-                      setIsEditing(true); // ✅ bật chế độ sửa
-                      setIsAdding(false);
-                      setIsDialogOpen(true); // ✅ mở popup
-                    }}
-                  >
-                    <Edit /> Sửa
-                  </Button>
                 </div>
               </div>
 
@@ -807,7 +915,7 @@ export default function CheckOutPage() {
             <CardFooter>
               <Button
                 variant="default"
-                className="bg-orange-600 hover:bg-orange-700 w-[200px] flex justify-start text-white"
+                className="bg-orange-500 hover:bg-orange-600 w-[200px] flex justify-start text-white"
                 onClick={() => {
                   setIsAdding(true);
                   setIsEditing(false);
@@ -841,7 +949,10 @@ export default function CheckOutPage() {
                         : 'bg-white border-gray-300 text-gray-700 hover:bg-gray-100'
                     }`}
                 >
-                  <span className="font-medium">
+                  <span className="font-medium flex items-center gap-2">
+                    {type === 'COD' && <CashIcon className="w-6 h-6 text-green-500" />}
+                    {type === 'VNPAY' && <VnPayIcon className="w-6 h-6 text-blue-500" />}
+                    {type === 'MOMO' && <MomoIcon className="w-6 h-6 text-pink-500" />}
                     {type === 'COD' ? 'Tiền mặt' : type === 'VNPAY' ? 'VNPay' : 'Ví Momo'}
                   </span>
                   <input
@@ -855,8 +966,52 @@ export default function CheckOutPage() {
               ))}
             </div>
           </div>
+          {/* Box áp mã voucher */}
+          <div
+            className="flex flex-col p-4 rounded-xl border border-gray-200 bg-white shadow-md mb-4 cursor-pointer"
+            onClick={async () => {
+              await loadVouchers();
+              setVoucherPopup(true);
+            }}
+          >
+            <p className="font-semibold text-lg inline-flex items-center gap-2">
+              <Ticket className="w-5 h-5 text-orange-500" />
+              Áp Mã Voucher
+            </p>
 
-          <div className="flex space-x-3">
+            {/* Nếu ĐÃ chọn voucher → Hiển thị ngay trong khung */}
+            {selectedVoucher && (
+              <div className="mt-2 p-3 bg-orange-50 border border-orange-300 rounded-lg flex items-center justify-between">
+                <div>
+                  <p className="font-semibold text-orange-700">{selectedVoucher.title}</p>
+                  <p className="text-sm text-orange-600">Mã: {selectedVoucher.code}</p>
+                </div>
+
+                <button
+                  className="text-red-500 font-semibold"
+                  onClick={(e) => {
+                    e.stopPropagation(); // không mở popup
+                    setSelectedVoucher(null);
+                  }}
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+            )}
+          </div>
+
+          {/* Popup chọn voucher */}
+          <PopupVoucher
+            open={voucherPopup}
+            onClose={() => setVoucherPopup(false)}
+            vouchers={vouchers}
+            onSelect={(voucherObj) => {
+              setSelectedVoucher(voucherObj);
+              setVoucherPopup(false);
+            }}
+          />
+
+          <div className="flex justify-center space-x-3">
             <Button
               onClick={() => {
                 console.log('🧭 selectedPaymentMethod:', selectedPaymentMethod);
@@ -866,15 +1021,15 @@ export default function CheckOutPage() {
                 }
                 handleSaveOnCheckout();
               }}
-              className="flex-1 bg-orange-500 hover:bg-orange-600"
+              className="w-full max-w-full  bg-orange-500 hover:bg-orange-600"
               size="lg"
             >
               {selectedPaymentMethod?.type === 'COD' ? 'Đặt hàng' : 'Tiếp tục thanh toán'}
             </Button>
 
-            <Button variant="outline" onClick={() => setShowCancelDialog(true)} size="lg">
+            {/* <Button className="flex-1" variant="outline" onClick={() => setShowCancelDialog(true)} size="lg">
               Hủy
-            </Button>
+            </Button> */}
           </div>
         </div>
         {showConfirmPopup && (
@@ -964,7 +1119,7 @@ export default function CheckOutPage() {
                   ))}
                 </div>
               </div>
-              <div className="flex items-center justify-end gap-3 mt-4">
+              <div className="flex items-center justify-center gap-3 mt-4">
                 <Button
                   variant="outline"
                   className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition"
@@ -1000,39 +1155,61 @@ export default function CheckOutPage() {
               {/* Order Items */}
               <div className="space-y-3">
                 {state.items.map((item) => {
-                  const optionTotal = item.selectedOptions
-                    ? item.selectedOptions.reduce(
-                        (sum, opt) =>
-                          sum + opt.items.reduce((s, oi) => s + Number(oi.price || 0), 0),
-                        0,
-                      )
-                    : 0;
+                  const optionTotal =
+                    item.selectedOptions?.reduce(
+                      (sum, opt) =>
+                        sum + (opt.items?.reduce((s, oi) => s + Number(oi.price || 0), 0) || 0),
+                      0,
+                    ) || 0;
 
                   const itemTotal = (item.menuItem.price + optionTotal) * item.quantity;
                   return (
-                    <div key={item.id} className="flex justify-between items-center">
-                      <ImageWithFallback
-                        src={item.menuItem.image}
-                        alt={item.menuItem.name}
-                        className="object-cover w-[40px] h-[40px] p-1  rounded-lg flex-shrink-0"
-                      />
-                      <div className="flex-1">
-                        <p className="font-medium">{item.menuItem.name}</p>
-
-                        {/* Hiển thị option đã chọn */}
-                        {item.selectedOptions?.map((opt) => (
-                          <p key={opt.option_id} className="text-xs text-gray-500">
-                            {opt.option_name}:{' '}
-                            {opt.items.map((oi) => oi.option_item_name).join(', ')}
+                    // <div key={item.id} className="flex justify-between items-center">
+                    <div
+                      key={item.id}
+                      className="flex flex-col gap-2 p-3 border border-gray-200 bg-gray-50 rounded-md transition"
+                    >
+                      {/* Hàng trên: Ảnh món + tên + số lượng + giá */}
+                      <div className="flex items-center justify-between gap-3">
+                        {/* Ảnh món */}
+                        <ImageWithFallback
+                          src={item.menuItem.image}
+                          alt={item.menuItem.name}
+                          className="object-cover w-[40px] h-[40px] p-1  rounded-lg flex-shrink-0"
+                        />
+                        {/* Tên + số lượng */}
+                        <div className="flex-1 flex flex-col">
+                          <p className="font-medium">{item.menuItem.name}</p>
+                          <p className="text-sm text-gray-500">
+                            {item.quantity} x {item.menuItem.price.toLocaleString('vi-VN')}đ
                           </p>
-                        ))}
-                        <p className="text-sm text-gray-500">
-                          {item.quantity} x {item.menuItem.price.toLocaleString('vi-VN')}đ
-                        </p>
+                        </div>
+                        {/* Giá */}
+                        <div className="mt-2 md:mt-0 md:ml-4 flex-shrink-0">
+                          <span className="font-medium">
+                            {(item.menuItem.price * item.quantity).toLocaleString('vi-VN')}đ
+                          </span>
+                        </div>
                       </div>
-                      <span className="font-medium">
-                        {(item.menuItem.price * item.quantity).toLocaleString('vi-VN')}đ
-                      </span>
+                      {/* Topping hiển thị riêng */}
+                      {item.selectedToppings && item.selectedToppings.length > 0 && (
+                        <div className="mt-2 md:mt-0 md:ml-4 flex flex-wrap gap-1 w-full md:w-auto">
+                          {item.selectedToppings.map((topping) => (
+                            <Badge
+                              key={topping.id}
+                              variant="outline"
+                              className="text-xs border border-gray-300"
+                            >
+                              {topping.option_group_name
+                                ? `${topping.option_group_name}: ${topping.option_item_name}`
+                                : topping.option_item_name}
+                              {topping.price > 0 && ` +${topping.price.toLocaleString('vi-VN')}đ`}
+                            </Badge>
+                          ))}
+                        </div>
+                      )}
+                      {/* Hiển thị option đã chọn */}
+                      {console.log('item:', item)}
                     </div>
                   );
                 })}
