@@ -30,7 +30,7 @@ import {
 import { Clock } from 'lucide-react';
 import { getDistanceKm, calculateDeliveryFee } from '../../utils/distanceUtils';
 import { Badge } from '../../components/ui/badge';
-import PopupVoucher from '@/components/PopupVoucher';
+import PopupVoucher from '@/components/VoucherDialog';
 
 export default function CheckOutPage() {
   // 🧩 Lấy user từ AuthContext
@@ -236,7 +236,7 @@ export default function CheckOutPage() {
       merchant_id: merchant.id,
       phone: finalAddress.phone,
       delivery_address: finalAddress.address,
-      voucher: selectedVoucher.code || null,
+      voucher: selectedVoucher ? selectedVoucher.code : null,
       delivery_fee: deliveryFee,
       note: note,
       utensils: true,
@@ -364,7 +364,7 @@ export default function CheckOutPage() {
         merchant_id: merchant.id,
         phone: selectedAddress.phone,
         delivery_address: selectedAddress.address,
-        voucher: selectedVoucher.code || null,
+        voucher: selectedVoucher ? selectedVoucher.code : null,
         delivery_fee: deliveryFee,
         payment_method: 'COD', // ✅ đồng bộ với backend
         note: selectedAddress?.note,

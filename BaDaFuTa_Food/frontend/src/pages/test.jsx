@@ -834,3 +834,33 @@ export default function HomePage() {
     </div>
   );
 }
+
+<DialogFooter className="p-4 border-t flex justify-center gap-3">
+  <Button variant="outline" onClick={onClose}>
+    Đóng
+  </Button>
+
+  <Button
+    disabled={!selectedVoucher}
+    onClick={() => {
+      onSelect(selectedVoucher);
+      onClose();
+    }}
+    className="bg-orange-600 hover:bg-orange-700 text-white font-semibold px-6"
+  >
+    Sử dụng
+  </Button>
+</DialogFooter>
+
+<DialogFooter className="p-4 border-t flex justify-center">
+  <Button
+    disabled={!selectedVoucher}
+    onClick={() => {
+      onSelect(selectedVoucher);
+      onClose();
+    }}
+    className="bg-orange-600 hover:bg-orange-700 text-white font-semibold px-6"
+  >
+    Sử dụng
+  </Button>
+</DialogFooter>
