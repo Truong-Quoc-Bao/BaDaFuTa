@@ -40,12 +40,12 @@ export default function PhoneVerification() {
   const phoneRef = useRef(null); // 👈 thêm ref
 
   // const hosts = ["/api192", "/api172", "/apiLocal"];
-  // const hosts = [
-  //   // "/api192",
-  //   // "/api172",
-  //   "/apiLocal"];
+  const hosts = [
+    // "/api192",
+    // "/api172",
+    "/apiLocal"];
 
-  const hosts = ['https://badafuta-production.up.railway.app/api'];
+  // const hosts = ['https://badafuta-production.up.railway.app/api'];
 
   const fetchWithTimeout = (url, options, timeout = 5000) => {
     return Promise.race([

@@ -115,6 +115,35 @@ export default function HomePage() {
 
     fetchRestaurants();
   }, [searchQuery, selectedCuisine]);
+  const [vouchers, setVouchers] = useState([]);
+
+  useEffect(() => {
+    async function loadVouchers() {
+      try {
+        const res = await fetch("http://localhost:3000/api/voucher/getAll", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({}),
+        });
+
+        const json = await res.json();
+
+        console.log("Voucher API response:", json);
+
+        const list = [
+          ...(json.data?.appVouchers || []),
+          ...(json.data?.merchantVouchers || []),
+          ...(json.data?.userVouchers || []),
+        ];
+
+        setVouchers(list);
+      } catch (err) {
+        console.error("Lỗi load vouchers:", err);
+      }
+    }
+
+    loadVouchers();
+  }, []);
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -143,9 +172,10 @@ export default function HomePage() {
       {/* Promotions */}
       <div className="mb-8">
         <h2 className="text-2xl font-bold mb-4">Ưu đãi hôm nay</h2>
+
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {promotions.map((promotion) => (
-            <PromotionBanner key={promotion.id} promotion={promotion} />
+          {vouchers.map((voucher) => (
+            <PromotionBanner key={voucher.id} promotion={voucher} />
           ))}
         </div>
       </div>
