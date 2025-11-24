@@ -835,18 +835,33 @@ export default function HomePage() {
   );
 }
 
-<label className="flex items-center cursor-pointer">
-  <input
-    type="radio"
-    name="voucher"
-    checked={selectedVoucher?.id === v.id}
-    onChange={() => setSelectedVoucher(v)}
-    className="hidden peer"
-  />
+import React from "react";
+import { CashIcon, VnPayIcon, MomoIcon } from "./PaymentIcons";
 
-  {/* Vòng radio */}
-  <span className="w-6 h-6 mr-4 rounded-full border-2 border-white flex items-center justify-center peer-checked:border-white peer-checked:bg-white">
-    {/* Chấm FULL */}
-    <span className="w-3 h-3 rounded-full bg-orange-600 peer-checked:bg-orange-600"></span>
-  </span>
-</label>
+<div className="grid gap-3">
+  {['COD', 'VNPAY', 'MOMO'].map((type) => (
+    <label
+      key={type}
+      className={`flex items-center justify-between p-3 border rounded-lg cursor-pointer transition
+        ${
+          selectedPaymentMethod?.type === type
+            ? 'bg-gray-100 border-gray-100 text-black shadow-lg'
+            : 'bg-white border-gray-300 text-gray-700 hover:bg-gray-100'
+        }`}
+    >
+      <span className="font-medium flex items-center gap-2">
+        {type === 'COD' && <CashIcon className="w-6 h-6 text-green-500" />}
+        {type === 'VNPAY' && <VnPayIcon className="w-6 h-6 text-blue-500" />}
+        {type === 'MOMO' && <MomoIcon className="w-6 h-6 text-pink-500" />}
+        {type === 'COD' ? 'Tiền mặt' : type === 'VNPAY' ? 'VNPay' : 'Ví Momo'}
+      </span>
+      <input
+        type="radio"
+        name="payment"
+        className="w-5 h-5 text-orange-500"
+        checked={selectedPaymentMethod?.type === type}
+        onChange={() => handlePaymentMethodSelect({ type })}
+      />
+    </label>
+  ))}
+</div>

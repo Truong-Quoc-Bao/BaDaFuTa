@@ -13,6 +13,7 @@ import {
   Edit3,
   FileText,
   Ticket,
+  X,
 } from 'lucide-react';
 import { ImageWithFallback } from '../../components/figma/ImageWithFallback';
 import { Textarea } from '../../components/ui/textarea';
@@ -32,6 +33,7 @@ import { Clock } from 'lucide-react';
 import { getDistanceKm, calculateDeliveryFee } from '../../utils/distanceUtils';
 import { Badge } from '../../components/ui/badge';
 import PopupVoucher from '@/components/VoucherDialog';
+import { CashIcon, VnPayIcon, MomoIcon } from '../../components/PaymentIcons';
 
 export default function CheckOutPage() {
   // 🧩 Lấy user từ AuthContext
@@ -947,7 +949,10 @@ export default function CheckOutPage() {
                         : 'bg-white border-gray-300 text-gray-700 hover:bg-gray-100'
                     }`}
                 >
-                  <span className="font-medium">
+                  <span className="font-medium flex items-center gap-2">
+                    {type === 'COD' && <CashIcon className="w-6 h-6 text-green-500" />}
+                    {type === 'VNPAY' && <VnPayIcon className="w-6 h-6 text-blue-500" />}
+                    {type === 'MOMO' && <MomoIcon className="w-6 h-6 text-pink-500" />}
                     {type === 'COD' ? 'Tiền mặt' : type === 'VNPAY' ? 'VNPay' : 'Ví Momo'}
                   </span>
                   <input
@@ -963,13 +968,13 @@ export default function CheckOutPage() {
           </div>
           {/* Box áp mã voucher */}
           <div
-            className="flex flex-col p-4 rounded-xl border border-gray-200 bg-white shadow-md mb-2 cursor-pointer"
+            className="flex flex-col p-4 rounded-xl border border-gray-200 bg-white shadow-md mb-4 cursor-pointer"
             onClick={async () => {
               await loadVouchers();
               setVoucherPopup(true);
             }}
           >
-            <p className="font-semibold text-lg inline-flex items-center gap-2 mb-3">
+            <p className="font-semibold text-lg inline-flex items-center gap-2">
               <Ticket className="w-5 h-5 text-orange-500" />
               Áp Mã Voucher
             </p>
@@ -989,7 +994,7 @@ export default function CheckOutPage() {
                     setSelectedVoucher(null);
                   }}
                 >
-                  X
+                  <X className="w-5 h-5" />
                 </button>
               </div>
             )}
