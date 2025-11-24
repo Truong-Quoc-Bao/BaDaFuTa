@@ -531,3 +531,54 @@ if (!res.ok) {
     document.getElementById('password').focus();
   }
 }
+{
+  "name": "backend-clean",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "dev": "tsx watch src/server.ts",
+    "generate": "prisma generate",
+    "build": "npm run generate && tsc",
+    "postinstall": "prisma generate",
+    "start": "node dist/server.js"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@prisma/client": "^6.19.0",
+    "bcryptjs": "^3.0.2",
+    "compression": "^1.8.1",
+    "cors": "^2.8.5",
+    "dotenv": "^17.2.3",
+    "express": "^5.1.0",
+    "express-session": "^1.18.2",
+    "framer-motion": "^12.23.24",
+    "helmet": "^8.1.0",
+    "leaflet": "^1.9.4",
+    "module-alias": "^2.2.3",
+    "moment": "^2.30.1",
+    "morgan": "^1.10.1",
+    "tsconfig-paths": "^4.2.0",
+    "ws": "^8.18.3",
+    "zod": "^4.1.12"
+  },
+  "_moduleAliases": {
+    "@": "dist"
+  },
+  "devDependencies": {
+    "@types/bcryptjs": "^2.4.6",
+    "@types/compression": "^1.8.1",
+    "@types/cors": "^2.8.19",
+    "@types/express": "^5.0.5",
+    "@types/express-session": "^1.18.2",
+    "@types/morgan": "^1.9.10",
+    "@types/node": "^24.10.0",
+    "@types/ws": "^8.18.1",
+    "prisma": "^6.18.0",
+    "tsx": "^4.20.6",
+    "typescript": "^5.9.3"
+  }
+}
