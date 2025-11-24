@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -21,8 +21,6 @@ export const ToppingSelectionDialog = ({ isOpen, onClose, menuItem, restaurant, 
   const { addItemWithToppings } = useCart();
   const [selectedToppings, setSelectedToppings] = useState([]);
   const [specialInstructions, setSpecialInstructions] = useState('');
-  const [groupErrors, setGroupErrors] = useState({});
-  const groupRefs = useRef({}); // lưu ref cho từng optionGroup
 
   // Check if item is available
   const isAvailable = menuItem.isAvailable !== false;
@@ -43,38 +41,14 @@ export const ToppingSelectionDialog = ({ isOpen, onClose, menuItem, restaurant, 
     }
 
     // E2: Check required toppings
-    // const requiredToppings = menuItem.options?.filter((t) => t.required) || [];
-    // const selectedRequiredToppings = selectedToppings.filter((t) => t.required);
+    const requiredToppings = menuItem.options?.filter((t) => t.required) || [];
+    const selectedRequiredToppings = selectedToppings.filter((t) => t.required);
 
-    // if (
-    //   requiredToppings.length > 0 &&
-    //   selectedRequiredToppings.length !== requiredToppings.length
-    // ) {
-    //   toast.error('Vui lòng chọn topping/tùy chọn đầy đủ.');
-    //   return;
-    // }
-    const requiredGroups = menuItem.options?.filter((g) => g.require_select) || [];
-    let newErrors = {};
-
-    const allRequiredSelected = requiredGroups.every((group) =>
-      selectedToppings.some((t) => t.option_group_id === group.option_id),
-    );
-
-    requiredGroups.forEach((group) => {
-      const selectedInGroup = selectedToppings.some((t) => t.option_group_id === group.option_id);
-      if (!selectedInGroup) {
-        newErrors[group.option_id] = 'Vui lòng chọn topping/tùy chọn đầy đủ.';
-      }
-    });
-    setGroupErrors(newErrors);
-
-    // Nếu còn lỗi, dừng thêm vào giỏ
-    if (Object.keys(newErrors).length > 0) {
-      const firstErrorId = Object.keys(newErrors)[0];
-      const el = groupRefs.current[firstErrorId];
-      if (el) {
-        el.scrollIntoView({ behavior: 'smooth', block: 'center' });
-      }
+    if (
+      requiredToppings.length > 0 &&
+      selectedRequiredToppings.length !== requiredToppings.length
+    ) {
+      toast.error('Vui lòng chọn topping/tùy chọn đầy đủ.');
       return;
     }
 
@@ -102,7 +76,7 @@ export const ToppingSelectionDialog = ({ isOpen, onClose, menuItem, restaurant, 
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-3xl w-[90vw] max-h-[90vh] overflow-y-auto border border-gray-300 mx-auto p-4 sm:p-6">
+      <DialogContent className="max-w-3xl w-[90vw] max-h-[90vh] overflow-y-auto mx-auto p-4 sm:p-6">
         <DialogHeader>
           <DialogTitle>Tùy chọn món ăn</DialogTitle>
           <DialogDescription>
@@ -179,25 +153,13 @@ export const ToppingSelectionDialog = ({ isOpen, onClose, menuItem, restaurant, 
               <h4 className="font-semibold">Tùy chọn thêm</h4>
 
               {menuItem.options.map((optionGroup) => (
-                <div key={optionGroup.option_id} className="space-y-2" ref={(el) => (groupRefs.current[optionGroup.option_id] = el)}>
-                  <div className="mb-2">
-                    <div className="flex items-center justify-between">
-                      <Label className="font-semibold">{optionGroup.option_name}</Label>
-                      {optionGroup.require_select && (
-                        <Badge
-                          variant="outline"
-                          className={`text-xs ${
-                            groupErrors[optionGroup.option_id] ? 'text-red-600 border-red-600' : ''
-                          }`}
-                        >
-                          Bắt buộc
-                        </Badge>
-                      )}
-                    </div>
-                    {groupErrors[optionGroup.option_id] && (
-                      <p className="text-red-600 text-sm mt-1 text-right">
-                        {groupErrors[optionGroup.option_id]}
-                      </p>
+                <div key={optionGroup.option_id} className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <Label className="font-semibold">{optionGroup.option_name}</Label>
+                    {optionGroup.require_select && (
+                      <Badge variant="outline" className="text-xs">
+                        Bắt buộc
+                      </Badge>
                     )}
                   </div>
 
@@ -210,26 +172,20 @@ export const ToppingSelectionDialog = ({ isOpen, onClose, menuItem, restaurant, 
                     return (
                       <div
                         key={optItem.option_item_id}
-                        className="flex items-center justify-between ml-4 space-y-2"
+                        className="flex items-center justify-between ml-4"
                       >
                         <div className="flex items-center space-x-3">
                           <Checkbox
                             id={optItem.option_item_id}
-                            // checked={isChecked}
-                            checked={Boolean(isChecked)}
+                            checked={isChecked}
                             onCheckedChange={(checked) => {
-                              const isCheckedBool = Boolean(checked);
-                              if (isCheckedBool) {
+                              if (checked) {
                                 setSelectedToppings((prev) => [
                                   ...prev,
                                   {
-                                    id: optItem.option_item_id,
-                                    name: `${optionGroup.option_name}: ${optItem.option_item_name}`,
                                     option_group_id: optionGroup.option_id,
                                     option_group_name: optionGroup.option_name,
-                                    // ...optItem,
-                                    option_item_id: optItem.option_item_id,
-                                    option_item_name: optItem.option_item_name,
+                                    ...optItem,
                                     price: Number(optItem.price || 0),
                                     required: optionGroup.require_select,
                                     multi_select: optionGroup.multi_select,
@@ -242,7 +198,6 @@ export const ToppingSelectionDialog = ({ isOpen, onClose, menuItem, restaurant, 
                               }
                             }}
                             disabled={!isAvailable}
-                            className="w-5 h-5 [&_svg]:scale-800 [&_svg]:translate-y-[-3px] sm:[&_svg]:translate-y-0 sm:[&_svg]:scale-125"
                           />
                           <Label htmlFor={optItem.option_item_id}>{optItem.option_item_name}</Label>
                         </div>

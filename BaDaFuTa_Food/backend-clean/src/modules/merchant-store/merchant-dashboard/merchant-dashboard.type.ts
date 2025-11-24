@@ -8,7 +8,7 @@ export interface MerchantOverviewStats {
   totalCustomers: number;
 }
 
-export interface Order {
+export interface RecentOrder {
   id: string;
   user_name: string;
   item_count: number;
@@ -17,39 +17,13 @@ export interface Order {
   payment_method: payment_method | null;
   created_at: Date | null;
 }
-export interface OrderItemDetail {
-  id: string;
-  name: string;
-  price: number;
-  quantity: number;
-  note: string;
-}
-export interface OrderDetail {
-  id: string;
-  user_name: string;
-  user_phone: string;
-  delivery_address: string;
-  note: string | null;
-  total_amount: number;
-  delivery_fee: number;
-  status: order_status;
-  payment_method: payment_method | null;
-  created_at: Date | null;
-  items: OrderItemDetail[];
-}
 
 export interface MerchantOverviewResponse extends MerchantOverviewStats {
-  /** 🏪 Thông tin nhà hàng */
+  // 🆕 Thông tin merchant
   merchant_id: string;
   merchantName: string;
   merchantPhone: string;
 
-  /** 🧾 Danh sách 5 đơn gần nhất */
-  recentOrders: Order[];
-  pendingOrderList: OrderDetail[];
-  confirmedOrdersList: OrderDetail[];
-  preparingOrdersList: OrderDetail[];
-  deliveringOrdersList: OrderDetail[];
-  completedOrdersList: OrderDetail[];
-  canceledOrdersList: OrderDetail[];
+  // Danh sách đơn hàng gần đây
+  recentOrders: RecentOrder[];
 }

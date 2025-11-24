@@ -27,10 +27,7 @@ export const PromotionBanner = ({ promotion }) => {
             </div>
             <div>
               <h3 className="font-bold text-lg mb-1">{promotion.title}</h3>
-              <p className="text-white/90 text-sm">
-                {promotion.description ||
-                  "Voucher được áp dụng trên toàn hệ thống!"}
-              </p>
+              <p className="text-white/90 text-sm">{promotion.description}</p>
             </div>
           </div>
 

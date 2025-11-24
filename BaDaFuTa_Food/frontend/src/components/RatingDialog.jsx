@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState } from "react";
 import {
   Dialog,
   DialogContent,
@@ -6,25 +6,25 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from './ui/dialog';
-import { Button } from './ui/button';
-import { Textarea } from './ui/textarea';
-import { Label } from './ui/label';
-import { Star } from 'lucide-react';
+} from "./ui/dialog";
+import { Button } from "./ui/button";
+import { Textarea } from "./ui/textarea";
+import { Label } from "./ui/label";
+import { Star } from "lucide-react";
 
 export const RatingDialog = ({ open, onOpenChange, order, onSubmitRating }) => {
   const [rating, setRating] = useState(0);
-  const [review, setReview] = useState('');
+  const [review, setReview] = useState("");
   const [hoveredRating, setHoveredRating] = useState(0);
 
   const handleSubmit = () => {
     if (rating === 0) {
-      alert('Vui lòng chọn số sao đánh giá');
+      alert("Vui lòng chọn số sao đánh giá");
       return;
     }
 
     const newRating = {
-      orderId: order.order_id,
+      orderId: order.id,
       rating,
       review: review.trim(),
       date: new Date().toISOString(),
@@ -34,26 +34,25 @@ export const RatingDialog = ({ open, onOpenChange, order, onSubmitRating }) => {
 
     // Reset form
     setRating(0);
-    setReview('');
+    setReview("");
     setHoveredRating(0);
     onOpenChange(false);
   };
 
   const handleCancel = () => {
     setRating(0);
-    setReview('');
+    setReview("");
     setHoveredRating(0);
     onOpenChange(false);
   };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md border border-gray-300">
+      <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>Đánh giá đơn hàng</DialogTitle>
           <DialogDescription>
-            Chia sẻ trải nghiệm của bạn về đơn hàng từ{' '}
-            <span className="font-semibold">{order.merchant_name}</span>
+            Chia sẻ trải nghiệm của bạn về đơn hàng từ {order.restaurantName}
           </DialogDescription>
         </DialogHeader>
 
@@ -61,18 +60,15 @@ export const RatingDialog = ({ open, onOpenChange, order, onSubmitRating }) => {
           {/* Order Info */}
           <div className="flex items-center space-x-3 p-3 bg-gray-50 rounded-lg">
             <img
-              src={order.merchant_image.url}
-              alt={order.merchant_image}
+              src={order.restaurantImage}
+              alt={order.restaurantName}
               className="w-12 h-12 rounded-lg object-cover"
             />
             <div>
-              <p className="font-medium">{order.merchant_name}</p>
-              <p className="text-sm text-gray-500">Mã đơn: {order.order_id}</p>
-              <p className="text-sm text-gray-600">
-                Tổng tiền:{' '}
-                <span className="font-bold text-orange-500">
-                  {(Number(order.total_amount) || 0).toLocaleString('vi-VN')}đ
-                </span>
+              <p className="font-medium">{order.restaurantName}</p>
+              <p className="text-sm text-gray-500">Mã đơn: {order.id}</p>
+              <p className="text-sm text-gray-500">
+                Tổng tiền: {(order?.total || 0).toLocaleString("vi-VN")}đ
               </p>
             </div>
           </div>
@@ -93,8 +89,8 @@ export const RatingDialog = ({ open, onOpenChange, order, onSubmitRating }) => {
                   <Star
                     className={`w-8 h-8 ${
                       star <= (hoveredRating || rating)
-                        ? 'fill-yellow-400 text-yellow-400'
-                        : 'text-gray-300'
+                        ? "fill-yellow-400 text-yellow-400"
+                        : "text-gray-300"
                     }`}
                   />
                 </button>
@@ -102,11 +98,11 @@ export const RatingDialog = ({ open, onOpenChange, order, onSubmitRating }) => {
             </div>
             {rating > 0 && (
               <p className="text-sm text-gray-600 mt-1">
-                {rating === 1 && 'Rất không hài lòng'}
-                {rating === 2 && 'Không hài lòng'}
-                {rating === 3 && 'Bình thường'}
-                {rating === 4 && 'Hài lòng'}
-                {rating === 5 && 'Rất hài lòng'}
+                {rating === 1 && "Rất không hài lòng"}
+                {rating === 2 && "Không hài lòng"}
+                {rating === 3 && "Bình thường"}
+                {rating === 4 && "Hài lòng"}
+                {rating === 5 && "Rất hài lòng"}
               </p>
             )}
           </div>
@@ -125,17 +121,13 @@ export const RatingDialog = ({ open, onOpenChange, order, onSubmitRating }) => {
           </div>
         </div>
 
-        <DialogFooter className="flex space-x-2 w-full flex-col-reverse space-y-2 space-y-reverse items-center sm:flex-row sm:justify-center sm:space-x-3 sm:space-y-0">
-          <Button
-            variant="outline"
-            className="w-full sm:w-32 px-6 py-2 bg-gray-200 text-gray-800 hover:bg-gray-300"
-            onClick={handleCancel}
-          >
+        <DialogFooter className="flex space-x-2">
+          <Button variant="outline" onClick={handleCancel}>
             Hủy
           </Button>
           <Button
             onClick={handleSubmit}
-            className="bg-orange-500 w-full sm:w-32 px-6 py-2 hover:bg-orange-600 text-white  disabled:opacity-50 disabled:cursor-not-allowed"
+            className="bg-orange-500 hover:bg-orange-600"
             disabled={rating === 0}
           >
             Gửi đánh giá

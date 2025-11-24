@@ -16,7 +16,7 @@ import { Alert, AlertDescription } from "../../components/ui/alert";
 import { Separator } from "../../components/ui/separator";
 import { Eye, EyeOff, Loader2, User, Lock, ArrowLeft } from "lucide-react";
 import { useAuth } from "../../contexts/AuthContext";
-import { useEffect } from "react"; // <-- thêm useEffect
+import {  useEffect } from "react"; // <-- thêm useEffect
 export default function LoginPage() {
   const [formData, setFormData] = useState({
     identifier: "",
@@ -39,6 +39,9 @@ export default function LoginPage() {
       navigate(redirectPath, { replace: true });
     }
   }, [state.isAuthenticated, navigate]);
+  
+
+  
 
   // // 🔹 Dán useEffect kiểm tra login ở đây
   // useEffect(() => {
@@ -75,17 +78,15 @@ export default function LoginPage() {
     }
 
     try {
-      const res = await fetch("http://localhost:3000/api/login", {
-        // const res = await fetch("http://172.20.10.3:3000/api/login", {
-        // const res = await fetch("http://192.168.100.124:3000/api/login", {
-
-        // const res = await fetch("/apiLocal/login", {
-        // const res = await fetch('https://badafuta-production.up.railway.app/api/login', {
-        method: "POST",
-        credentials: "include", // ✅ gửi cookie
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ identifier, password }),
-      });
+      // const res = await fetch("http://localhost:3000/api/login", {
+      // const res = await fetch("http://172.20.10.3:3000/api/login", {
+      // const res = await fetch("http://192.168.100.124:3000/api/login", {
+        const res = await fetch("/apiLocal/login", {
+          method: "POST",
+          credentials: "include", // ✅ gửi cookie
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ identifier, password }),
+        });
 
       const data = await res.json();
 
@@ -110,6 +111,7 @@ export default function LoginPage() {
           setError("Đăng nhập thất bại! Vui lòng thử lại.");
         }
       } else {
+  
         //  localStorage.setItem("token", data.token);
         //  localStorage.setItem("user", JSON.stringify(data.user));
         //  //  dispatch({ type: "LOGIN_SUCCESS", payload: data.user });
@@ -118,6 +120,7 @@ export default function LoginPage() {
 
         //Hoặc
         //window.location.href = "/"; // reload và đi thẳng homepage
+
 
         //cách này lưu vào context nên là ko gây load trang mượt hơn
         localStorage.setItem("token", data.token);

@@ -7,7 +7,7 @@ import { useCart } from '../../contexts/CartContext';
 import { ImageWithFallback } from '../../components/figma/ImageWithFallback';
 import { useAuth } from '../../contexts/AuthContext'; // 🔹 import auth
 import { toast } from 'sonner';
-import React, { useEffect } from 'react';
+import React, { useEffect } from 'react'; 
 
 export default function CartPage() {
   const navigate = useNavigate();
@@ -38,30 +38,23 @@ export default function CartPage() {
       navigate('/cart/checkout');
     }
   };
-
+  
   useEffect(() => {
     if (state.items.length === 0) return;
-
-    state.items.forEach((item) => {
-      const toppings = item.selectedToppings || [];
-      const toppingsTotal = toppings.reduce((sum, t) => sum + t.price, 0);
+    state.items.forEach(item => {
+      console.log("Món:", item.menuItem.name);
+      console.log("- Topping:", item.selectedToppings?.map(t => t.name).join(", ") || "Không có topping");
+      const toppingsTotal = (item.selectedToppings || []).reduce((sum, t) => sum + t.price, 0);
       const itemPrice = item.menuItem.price + toppingsTotal;
-
-      const toppingNames =
-        toppings.length > 0
-          ? toppings.map((t) => `${t.option_group_name}: ${t.option_item_name}`).join(' | ')
-          : 'Không có topping';
-
-      console.log('Món:', item.menuItem.name);
-      console.log('- Topping:', toppingNames);
-      console.log('- Giá món:', item.menuItem.price.toLocaleString('vi-VN') + ' đ');
-      console.log('- Giá topping:', toppingsTotal.toLocaleString('vi-VN') + ' đ');
-      console.log('- Tổng 1 món:', itemPrice.toLocaleString('vi-VN') + ' đ');
-      console.log('- Số lượng:', item.quantity);
-      console.log('- Giá tổng cả món:', (itemPrice * item.quantity).toLocaleString('vi-VN') + ' đ');
-      console.log('------');
+      console.log("- Giá món:", item.menuItem.price.toLocaleString('vi-VN') + " đ");
+      console.log("- Giá topping:", toppingsTotal.toLocaleString('vi-VN') + " đ");
+      console.log("- Tổng 1 món:", itemPrice.toLocaleString('vi-VN') + " đ");
+      console.log("- Số lượng:", item.quantity);
+      console.log("- Giá tổng cả món:", (itemPrice * item.quantity).toLocaleString('vi-VN') + " đ");
+      console.log("------");
     });
   }, [state.items]);
+  
 
   if (state.items.length === 0) {
     return (
@@ -139,14 +132,11 @@ export default function CartPage() {
 
                         {/* Display selected toppings */}
                         {item.selectedToppings && item.selectedToppings.length > 0 && (
-                          <div className="mt-2 flex flex-wrap gap-1 ">
+                          <div className="mt-2 flex flex-wrap gap-1">
                             {item.selectedToppings.map((topping) => (
-                              <Badge key={topping.id} variant="outline" className="text-xs border border-gray-300">
-                                {/* Có thể chỉ hiện tên item hoặc kèm group */}
-                                {topping.option_group_name
-                                  ? `${topping.option_group_name}: ${topping.option_item_name}`
-                                  : topping.option_item_name}
-                                {topping.price > 0 && ` +${topping.price.toLocaleString('vi-VN')}đ`}
+                              <Badge key={topping.id} variant="outline" className="text-xs">
+                                {topping.name}{' '}
+                                {topping.price > 0 && `+${topping.price.toLocaleString('vi-VN')}đ`}
                               </Badge>
                             ))}
                           </div>

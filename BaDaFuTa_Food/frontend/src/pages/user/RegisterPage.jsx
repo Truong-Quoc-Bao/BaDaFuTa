@@ -33,6 +33,7 @@ import { cn } from "../../components/ui/utils";
 import { useLocation } from "react-router-dom";
 import { useAuth } from "../../contexts/AuthContext";
 
+
 export default function RegisterPage() {
   const navigate = useNavigate();
   const { state } = useAuth();
@@ -74,6 +75,7 @@ export default function RegisterPage() {
   //   password: "varchar",
   //   comfirmPassword: "varchar",
   // };
+
 
   // Phone validation - must start with 0 and have exactly 10 digits
 
@@ -234,12 +236,6 @@ export default function RegisterPage() {
       // "/api172/register",
       // "/api/register", // fallback
     ];
-    // const hosts = [
-    //   // "https://badafuta-production.up.railway.app/api/register",
-    //   // "/api192/register",
-    //   // "/api172/register",
-    //   // "/api/register", // fallback
-    // ];
 
     for (const url of hosts) {
       try {
@@ -260,19 +256,17 @@ export default function RegisterPage() {
         const data = await res.json(); // đây sẽ là { success: true, user: {...} }
 
         if (!res.ok) {
-          if (data.error_code === "AUTH_PHONE_EXISTS") {
+          if (data.sdt) {
+            // Nếu số điện thoại đã có → điều hướng sang login
             setShowPhoneExists(true);
-            setIsLoading(false);
             return;
           }
-          if (data.error_code === "AUTH_EMAIL_EXISTS") {
-            setEmailError(data.error);
+          if (data.email) {
+            setEmailError("⚠️ Email này đã được đăng ký"); // ← hiển thị thông báo
             document.getElementById("email").focus();
-            setIsLoading(false);
             return;
           }
           setError(data.error || "Đăng ký thất bại");
-          setIsLoading(false);
           return;
         }
 

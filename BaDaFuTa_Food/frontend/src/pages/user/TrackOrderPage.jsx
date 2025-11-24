@@ -14,13 +14,6 @@ import {
   Home,
   Star,
   ArrowLeft,
-  ForkKnife,
-  FileText,
-  Calendar,
-  CreditCard,
-  Tag,
-  Percent,
-  DollarSign,
 } from 'lucide-react';
 import 'leaflet/dist/leaflet.css';
 import { motion } from 'framer-motion';
@@ -53,17 +46,6 @@ export const TrackOrderPage = () => {
 
   const [order, setOrder] = useState(orderFromState || null);
   const [isDelivered, setIsDelivered] = useState(false);
-
-  function formatDateTime(date) {
-    if (!date) return 'Không có';
-    return new Date(date).toLocaleString('vi-VN', {
-      hour: '2-digit',
-      minute: '2-digit',
-      day: '2-digit',
-      month: '2-digit',
-      year: 'numeric',
-    });
-  }
 
   // console.log('Received Order ID:', orderId); // kiểm tra
 
@@ -142,8 +124,7 @@ export const TrackOrderPage = () => {
 
     // else try fetch by route param id (most cases)
     if (id) {
-      fetch(`https://badafuta-production.up.railway.app/api/order/getOrder/${id}`) 
-      // fetch(`/apiLocal/order/getOrder/${id}`)
+      fetch(`/apiLocal/order/getOrder/${id}`)
         .then((res) => {
           if (!res.ok) throw new Error('Fetch order failed');
           return res.json();
@@ -230,8 +211,8 @@ export const TrackOrderPage = () => {
             console.error('No order id available for update');
             return;
           }
-          const res = await fetch(`https://badafuta-production.up.railway.app/api/order/${apiId}/updateBody`, {
-          // const res = await fetch(`/apiLocal/order/${apiId}/updateBody`, {
+
+          const res = await fetch(`/apiLocal/order/${apiId}/updateBody`, {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -280,23 +261,6 @@ export const TrackOrderPage = () => {
 
   const createdAt = new Date(order.created_at);
   const estimatedDelivery = new Date(createdAt.getTime() + 40 * 60 * 1000);
-  // Xác định màu theo trạng thái
-  const truckColor = () => {
-    switch (currentStep) {
-      case 1:
-        return 'text-gray-400'; // chuẩn bị
-      case 2:
-        return 'text-orange-400'; // đang nhận đơn
-      case 3:
-        return 'text-yellow-500'; // tới quán
-      case 4:
-        return 'text-blue-500'; // đang vận chuyển
-      case 5:
-        return 'text-green-500'; // đã giao
-      default:
-        return 'text-gray-400';
-    }
-  };
 
   console.log('👉 order.driver:', order.driver);
   console.log('👉 currentStep:', currentStep);
@@ -320,42 +284,21 @@ export const TrackOrderPage = () => {
         <ArrowLeft className="w-4 h-4 mr-2" />
         Quay lại Đơn hàng của tôi
       </Button>
-      {/* <div className="max-w-2xl mx-auto space-y-6"> */}
-      {/* Tiêu đề */}
-      <div className="text-center mb-6">
+      <div className="text-center space-y-1">
         <h2 className="text-2xl md:text-3xl font-bold">Theo dõi đơn hàng</h2>
+        {/* <p>
+          Mã đơn hàng: <strong>{order?.order_id}</strong>
+        </p> */}
+        <p className="text-gray-600 text-sm md:text-base">
+          Dự kiến giao hàng:{' '}
+          <span className="font-semibold text-orange-500">
+            {estimatedDelivery.toLocaleTimeString('vi-VN', {
+              hour: '2-digit',
+              minute: '2-digit',
+            })}
+          </span>
+        </p>
       </div>
-
-      {/* Khối thông tin */}
-      <div className="bg-gray-50 p-4 md:p-6 rounded-xl shadow-sm text-gray-700 text-sm space-y-4">
-        {/* Dự kiến giao hàng */}
-        <div className="flex items-center space-x-3 w-full">
-          <Calendar className="w-6 h-6 text-orange-500 flex-shrink-0" />
-          <p className="text-gray-600 text-sm md:text-base">
-            Dự kiến giao hàng:{' '}
-            <span className="font-semibold text-orange-500">
-              {estimatedDelivery.toLocaleTimeString('vi-VN', {
-                hour: '2-digit',
-                minute: '2-digit',
-              })}
-            </span>
-          </p>
-        </div>
-
-        {/* Trạng thái tài xế */}
-        <div className="flex items-center space-x-3 w-full">
-          <Truck className={`w-6 h-6 flex-shrink-0 ${truckColor()}`} />
-          <p className="text-gray-600 text-sm md:text-base break-words">
-            {currentStep === 1 && 'Đơn hàng đang chuẩn bị...'}
-            {currentStep === 2 && 'Tài xế đã nhận đơn và đang trên đường tới quán...'}
-            {currentStep === 3 && 'Tài xế đã tới quán và đang lấy đơn...'}
-            {currentStep === 4 && 'Đơn hàng đang được vận chuyển...'}
-            {currentStep === 5 && 'Đơn đã giao thành công 🎉'}
-          </p>
-        </div>
-      </div>
-
-      {/* </div> */}
 
       {/* Timeline responsive */}
       <div className="flex flex-col md:flex-row md:justify-between items-center gap-6 relative">
@@ -363,6 +306,13 @@ export const TrackOrderPage = () => {
           const StepIcon = step.icon;
           const isCompleted = index + 1 < currentStep;
           const isActive = index + 1 === currentStep;
+
+          // Tính progress cho step hiện tại
+          // const stepProgress = isActive
+          //   ? Math.min((Date.now() - stepStartTime) / 20000, 1)
+          //   : isCompleted
+          //   ? 1
+          //   : 0;
 
           const stepDuration = 20000;
           const now = Date.now();
@@ -512,7 +462,7 @@ export const TrackOrderPage = () => {
 
       {/* Order info responsive */}
       <div className="bg-white p-4 md:p-6 rounded-lg shadow-sm space-y-2 text-sm text-gray-500 md:text-base">
-        {/* <p className="text-lg">Thông tin đơn hàng</p> */}
+        <p className="text-lg">Thông tin đơn hàng</p>
 
         <div className="flex flex-col space-y-4 bg-white p-4 rounded-lg shadow-sm">
           {/* Từ */}
@@ -523,7 +473,7 @@ export const TrackOrderPage = () => {
             <div className="flex flex-col">
               {/* Từ: Tên quán" */}
               <div className="flex space-x-1 items-center">
-                <span className="text-gray-700 font-semibold">Từ: </span>
+                <span className="text-gray-700 font-semibold">Từ:</span>
                 <span className="text-gray-600 font-medium">
                   {order?.merchant_name || 'Đang tải tên quán...'}
                 </span>
@@ -548,7 +498,7 @@ export const TrackOrderPage = () => {
             <div className="flex flex-col">
               {/* Hàng chữ "Đến: Địa chỉ" */}
               <div className="flex items-center space-x-1">
-                <span className="text-gray-700 font-semibold">Đến: </span>
+                <span className="text-gray-700 font-semibold">Đến:</span>
                 <span className="text-gray-600 font-medium">
                   {order?.delivery_address || 'Đang tải địa chỉ...'}
                 </span>
@@ -562,142 +512,15 @@ export const TrackOrderPage = () => {
             </div>
           </div>
         </div>
-        <div className="space-y-6">
-          {/* Tóm tắt đơn hàng */}
-          <div className="bg-white p-6 rounded-xl shadow-md space-y-4 text-gray-600">
-            <h2 className="text-xl font-semibold text-gray-800">Tóm tắt đơn hàng</h2>
-
-            {order?.items?.map((item, index) => (
-              <div
-                key={index}
-                className="flex items-center space-x-4 p-2 rounded-lg bg-gray-100 transition"
-              >
-                {/* Hình món */}
-                {item?.image_item?.url ? (
-                  <img
-                    src={item.image_item.url}
-                    alt={item.name_item}
-                    className="w-16 h-16 rounded-lg object-cover"
-                  />
-                ) : (
-                  <div className="w-16 h-16 bg-gray-200 flex items-center justify-center text-xs text-gray-400 rounded-lg">
-                    No Image
-                  </div>
-                )}
-                {/* Tên + số lượng + topping */}
-                <div className="flex-1 flex flex-col">
-                  <span className="font-medium text-gray-800">Tên món: {item.name_item}</span>
-                  <span className="text-sm">Số lượng: {item.quantity}</span>
-                  <span className="text-sm">
-                    Giá: {Number(item.price).toLocaleString('vi-VN')}đ
-                  </span>
-                  <span className="text-sm">
-                    Topping:{' '}
-                    {item.options
-                      .map((opt) => `${opt.option_name} (${opt.option_item_name})`)
-                      .join(', ') || 'Hình như bạn chưa chọn topping cho món này!'}
-                  </span>
-                </div>
-              </div>
-            ))}
-            <div className="text-sm space-y-2">
-              {/* <div className="flex justify-between items-center"> */}
-              <div className="flex justify-between items-center mt-3 text-sm text-gray-600 px-2">
-                <div className="flex items-center space-x-2">
-                  <Truck className="w-4 h-4 text-orange-500" />
-                  <span className="text-gray-600">Phí giao hàng:</span>
-                </div>
-                <span className="text-gray-600">
-                  {Number(order.delivery_fee).toLocaleString('vi-VN')}đ
-                </span>
-              </div>
-
-              <div className="flex justify-between items-center mt-3 text-sm text-gray-600 px-2">
-                <div className="flex items-center space-x-2">
-                  <Tag className="w-4 h-4 text-blue-500" />
-                  <span className="text-gray-600">Phí áp dụng:</span>
-                </div>
-                <span className="text-gray-600">{order.feesapply || 'Không có'}</span>
-              </div>
-
-              <div className="flex justify-between items-center mt-3 text-sm text-gray-600 px-2">
-                <div className="flex items-center space-x-2">
-                  <Percent className="w-4 h-4 text-green-500" />
-                  <span className="text-gray-600">Giảm giá:</span>
-                </div>
-                <span className="text-gray-600">{order.discount || '0'}đ</span>
-              </div>
-
-              <div className="flex justify-between items-center mt-3 text-sm text-gray-600 px-2">
-                <div className="flex items-center space-x-2">
-                  <DollarSign className="w-4 h-4 text-red-500" />
-                  <span className="text-gray-600">Tổng tiền:</span>
-                </div>
-                <span className="font-bold text-gray-800">
-                  {Number(order.total_amount).toLocaleString('vi-VN')}đ
-                </span>
-              </div>
-            </div>
-          </div>
-          {/* Thông tin đơn hàng */}
-          <div className="bg-white p-6 rounded-xl shadow-md space-y-4 text-gray-600">
-            <h2 className="text-xl font-semibold text-gray-800 pb-2">Thông tin đơn hàng</h2>
-
-            {/* Dụng cụ ăn uống */}
-            <div className="flex justify-between items-center mt-3 text-sm text-gray-600 px-2">
-              <div className="flex items-center space-x-2">
-                <ForkKnife className="w-4 h-4 text-orange-500" />
-                <span>Dụng cụ ăn uống</span>
-              </div>
-              <span className="text-gray-600">{order.utensils || 'Không có'}</span>
-            </div>
-
-            {/* Ghi chú */}
-            <div className="flex justify-between items-center mt-3 text-sm text-gray-600 px-2 ">
-              <div className="flex items-center space-x-2">
-                <FileText className="w-4 h-4 text-blue-500" />
-                <span>Ghi chú</span>
-              </div>
-              <span className="text-gray-600">{order.note || 'Không có'}</span>
-            </div>
-            {/* Mã đơn */}
-            <div className="flex justify-between items-center mt-3 text-sm text-gray-600 px-2 ">
-              <div className="flex items-center space-x-2">
-                <FileText className="w-4 h-4 text-blue-500" />
-                <span>Mã đơn</span>
-              </div>
-              <span className="text-gray-600 text-right">{order.order_id || 'Không có'}</span>
-            </div>
-            {/* Thời gian đặt hàng */}
-            <div className="flex justify-between items-center mt-3 text-sm text-gray-600 px-2">
-              <div className="flex items-center space-x-2">
-                <Calendar className="w-4 h-4 text-green-500" />
-                <span>Thời gian đặt hàng</span>
-              </div>
-              <span className="text-gray-600 text-right">{formatDateTime(order.created_at)}</span>
-            </div>
-
-            {/* Giao lúc (nếu có) */}
-            {order.delivered_at && (
-              <div className="flex justify-between items-center mt-3 text-sm text-gray-600 px-2">
-                <div className="flex items-center space-x-2">
-                  <Clock className="w-4 h-4 text-purple-500" />
-                  <span>Giao lúc</span>
-                </div>
-                <span className="text-gray-600">{formatDateTime(order.delivered_at)}</span>
-              </div>
-            )}
-
-            {/* Thanh toán */}
-            <div className="flex justify-between items-center mt-3 text-sm text-gray-600 px-2">
-              <div className="flex items-center space-x-2">
-                <CreditCard className="w-4 h-4 text-purple-500" />
-                <span>Thanh toán</span>
-              </div>
-              <span className="text-gray-600">{order.payment_method}</span>
-            </div>
-          </div>
-        </div>
+        <p>
+          <strong>Thanh toán:</strong> {order.payment_method}
+        </p>
+        <p>
+          <strong>Tổng tiền:</strong> {Number(order.total_amount).toLocaleString('vi-VN')}đ
+        </p>
+        <p>
+          <strong>Ghi chú:</strong> {order.note || 'Không có ghi chú cho món này! '}
+        </p>
       </div>
     </div>
   );
