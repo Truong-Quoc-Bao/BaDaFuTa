@@ -171,6 +171,7 @@ export default function OrderSuccessPage() {
     }
 
     setValidated(true);
+    clearCart();
 
     const clearTimer = setTimeout(() => {
       localStorage.removeItem('orderConfirmed');

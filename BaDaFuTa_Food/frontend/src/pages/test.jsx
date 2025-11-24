@@ -569,3 +569,33 @@ if (!res.ok) {
 
 
 
+
+
+useEffect(() => {
+  if (status === 'success' && encodedData && !momoHandled.current) {
+    momoHandled.current = true;
+    try {
+      const decodedJson = atob(decodeURIComponent(encodedData));
+      const decodedData = JSON.parse(decodedJson);
+
+      setValidated(true);
+
+      // ⚡ Xóa cart ngay lập tức trước khi navigate
+      clearCart();
+
+      setTimeout(() => {
+        if (decodedData?.status === 'DELIVERING') {
+          navigate(`/track-order/${decodedData.order_id}`, {
+            state: { order: decodedData, from: 'OrderSuccess' },
+          });
+        } else {
+          alert('Đơn hàng chưa được xác nhận, không thể xem chi tiết vận chuyển.');
+          navigate('/my-orders', { state: { activeTab: 'PENDING' } });
+        }
+      }, 5000);
+    } catch (err) {
+      console.error('❌ Decode callback error:', err);
+      navigate('/cart/checkout/orderfailed');
+    }
+  }
+}, [status, encodedData, navigate, clearCart]);
