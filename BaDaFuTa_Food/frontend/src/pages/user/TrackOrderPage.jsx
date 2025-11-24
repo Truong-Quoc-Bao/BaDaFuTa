@@ -445,7 +445,7 @@ export const TrackOrderPage = () => {
         </div>
       )}
       {currentStep === timelineSteps.length && !isDelivered && (
-       <div className="mt-6 flex border flex-col items-center gap-2 px-4">
+       <div className="mt-6 flex flex-col items-center gap-2 px-4">
        {/* Text nằm trên nút */}
        <p className="text-gray-500 text-center text-sm max-w-xs">
          Đơn hàng đã được giao đến, vui lòng nhấn "Đã nhận hàng"
