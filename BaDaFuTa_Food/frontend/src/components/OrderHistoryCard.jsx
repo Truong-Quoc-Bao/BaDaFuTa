@@ -313,7 +313,7 @@ export const OrderHistoryCard = ({ order, onRatingSubmit, onCancel }) => {
                 variant="outline"
                 size="sm"
                 onClick={() => setShowDetails(!showDetails)}
-                className="w-full max-w-xs sm:w-auto justify-center"
+                className="flex-1 w-full max-w-xs sm:w-auto justify-center"
               >
                 {showDetails ? 'Thu gọn' : 'Xem chi tiết đơn'}
               </Button>
@@ -323,7 +323,7 @@ export const OrderHistoryCard = ({ order, onRatingSubmit, onCancel }) => {
                   variant="default"
                   size="sm"
                   onClick={handleTrack}
-                  className="w-full max-w-xs sm:w-auto bg-orange-500 text-white border-orange-500 hover:bg-orange-600 px-4 py-1 rounded-md flex items-center gap-2 justify-center transition"
+                  className="flex-1 w-full max-w-xs sm:w-auto bg-orange-500 text-white border-orange-500 hover:bg-orange-600 px-4 py-1 rounded-md flex items-center gap-2 justify-center transition"
                 >
                   <Truck className="w-4 h-4" />
                   <span>Theo dõi đơn hàng</span>
@@ -333,7 +333,7 @@ export const OrderHistoryCard = ({ order, onRatingSubmit, onCancel }) => {
                   variant="outline"
                   size="sm"
                   onClick={() => onCancel(order)} // mở dialog ở MyOrdersPage
-                  className="bg-red-500 hover:bg-red-600 w-full max-w-xs text-white border-red-500"
+                  className="flex-1 bg-red-500 hover:bg-red-600 w-full max-w-xs text-white border-red-500"
                 >
                   Huỷ đơn
                 </Button>
@@ -342,7 +342,7 @@ export const OrderHistoryCard = ({ order, onRatingSubmit, onCancel }) => {
                   variant="outline"
                   size="sm"
                   disabled
-                  className="w-full max-w-xs sm:w-auto bg-gray-300 text-gray-600 cursor-not-allowed justify-center"
+                  className="flex-1 w-full max-w-xs sm:w-auto bg-gray-300 text-gray-600 cursor-not-allowed justify-center"
                 >
                   Không thể huỷ
                 </Button>
@@ -351,7 +351,7 @@ export const OrderHistoryCard = ({ order, onRatingSubmit, onCancel }) => {
                   variant="outline"
                   size="sm"
                   onClick={handleReorder}
-                  className="w-full max-w-xs sm:w-auto bg-orange-500 hover:bg-orange-600 text-white border-orange-500 justify-center"
+                  className="flex-1 w-full max-w-xs sm:w-auto bg-orange-500 hover:bg-orange-600 text-white border-orange-500 justify-center"
                 >
                   Đặt lại
                 </Button>

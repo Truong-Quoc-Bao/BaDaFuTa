@@ -508,131 +508,117 @@ app
 //
 //
 //Mới nhất
+if (!res.ok) {
+  console.log('Lỗi từ server:', data);
 
-//
-import express from 'express';
-import helmet from 'helmet';
-import cors from 'cors';
-import compression from 'compression';
-import session from 'express-session';
-import dotenv from 'dotenv';
-import routes from './routes';
-import { bigIntJsonMiddleware } from './middlewares/bigint-json.middleware';
-import path from 'path';
+  let errMsg = 'Đăng nhập thất bại! Vui lòng thử lại.';
 
-dotenv.config();
-
-export const createApp = () => {
-  const app = express();
-  const __dirname = path.resolve();
-
-  // Logging
-  app.use((req, _res, next) => {
-    console.log('→', req.method, req.originalUrl);
-    next();
-  });
-
-  app.use(helmet());
-  app.use(compression());
-  app.use(express.json({ limit: '10mb', type: 'application/json' }));
-  app.use(express.urlencoded({ extended: true }));
-
-  // CORS
-  app.use(
-    cors({
-      origin: [
-        'http://localhost:5173',
-        'http://localhost:5174',
-        'http://192.168.100.124:5173',
-        'http://192.168.100.124:5174',
-        'http://172.20.10.3:5173',
-        'http://172.20.10.3:5174',
-        'https://unnibbed-unthrilled-averi.ngrok-free.dev',
-        'https://ba-da-fu-ta-food.vercel.app',
-      ],
-      methods: ['GET', 'POST', 'PUT', 'DELETE'],
-      credentials: true,
-    }),
-  );
-
-  // Session
-  app.use(
-    session({
-      secret: process.env.SESSION_SECRET || 'abc123',
-      resave: false,
-      saveUninitialized: true,
-      cookie: {
-        secure: false,
-        httpOnly: true,
-        sameSite: 'lax',
-      },
-    }),
-  );
-
-  app.use(bigIntJsonMiddleware);
-
-  // API routes
-  app.get('/api/health', (_req, res) => res.json({ ok: true }));
-  app.use('/api', routes);
-
-  // Serve static files from React build
-  const staticPath = path.join(__dirname, 'frontend/dist');
-  app.use(express.static(staticPath));
-
-  // SPA fallback: tất cả route không phải API trả index.html
-  app.get('*', (req, res, next) => {
-    if (req.path.startsWith('/api')) return next(); // bỏ qua API
-    res.sendFile(path.join(staticPath, 'index.html'));
-  });
-
-  // 404 cho API chưa match
-  app.use('/api', (_req, res) => res.status(404).json({ error: 'Not found' }));
-
-  // Error handler
-  app.use((err: any, _req: any, res: any, _next: any) => {
-    console.error(err);
-    res.status(500).json({ error: 'Internal Server Error' });
-  });
-
-  return app;
-};
-//
-//
-//
-//
-useEffect(() => {
-  const fetchRestaurants = async () => {
-    const host = "https://badafuta-production.up.railway.app/api/restaurants";
-
-    const params = new URLSearchParams();
-
-    // Search param
-    if (searchQuery.trim() !== "") {
-      params.append("search", searchQuery);
+  // Parse nếu server trả về JSON string
+  try {
+    const parsed = JSON.parse(data.error);
+    if (Array.isArray(parsed) && parsed[0]?.message) {
+      errMsg = parsed[0].message;
     }
+  } catch (_) {
+    if (data.error) errMsg = data.error;
+  }
 
-    // Cuisine param
-    if (selectedCuisine !== "Tất cả") {
-      params.append("cuisine", selectedCuisine);
-    }
+  // Kiểm tra theo error_code trước
+  if (data.error_code === 'AUTH_USER_NOT_FOUND') {
+    const isEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(identifier);
+    const isPhone = /^\d{9,12}$/.test(identifier);
+    const isDigits = /^\d+$/.test(identifier);
 
-    let url = host;
+    if (isEmail) setError('Email không tồn tại hoặc chưa đăng ký!');
+    else if (isDigits && !isPhone) setError('Số điện thoại không hợp lệ!');
+    else if (isPhone) setError('Số điện thoại không tồn tại hoặc chưa đăng ký!');
+    else setError('Tài khoản không tồn tại!');
 
-    if (params.toString() !== "") {
-      url = `${host}?${params.toString()}`;
-    }
+    document.getElementById('email').focus();
+    return;
+  }
 
-    try {
-      const res = await fetch(url);
-      if (!res.ok) throw new Error("Fetch failed");
+  if (data.error_code === 'AUTH_WRONG_PASSWORD') {
+    setError('Mật khẩu không chính xác!');
+    document.getElementById('password').focus();
+    return;
+  }
 
-      const data = await res.json();
-      setRestaurants(data);
-      console.log("Fetch:", url);
-    } catch (err) {
-      console.error("Error:", err.message);
-    }
-  };
+  // Fallback: check message từ server
+  const lower = errMsg.toLowerCase();
+  if (lower.includes('email')) {
+    setError('Email không tồn tại hoặc chưa đăng ký!');
+    document.getElementById('email').focus();
+    return;
+  }
+  if (lower.includes('số điện thoại') || lower.includes('identifier')) {
+    setError('Số điện thoại không đúng định dạng hoặc chưa đăng ký!');
+    document.getElementById('email').focus();
+    return;
+  }
+  if (lower.includes('mật khẩu') || lower.includes('wrong password')) {
+    setError('Mật khẩu không chính xác!');
+    document.getElementById('password').focus();
+    return;
+  }
 
-  fetchRestaurants();
-}, [searchQuery, selectedCuisine]);
+  // Mặc định nếu không bắt được lỗi cụ thể
+  setError(errMsg);
+}
+
+
+
+
+
+
+<div className="flex flex-wrap gap-2 sm:flex-nowrap justify-start">
+  {/* Nút xem chi tiết */}
+  <Button
+    variant="outline"
+    size="sm"
+    onClick={() => setShowDetails(!showDetails)}
+    className="flex-1 sm:flex-none justify-center"
+  >
+    {showDetails ? 'Thu gọn' : 'Xem chi tiết đơn'}
+  </Button>
+
+  {/* Nút Huỷ / Theo dõi / Đặt lại */}
+  {order.status === 'DELIVERING' || order.status === 'CONFIRMED' ? (
+    <Button
+      variant="default"
+      size="sm"
+      onClick={handleTrack}
+      className="flex-1 sm:flex-none bg-orange-500 text-white border-orange-500 hover:bg-orange-600 justify-center"
+    >
+      <Truck className="w-4 h-4" />
+      <span>Theo dõi đơn hàng</span>
+    </Button>
+  ) : order.status === 'PENDING' ? (
+    <Button
+      variant="outline"
+      size="sm"
+      onClick={() => onCancel(order)}
+      className="flex-1 sm:flex-none bg-red-500 text-white border-red-500 hover:bg-red-600 justify-center"
+    >
+      Huỷ đơn
+    </Button>
+  ) : order.status === 'CONFIRMED' ? (
+    <Button
+      variant="outline"
+      size="sm"
+      disabled
+      className="flex-1 sm:flex-none bg-gray-300 text-gray-600 cursor-not-allowed justify-center"
+    >
+      Không thể huỷ
+    </Button>
+  ) : (
+    <Button
+      variant="outline"
+      size="sm"
+      onClick={handleReorder}
+      className="flex-1 sm:flex-none bg-orange-500 hover:bg-orange-600 text-white border-orange-500 justify-center"
+    >
+      Đặt lại
+    </Button>
+  )}
+</div>
