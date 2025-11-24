@@ -111,21 +111,27 @@ export default function LoginPage() {
       if (!res.ok) {
         console.log('Lỗi từ server:', data);
 
-        let errMsg = data.error || 'Đăng nhập thất bại!';
+        let errMsg = 'Đăng nhập thất bại! Vui lòng thử lại.';
 
-        // Nếu error là JSON string → parse
         try {
           const parsed = JSON.parse(data.error);
           if (Array.isArray(parsed) && parsed[0]?.message) {
             errMsg = parsed[0].message;
           }
-        } catch (_) {}
+        } catch (_) {
+          if (data.error) errMsg = data.error;
+        }
 
-        const lower = errMsg.toLowerCase();
-
-        // 🔥 CHECK THEO error_code TRƯỚC
+        // Kiểm tra theo error_code trước
         if (data.error_code === 'AUTH_USER_NOT_FOUND') {
-          setError('Email hoặc số điện thoại không tồn tại!');
+          const isEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(identifier);
+          const isPhone = /^\d{9,12}$/.test(identifier);
+
+          if (isEmail) setError('Email không tồn tại hoặc chưa đăng ký!');
+          else if (/^\d+$/.test(identifier) && !isPhone) setError('Số điện thoại không hợp lệ!');
+          else if (isPhone) setError('Số điện thoại không tồn tại hoặc chưa đăng ký!');
+          else setError('Tài khoản không tồn tại!');
+
           document.getElementById('email').focus();
           return;
         }
@@ -136,28 +142,25 @@ export default function LoginPage() {
           return;
         }
 
-        // 🔥 CHECK THÊM THEO message chứa từ khóa (fallback)
-        if (
-          lower.includes('không tồn tại') ||
-          lower.includes('not found') ||
-          lower.includes('email') ||
-          lower.includes('số điện thoại') ||
-          lower.includes('identifier')
-        ) {
-          setError('Email hoặc số điện thoại không tồn tại!');
+        // Fallback: check message từ server
+        const lower = errMsg.toLowerCase();
+        if (lower.includes('email')) {
+          setError('Email không đúng định dạng!');
           document.getElementById('email').focus();
           return;
         }
-
+        if (lower.includes('số điện thoại') || lower.includes('identifier')) {
+          setError('Số điện thoại không đúng định dạng!');
+          document.getElementById('email').focus();
+          return;
+        }
         if (lower.includes('mật khẩu') || lower.includes('wrong password')) {
           setError('Mật khẩu không chính xác!');
           document.getElementById('password').focus();
           return;
         }
 
-        // 🔥 Cuối cùng: báo lỗi mặc định từ server
         setError(errMsg);
-        return;
       } else {
         //cách này lưu vào context nên là ko gây load trang mượt hơn
         localStorage.setItem('token', data.token);

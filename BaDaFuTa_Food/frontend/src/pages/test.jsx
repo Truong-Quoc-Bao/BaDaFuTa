@@ -509,76 +509,63 @@ app
 //
 //Mới nhất
 if (!res.ok) {
-  console.log(data);
-  let message = 'Đăng nhập thất bại! Vui lòng thử lại.';
+  console.log('Lỗi từ server:', data);
 
-  // parse lỗi server
+  let errMsg = 'Đăng nhập thất bại! Vui lòng thử lại.';
+
+  // Parse nếu server trả về JSON string
   try {
-    const errorDetail = JSON.parse(data.error);
-    if (Array.isArray(errorDetail) && errorDetail[0]?.message) {
-      message = errorDetail[0].message; // lấy thông điệp chính xác
+    const parsed = JSON.parse(data.error);
+    if (Array.isArray(parsed) && parsed[0]?.message) {
+      errMsg = parsed[0].message;
     }
-  } catch (e) {
-    // nếu parse thất bại thì giữ message mặc định
+  } catch (_) {
+    if (data.error) errMsg = data.error;
   }
 
-  setError(message);
+  // Kiểm tra theo error_code trước
+  if (data.error_code === 'AUTH_USER_NOT_FOUND') {
+    const isEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(identifier);
+    const isPhone = /^\d{9,12}$/.test(identifier);
+    const isDigits = /^\d+$/.test(identifier);
 
-  // focus input theo lỗi
-  if (message.toLowerCase().includes('số điện thoại') || message.toLowerCase().includes('email')) {
+    if (isEmail) setError('Email không tồn tại hoặc chưa đăng ký!');
+    else if (isDigits && !isPhone) setError('Số điện thoại không hợp lệ!');
+    else if (isPhone) setError('Số điện thoại không tồn tại hoặc chưa đăng ký!');
+    else setError('Tài khoản không tồn tại!');
+
     document.getElementById('email').focus();
-  } else if (message.toLowerCase().includes('mật khẩu')) {
+    return;
+  }
+
+  if (data.error_code === 'AUTH_WRONG_PASSWORD') {
+    setError('Mật khẩu không chính xác!');
     document.getElementById('password').focus();
+    return;
   }
-}
-{
-  "name": "backend-clean",
-  "version": "1.0.0",
-  "description": "",
-  "main": "index.js",
-  "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
-    "dev": "tsx watch src/server.ts",
-    "generate": "prisma generate",
-    "build": "npm run generate && tsc",
-    "postinstall": "prisma generate",
-    "start": "node dist/server.js"
-  },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
-  "dependencies": {
-    "@prisma/client": "^6.19.0",
-    "bcryptjs": "^3.0.2",
-    "compression": "^1.8.1",
-    "cors": "^2.8.5",
-    "dotenv": "^17.2.3",
-    "express": "^5.1.0",
-    "express-session": "^1.18.2",
-    "framer-motion": "^12.23.24",
-    "helmet": "^8.1.0",
-    "leaflet": "^1.9.4",
-    "module-alias": "^2.2.3",
-    "moment": "^2.30.1",
-    "morgan": "^1.10.1",
-    "tsconfig-paths": "^4.2.0",
-    "ws": "^8.18.3",
-    "zod": "^4.1.12"
-  },
-  "_moduleAliases": {
-    "@": "dist"
-  },
-  "devDependencies": {
-    "@types/bcryptjs": "^2.4.6",
-    "@types/compression": "^1.8.1",
-    "@types/cors": "^2.8.19",
-    "@types/express": "^5.0.5",
-    "@types/express-session": "^1.18.2",
-    "@types/morgan": "^1.9.10",
-    "@types/node": "^24.10.0",
-    "@types/ws": "^8.18.1",
-    "prisma": "^6.18.0",
-    "tsx": "^4.20.6",
-    "typescript": "^5.9.3"
+
+  // Fallback: check message từ server
+  const lower = errMsg.toLowerCase();
+  if (lower.includes('email')) {
+    setError('Email không tồn tại hoặc chưa đăng ký!');
+    document.getElementById('email').focus();
+    return;
   }
+  if (lower.includes('số điện thoại') || lower.includes('identifier')) {
+    setError('Số điện thoại không đúng định dạng hoặc chưa đăng ký!');
+    document.getElementById('email').focus();
+    return;
+  }
+  if (lower.includes('mật khẩu') || lower.includes('wrong password')) {
+    setError('Mật khẩu không chính xác!');
+    document.getElementById('password').focus();
+    return;
+  }
+
+  // Mặc định nếu không bắt được lỗi cụ thể
+  setError(errMsg);
 }
+
+
+
+
