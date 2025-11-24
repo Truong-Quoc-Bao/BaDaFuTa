@@ -5,6 +5,7 @@ export const CreateCODOrderSchema = z.object({
   merchant_id: z.string().uuid({ message: "merchant_id không hợp lệ" }),
   phone: z.string().trim().min(8, "Số điện thoại không hợp lệ"),
   delivery_address: z.string().trim().min(5, "Địa chỉ quá ngắn"),
+  voucher: z.string().trim().nullable().optional(),
   delivery_fee: z.coerce.number().int().nonnegative().default(0),
   note: z.string().nullable().optional(),
   payment_method: z.enum(["COD", "VNPAY", "MOMO"]).default("COD"),
@@ -74,8 +75,8 @@ export const UpdateOrderSchema = z
       path: ["status"],
     }
   );
-  export const UpdateRating = z.object({
-    rating: z.number().int().min(1).max(5),
-  
-    review: z.string().trim().optional().nullable(),
-  });
+export const UpdateRating = z.object({
+  rating: z.number().int().min(1).max(5),
+
+  review: z.string().trim().optional().nullable(),
+});
