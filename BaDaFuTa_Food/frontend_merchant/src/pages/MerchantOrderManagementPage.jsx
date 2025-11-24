@@ -12,19 +12,23 @@ import { toast } from 'sonner';
 export function MerchantOrderManagementPage() {
   const [activeTab, setActiveTab] = useState('pending');
   const [searchTerm, setSearchTerm] = useState('');
-  const { orders, updateOrderStatus, fetchOrders, autoConfirmEnabled, toggleAutoConfirm } =
-    useMerchant();
+  const { 
+    orders, 
+    updateOrderStatus, 
+    fetchOrders,
+    autoConfirmEnabled,
+    toggleAutoConfirm 
+  } = useMerchant();
 
-  useEffect(() => {
-    fetchOrders();
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  // useEffect(() => {
+  //   fetchOrders();
+  // }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Filter orders based on tab and search
-  const filteredOrders = orders.filter((order) => {
-    const matchesSearch =
-      order.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      order.customerName?.toLowerCase().includes(searchTerm.toLowerCase());
-
+  const filteredOrders = orders.filter(order => {
+    const matchesSearch = order.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         order.customerName?.toLowerCase().includes(searchTerm.toLowerCase());
+    
     switch (activeTab) {
       case 'pending':
         return order.status === 'pending' && matchesSearch;
@@ -46,17 +50,17 @@ export function MerchantOrderManagementPage() {
   const getTabCount = (status) => {
     switch (status) {
       case 'pending':
-        return orders.filter((o) => o.status === 'pending').length;
+        return orders.filter(o => o.status === 'pending').length;
       case 'confirmed':
-        return orders.filter((o) => o.status === 'confirmed').length;
+        return orders.filter(o => o.status === 'confirmed').length;
       case 'preparing':
-        return orders.filter((o) => o.status === 'preparing').length;
+        return orders.filter(o => o.status === 'preparing').length;
       case 'ready':
-        return orders.filter((o) => o.status === 'ready').length;
+        return orders.filter(o => o.status === 'ready').length;
       case 'completed':
-        return orders.filter((o) => o.status === 'delivered').length;
+        return orders.filter(o => o.status === 'delivered').length;
       case 'cancelled':
-        return orders.filter((o) => o.status === 'cancelled').length;
+        return orders.filter(o => o.status === 'cancelled').length;
       default:
         return 0;
     }
@@ -77,9 +81,11 @@ export function MerchantOrderManagementPage() {
       <div className="flex flex-col sm:flex-row gap-4 justify-between items-start sm:items-center">
         <div>
           <h2>Quản lý đơn hàng</h2>
-          <p className="text-muted-foreground">Quản lý và theo dõi tất cả đơn hàng của nhà hàng</p>
+          <p className="text-muted-foreground">
+            Quản lý và theo dõi tất cả đơn hàng của nhà hàng
+          </p>
         </div>
-
+        
         <div className="flex flex-col sm:flex-row gap-2">
           <div className="relative">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -91,7 +97,7 @@ export function MerchantOrderManagementPage() {
             />
           </div>
           <Button
-            variant={autoConfirmEnabled ? 'default' : 'outline'}
+            variant={autoConfirmEnabled ? "default" : "outline"}
             onClick={toggleAutoConfirm}
             className="whitespace-nowrap w-max"
           >
@@ -113,7 +119,7 @@ export function MerchantOrderManagementPage() {
             </div>
           </CardContent>
         </Card>
-
+        
         <Card className="hover:scale-100">
           <CardContent className="p-4">
             <div className="flex items-center space-x-2">
@@ -125,7 +131,7 @@ export function MerchantOrderManagementPage() {
             </div>
           </CardContent>
         </Card>
-
+        
         <Card className="hover:scale-100">
           <CardContent className="p-4">
             <div className="flex items-center space-x-2">
@@ -137,7 +143,7 @@ export function MerchantOrderManagementPage() {
             </div>
           </CardContent>
         </Card>
-
+        
         <Card className="hover:scale-100">
           <CardContent className="p-4">
             <div className="flex items-center space-x-2">
@@ -149,7 +155,7 @@ export function MerchantOrderManagementPage() {
             </div>
           </CardContent>
         </Card>
-
+        
         <Card className="hover:scale-100">
           <CardContent className="p-4">
             <div className="flex items-center space-x-2">
@@ -161,7 +167,7 @@ export function MerchantOrderManagementPage() {
             </div>
           </CardContent>
         </Card>
-
+        
         <Card className="hover:scale-100">
           <CardContent className="p-4">
             <div className="flex items-center space-x-2">
@@ -234,28 +240,25 @@ export function MerchantOrderManagementPage() {
               {filteredOrders.length === 0 ? (
                 <Card className="hover:scale-100">
                   <CardContent className="p-12 text-center">
-                    <Package
-                      className={`h-12 w-12 text-muted-foreground mx-auto mb-4 ${
-                        status === 'pending'
-                          ? 'text-red-500'
-                          : status === 'confirmed'
-                          ? 'text-blue-500'
-                          : status === 'preparing'
-                          ? 'text-yellow-500'
-                          : status === 'ready'
-                          ? 'text-green-500'
-                          : status === 'completed'
-                          ? 'text-green-600'
-                          : status === 'cancelled'
-                          ? 'text-red-500'
-                          : 'text-muted-foreground'
-                      }`}
-                    />
+                    <Package className={`h-12 w-12 text-muted-foreground mx-auto mb-4 ${
+                              status === 'pending'
+                                ? 'text-red-500'
+                                : status === 'confirmed'
+                                ? 'text-blue-500'
+                                : status === 'preparing'
+                                ? 'text-yellow-500'
+                                : status === 'ready'
+                                ? 'text-green-500'
+                                : status === 'completed'
+                                ? 'text-green-600'
+                                : status === 'cancelled'
+                                ? 'text-red-500'
+                                : 'text-muted-foreground'
+                            }`}
+                          />
                     <h3 className="text-lg font-semibold mb-2">Không có đơn hàng</h3>
                     <p className="text-muted-foreground">
-                      {searchTerm
-                        ? 'Không tìm thấy đơn hàng phù hợp với từ khóa tìm kiếm.'
-                        : 'Chưa có đơn hàng nào trong trạng thái này.'}
+                      {searchTerm ? 'Không tìm thấy đơn hàng phù hợp với từ khóa tìm kiếm.' : 'Chưa có đơn hàng nào trong trạng thái này.'}
                     </p>
                   </CardContent>
                 </Card>
