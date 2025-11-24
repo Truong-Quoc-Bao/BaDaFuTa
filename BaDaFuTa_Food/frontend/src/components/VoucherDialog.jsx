@@ -15,7 +15,7 @@ export default function PopupVoucher({ open, onClose, vouchers, onSelect }) {
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="max-w-xl p-0 bg-white overflow-hidden">
+      <DialogContent className="max-w-xl p-0 bg-white overflow-hidden border border-gray-300">
         <DialogHeader className="p-4 border border-gray-300">
           <DialogTitle className="text-xl font-bold text-gray-800 flex items-center gap-2">
             Chọn voucher
@@ -23,7 +23,7 @@ export default function PopupVoucher({ open, onClose, vouchers, onSelect }) {
         </DialogHeader>
 
         {/* LIST */}
-        <div className="max-h-[450px] overflow-y-auto p-4 space-y-4">
+        <div className="max-h-[400px] md:max-h-[600px] overflow-y-auto p-4 space-y-4">
           {vouchers.length === 0 && (
             <p className="text-gray-500 text-sm text-center">Không có voucher khả dụng</p>
           )}
@@ -69,7 +69,12 @@ export default function PopupVoucher({ open, onClose, vouchers, onSelect }) {
         </div>
 
         {/* FOOTER */}
-        <DialogFooter className="p-4 border border-gray-300 flex w-full !justify-center items-center space-x-4">
+        <DialogFooter
+          className="p-4 border border-gray-300 
+             flex !flex-row w-full 
+             !justify-center items-center 
+             space-x-4 !space-y-0"
+        >
           <Button variant="outline" onClick={onClose} className="w-32">
             Đóng
           </Button>

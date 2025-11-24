@@ -12,6 +12,7 @@ import {
   Plus,
   Edit3,
   FileText,
+  Ticket,
 } from 'lucide-react';
 import { ImageWithFallback } from '../../components/figma/ImageWithFallback';
 import { Textarea } from '../../components/ui/textarea';
@@ -968,7 +969,10 @@ export default function CheckOutPage() {
               setVoucherPopup(true);
             }}
           >
-            <p className="font-semibold text-lg flex items-center mb-3">Áp Mã Voucher</p>
+            <p className="font-semibold text-lg inline-flex items-center gap-2 mb-3">
+              <Ticket className="w-5 h-5 text-orange-500" />
+              Áp Mã Voucher
+            </p>
 
             {/* Nếu ĐÃ chọn voucher → Hiển thị ngay trong khung */}
             {selectedVoucher && (

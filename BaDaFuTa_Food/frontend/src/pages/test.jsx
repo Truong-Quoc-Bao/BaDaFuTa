@@ -835,32 +835,18 @@ export default function HomePage() {
   );
 }
 
-<DialogFooter className="p-4 border-t flex justify-center gap-3">
-  <Button variant="outline" onClick={onClose}>
-    Đóng
-  </Button>
+<label className="flex items-center cursor-pointer">
+  <input
+    type="radio"
+    name="voucher"
+    checked={selectedVoucher?.id === v.id}
+    onChange={() => setSelectedVoucher(v)}
+    className="hidden peer"
+  />
 
-  <Button
-    disabled={!selectedVoucher}
-    onClick={() => {
-      onSelect(selectedVoucher);
-      onClose();
-    }}
-    className="bg-orange-600 hover:bg-orange-700 text-white font-semibold px-6"
-  >
-    Sử dụng
-  </Button>
-</DialogFooter>
-
-<DialogFooter className="p-4 border-t flex justify-center">
-  <Button
-    disabled={!selectedVoucher}
-    onClick={() => {
-      onSelect(selectedVoucher);
-      onClose();
-    }}
-    className="bg-orange-600 hover:bg-orange-700 text-white font-semibold px-6"
-  >
-    Sử dụng
-  </Button>
-</DialogFooter>
+  {/* Vòng radio */}
+  <span className="w-6 h-6 mr-4 rounded-full border-2 border-white flex items-center justify-center peer-checked:border-white peer-checked:bg-white">
+    {/* Chấm FULL */}
+    <span className="w-3 h-3 rounded-full bg-orange-600 peer-checked:bg-orange-600"></span>
+  </span>
+</label>
