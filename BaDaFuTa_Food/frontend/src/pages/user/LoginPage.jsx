@@ -107,37 +107,58 @@ export default function LoginPage() {
       //   } else {
       //     setError('Đăng nhập thất bại! Vui lòng thử lại.');
       //   }
-      // } 
+      // }
       if (!res.ok) {
-        console.log(data);
-      
-        let errMsg = 'Đăng nhập thất bại! Vui lòng thử lại.';
-      
-        // Nếu server trả về data.error là JSON string, parse nó
+        console.log('Lỗi từ server:', data);
+
+        let errMsg = data.error || 'Đăng nhập thất bại!';
+
+        // Nếu error là JSON string → parse
         try {
-          const errorDetail = JSON.parse(data.error);
-          if (Array.isArray(errorDetail) && errorDetail[0]?.message) {
-            errMsg = errorDetail[0].message; // lấy thông báo lỗi chính xác từ server
-          } else if (typeof data.error === 'string') {
-            errMsg = data.error;
+          const parsed = JSON.parse(data.error);
+          if (Array.isArray(parsed) && parsed[0]?.message) {
+            errMsg = parsed[0].message;
           }
-        } catch (e) {
-          // parse thất bại, giữ nguyên errMsg mặc định
-          if (data.error) errMsg = data.error;
-        }
-      
-        setError(errMsg);
-      
-        // focus input phù hợp với loại lỗi
-        const lowerMsg = errMsg.toLowerCase();
-        if (lowerMsg.includes('email') || lowerMsg.includes('số điện thoại')) {
+        } catch (_) {}
+
+        const lower = errMsg.toLowerCase();
+
+        // 🔥 CHECK THEO error_code TRƯỚC
+        if (data.error_code === 'AUTH_USER_NOT_FOUND') {
+          setError('Email hoặc số điện thoại không tồn tại!');
           document.getElementById('email').focus();
-        } else if (lowerMsg.includes('mật khẩu')) {
-          document.getElementById('password').focus();
+          return;
         }
-      }
-      
-      else {
+
+        if (data.error_code === 'AUTH_WRONG_PASSWORD') {
+          setError('Mật khẩu không chính xác!');
+          document.getElementById('password').focus();
+          return;
+        }
+
+        // 🔥 CHECK THÊM THEO message chứa từ khóa (fallback)
+        if (
+          lower.includes('không tồn tại') ||
+          lower.includes('not found') ||
+          lower.includes('email') ||
+          lower.includes('số điện thoại') ||
+          lower.includes('identifier')
+        ) {
+          setError('Email hoặc số điện thoại không tồn tại!');
+          document.getElementById('email').focus();
+          return;
+        }
+
+        if (lower.includes('mật khẩu') || lower.includes('wrong password')) {
+          setError('Mật khẩu không chính xác!');
+          document.getElementById('password').focus();
+          return;
+        }
+
+        // 🔥 Cuối cùng: báo lỗi mặc định từ server
+        setError(errMsg);
+        return;
+      } else {
         //cách này lưu vào context nên là ko gây load trang mượt hơn
         localStorage.setItem('token', data.token);
         localStorage.setItem('user', JSON.stringify(data.user));
