@@ -1,3 +1,65 @@
+merchant         merchant           @relation(fields: [merchant_id], references: [id], onDelete: Cascade)
+  menu_item_option menu_item_option[]
+  order_items      order_item[]
+}
+
+/// ============ option ============
+model option {
+  id               String             @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  merchant_id      String             @db.Uuid
+  option_name      String
+  multi_select     Boolean            @default(false)
+  require_select   Boolean            @default(false)
+  number_select    BigInt             @default(0)
+  menu_item_option menu_item_option[]
+  merchant         merchant           @relation(fields: [merchant_id], references: [id], onDelete: Cascade)
+  option_item      option_item[]
+}
+
+/// ============ option_item ============
+model option_item {
+  id                 String              @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  option_id          String              @db.Uuid
+  option_item_name   String
+  status             Boolean             @default(true)
+  status_select      Boolean             @default(false)
+  price              BigInt              @default(0)
+  option             option              @relation(fields: [option_id], references: [id], onDelete: Cascade)
+  order_item_options order_item_option[]
+}
+
+/// ============ menu_item_option (N-N) ============
+model menu_item_option {
+  option_id    String    @db.Uuid
+  menu_item_id String    @db.Uuid
+  menu_item    menu_item @relation(fields: [menu_item_id], references: [id], onDelete: Cascade)
+  option       option    @relation(fields: [option_id], references: [id], onDelete: Cascade)
+
+  @@id([option_id, menu_item_id])
+}
+
+model order {
+  id               String                @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  merchant_id      String                @db.Uuid
+  user_id          String                @db.Uuid
+  full_name        String                @db.VarChar(255)
+  phone            String?               @db.VarChar(20)
+  delivery_address String?
+  delivery_fee     BigInt?               @default(0)
+  note             String?
+  total_amount     BigInt
+  created_at       DateTime?             @default(now()) @db.Timestamp(6)
+  updated_at       DateTime?             @default(now()) @updatedAt @db.Timestamp(6)
+  status           order_status?         @default(PENDING)
+  status_payment   PaymentStatus?        @default(PENDING)
+  payment_method   payment_method?       @default(COD)
+  rating           Int?
+  need_utensils    Boolean?              @default(false)
+  voucher_id       String?               @db.Uuid
+  voucher          voucher?              @relation(fields: [voucher_id], references: [id])
+
+  merchant         merchant              @relation(fields: [merchant_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_order_merchant")
+  user             users                 @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_order_user")
 generator client {
   provider = "prisma-client-js"
 }
@@ -71,72 +133,13 @@ model menu_item {
   status           Boolean            @default(true)
   rating           Int?
   category         category?          @relation(fields: [category_id], references: [id])
-  merchant         merchant           @relation(fields: [merchant_id], references: [id], onDelete: Cascade)
-  menu_item_option menu_item_option[]
-  order_items      order_item[]
-}
-
-/// ============ option ============
-model option {
-  id               String             @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  merchant_id      String             @db.Uuid
-  option_name      String
-  multi_select     Boolean            @default(false)
-  require_select   Boolean            @default(false)
-  number_select    BigInt             @default(0)
-  menu_item_option menu_item_option[]
-  merchant         merchant           @relation(fields: [merchant_id], references: [id], onDelete: Cascade)
-  option_item      option_item[]
-}
-
-/// ============ option_item ============
-model option_item {
-  id                 String              @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  option_id          String              @db.Uuid
-  option_item_name   String
-  status             Boolean             @default(true)
-  status_select      Boolean             @default(false)
-  price              BigInt              @default(0)
-  option             option              @relation(fields: [option_id], references: [id], onDelete: Cascade)
-  order_item_options order_item_option[]
-}
-
-/// ============ menu_item_option (N-N) ============
-model menu_item_option {
-  option_id    String    @db.Uuid
-  menu_item_id String    @db.Uuid
-  menu_item    menu_item @relation(fields: [menu_item_id], references: [id], onDelete: Cascade)
-  option       option    @relation(fields: [option_id], references: [id], onDelete: Cascade)
-
-  @@id([option_id, menu_item_id])
-}
-
-model order {
-  id               String                @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  merchant_id      String                @db.Uuid
-  user_id          String                @db.Uuid
-  full_name        String                @db.VarChar(255)
-  phone            String?               @db.VarChar(20)
-  delivery_address String?
-  delivery_fee     BigInt?               @default(0)
-  note             String?
-  total_amount     BigInt
-  created_at       DateTime?             @default(now()) @db.Timestamp(6)
-  updated_at       DateTime?             @default(now()) @updatedAt @db.Timestamp(6)
-  status           order_status?         @default(PENDING)
-  status_payment   PaymentStatus?        @default(PENDING)
-  payment_method   payment_method?       @default(COD)
-  rating           Int?
-  need_utensils    Boolean?              @default(false)
-  merchant         merchant              @relation(fields: [merchant_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_order_merchant")
-  user             users                 @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_order_user")
-  items            order_item[]
+items            order_item[]
   order_rating     order_rating?
   payments         payment_transaction[]
 }
 
 model order_item {
-  id           String              @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  id           String   @id @default(uuid()) @db.Uuid
   order_id     String              @db.Uuid
   menu_item_id String              @db.Uuid
   note         String?
@@ -191,7 +194,7 @@ model order_rating {
   rating     Int
   review     String?
   created_at DateTime? @default(now()) @db.Timestamp(6)
-  order      order     @relation(fields: [order_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_order")
+order      order     @relation(fields: [order_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_order")
 }
 
 model voucher {
@@ -208,8 +211,9 @@ model voucher {
   start_date       DateTime           @db.Timestamptz(6)
   end_date         DateTime           @db.Timestamptz(6)
   is_active        Boolean?           @default(true)
+  apply_type       VoucherApplyType   @default(TOTAL)  // 👈 ENUM
   created_at       DateTime?          @default(now()) @db.Timestamptz(6)
-  apply_type       voucher_apply_type @default(TOTAL)
+  orders           order[]  
   merchant_targets voucher_merchant[]
   user_targets     voucher_user[]
 }
@@ -221,6 +225,8 @@ model voucher_merchant {
   merchant    merchant @relation(fields: [merchant_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_vm_merchant")
   voucher     voucher  @relation(fields: [voucher_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_vm_voucher")
 
+  @@index([merchant_id], map: "idx_voucher_merchant_merchant")
+  @@index([voucher_id], map: "idx_voucher_merchant_voucher")
   @@map("voucher_merchant")
 }
 
@@ -232,6 +238,8 @@ model voucher_user {
   user       users    @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_vu_user")
   voucher    voucher  @relation(fields: [voucher_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_vu_voucher")
 
+  @@index([user_id], map: "idx_voucher_user_user")
+  @@index([voucher_id], map: "idx_voucher_user_voucher")
   @@map("voucher_user")
 }
 
@@ -261,7 +269,7 @@ enum payment_method {
   STRIPE
 }
 
-enum voucher_apply_type {
+enum VoucherApplyType {
   TOTAL
   DELIVERY
   MERCHANT

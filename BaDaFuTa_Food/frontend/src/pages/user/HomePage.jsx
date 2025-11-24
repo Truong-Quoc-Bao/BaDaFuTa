@@ -1,3 +1,4 @@
+
 import { Search, TrendingUp, MapPin } from 'lucide-react';
 import { Input } from '../../components/ui/input';
 import { Button } from '../../components/ui/button';
@@ -72,15 +73,7 @@ export default function HomePage() {
     return name.includes(query) || cuisine.includes(query);
   });
 
-  const cuisineTypes = [
-    'Tất cả',
-    'Việt Nam',
-    'Coffee',
-    'Philippin',
-    'Thái Lan',
-    'Hàn Quốc',
-    'Mỹ',
-  ];
+  const cuisineTypes = ['Tất cả', 'Việt Nam', 'Coffee', 'Philippin', 'Thái Lan', 'Hàn Quốc', 'Mỹ'];
 
   const finalFilteredRestaurants =
     selectedCuisine === 'Tất cả'
@@ -126,6 +119,36 @@ export default function HomePage() {
   }, [searchQuery, selectedCuisine]);
   console.log(normalizedRestaurants.map((r) => r.district));
 
+  //Voucher
+  const [vouchers, setVouchers] = useState([]);
+
+  useEffect(() => {
+    async function loadVouchers() {
+      try {
+        const res = await fetch('https://badafuta-production.up.railway.app/api/voucher/getAll', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({}),
+        });
+
+        const json = await res.json();
+
+        console.log('Voucher API response:', json);
+
+        const list = [
+          ...(json.data?.appVouchers || []),
+          ...(json.data?.merchantVouchers || []),
+          ...(json.data?.userVouchers || []),
+        ];
+
+        setVouchers(list);
+      } catch (err) {
+        console.error('Lỗi load vouchers:', err);
+      }
+    }
+
+    loadVouchers();
+  }, []);
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       {/* Hero Section */}
@@ -150,10 +173,11 @@ export default function HomePage() {
 
       {/* Promotions */}
       <div className="mb-8">
-        <h2 className="text-xl md:text-2xl font-bold mb-4">Ưu đãi hôm nay</h2>
+        <h2 className="text-2xl font-bold mb-4">Ưu đãi hôm nay</h2>
+
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {promotions.map((promotion) => (
-            <PromotionBanner key={promotion.id} promotion={promotion} />
+          {vouchers.map((voucher) => (
+            <PromotionBanner key={voucher.id} promotion={voucher} />
           ))}
         </div>
       </div>
