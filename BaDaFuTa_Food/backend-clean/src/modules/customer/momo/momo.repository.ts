@@ -8,7 +8,7 @@ export const momoRepository = {
       where: {
         user_id: data.user_id,
         merchant_id: data.merchant_id,
-        status: order_status.PENDING,
+        status: order_status.DELIVERING,
         status_payment: PaymentStatus.PENDING,
         payment_method: { in: ['MOMO', 'VNPAY'] },
       },
