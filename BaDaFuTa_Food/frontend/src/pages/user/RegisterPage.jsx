@@ -1,5 +1,5 @@
-import { useNavigate, Link } from "react-router-dom";
-import React, { useState, useEffect, useRef } from "react";
+import { useNavigate, Link } from 'react-router-dom';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   Eye,
   EyeOff,
@@ -14,7 +14,7 @@ import {
   XCircle,
   Store,
   Calendar,
-} from "lucide-react";
+} from 'lucide-react';
 import {
   Card,
   CardContent,
@@ -22,17 +22,16 @@ import {
   CardFooter,
   CardHeader,
   CardTitle,
-} from "../../components/ui/card";
-import { Logo } from "../../components/Logo";
-import { Button } from "../../components/ui/button";
-import { Alert, AlertDescription } from "../../components/ui/alert";
-import { Input } from "../../components/ui/input";
-import { Label } from "../../components/ui/label";
-import { Separator } from "../../components/ui/separator";
-import { cn } from "../../components/ui/utils";
-import { useLocation } from "react-router-dom";
-import { useAuth } from "../../contexts/AuthContext";
-
+} from '../../components/ui/card';
+import { Logo } from '../../components/Logo';
+import { Button } from '../../components/ui/button';
+import { Alert, AlertDescription } from '../../components/ui/alert';
+import { Input } from '../../components/ui/input';
+import { Label } from '../../components/ui/label';
+import { Separator } from '../../components/ui/separator';
+import { cn } from '../../components/ui/utils';
+import { useLocation } from 'react-router-dom';
+import { useAuth } from '../../contexts/AuthContext';
 
 export default function RegisterPage() {
   const navigate = useNavigate();
@@ -40,33 +39,33 @@ export default function RegisterPage() {
 
   useEffect(() => {
     if (state.isAuthenticated) {
-      const redirectPath = localStorage.getItem("redirectAfterLogin") || "/";
-      localStorage.removeItem("redirectAfterLogin");
+      const redirectPath = localStorage.getItem('redirectAfterLogin') || '/';
+      localStorage.removeItem('redirectAfterLogin');
       navigate(redirectPath, { replace: true }); // replace để chặn quay lại login/register/OTP
     }
   }, [state.isAuthenticated, navigate]);
 
   const location = useLocation();
-  const phoneFromVerification = location.state?.phone || "";
+  const phoneFromVerification = location.state?.phone || '';
   const [formData, setFormData] = useState({
-    full_name: "",
+    full_name: '',
     phone: phoneFromVerification,
-    email: "",
-    password: "",
-    confirmPassword: "",
+    email: '',
+    password: '',
+    confirmPassword: '',
   });
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const [error, setError] = useState("");
+  const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const [phoneError, setPhoneError] = useState("");
-  const [emailError, setEmailError] = useState("");
-  const [passwordError, setPasswordError] = useState("");
-  const [confirmPassword, setconfirmPassword] = useState("");
+  const [phoneError, setPhoneError] = useState('');
+  const [emailError, setEmailError] = useState('');
+  const [passwordError, setPasswordError] = useState('');
+  const [confirmPassword, setconfirmPassword] = useState('');
   const [showSuccessDialog, setShowSuccessDialog] = useState(false);
   const [showPhoneExists, setShowPhoneExists] = useState(false); // Thông báo trùng SĐT
   //const [showEmailExists, setShowEmailExistss] = useStates(false);
-  const [newUserUNFID, setNewUserUNFID] = useState("");
+  const [newUserUNFID, setNewUserUNFID] = useState('');
 
   // const { register, state } = {
   //   full_name: "varchar",
@@ -76,59 +75,53 @@ export default function RegisterPage() {
   //   comfirmPassword: "varchar",
   // };
 
-
   // Phone validation - must start with 0 and have exactly 10 digits
 
   const handleChange = (field, value) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
-    if (error) setError("");
+    if (error) setError('');
 
     // ✅ Kiểm tra lỗi số điện thoại nếu field là phone
-    if (field === "phone") {
+    if (field === 'phone') {
       const phoneRegex = /^0\d{9}$/;
 
-      if (!value) setPhoneError("");
-      else if (!value.startsWith("0"))
-        setPhoneError("Số điện thoại phải bắt đầu bằng số 0");
-      else if (value.length > 10)
-        setPhoneError("Số điện thoại không được quá 10 số");
-      else if (!phoneRegex.test(value))
-        setPhoneError("Số điện thoại phải có đúng 10 chữ số");
-      else setPhoneError("");
+      if (!value) setPhoneError('');
+      else if (!value.startsWith('0')) setPhoneError('Số điện thoại phải bắt đầu bằng số 0');
+      else if (value.length > 10) setPhoneError('Số điện thoại không được quá 10 số');
+      else if (!phoneRegex.test(value)) setPhoneError('Số điện thoại phải có đúng 10 chữ số');
+      else setPhoneError('');
     }
 
     //check email
-    if (field === "email") {
+    if (field === 'email') {
       const vietnameseRegex = /[^\u0000-\u007F]/; // ký tự có dấu tiếng Việt hoặc Unicode lạ
       const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
 
       if (!value) {
-        setEmailError("");
+        setEmailError('');
       } else if (vietnameseRegex.test(value)) {
-        setEmailError(
-          "Email không được chứa ký tự có dấu hoặc ký tự đặc biệt lạ"
-        );
-      } else if (!value.includes("@")) {
+        setEmailError('Email không được chứa ký tự có dấu hoặc ký tự đặc biệt lạ');
+      } else if (!value.includes('@')) {
         setEmailError("Email phải có ký tự '@'");
       } else if (!/\.[a-zA-Z]{2,}$/.test(value)) {
-        setEmailError("Email phải có tên miền hợp lệ (vd: .com, .vn)");
+        setEmailError('Email phải có tên miền hợp lệ (vd: .com, .vn)');
       } else if (!emailRegex.test(value)) {
-        setEmailError("Email không hợp lệ, vui lòng kiểm tra lại");
+        setEmailError('Email không hợp lệ, vui lòng kiểm tra lại');
       } else {
-        setEmailError("");
+        setEmailError('');
       }
     }
 
-    if (field === "password") {
+    if (field === 'password') {
       const hasUppercase = /[A-Z]/.test(value); //ít nhất 1 chữ in hoa
       const hasNumber = /\d/.test(value); //ít nhất 1 số
       const hasLetter = /[a-zA-z]/.test(value); // ít nhất 1 chữ thường
       const hasSpecial = /[!@#$%^&*()_\-+=\[\]{};:"',.<>/?\\|]/.test(value);
 
       if (!value) {
-        setPasswordError("");
+        setPasswordError('');
       } else if (value.length < 6) {
-        setPasswordError("Mật khẩu phải có ít nhất 6 ký tự.");
+        setPasswordError('Mật khẩu phải có ít nhất 6 ký tự.');
       } else {
         const hasUppercase = /[A-Z]/.test(value);
         const hasNumber = /\d/.test(value);
@@ -138,7 +131,7 @@ export default function RegisterPage() {
 
         // bắt buộc có chữ
         if (!hasLetter) {
-          setPasswordError("Mật khẩu phải chứa ít nhất 1 chữ cái.");
+          setPasswordError('Mật khẩu phải chứa ít nhất 1 chữ cái.');
         } else {
           // tính điểm phụ thuộc các yếu tố (chữ đã có)
           let score = 0;
@@ -148,14 +141,14 @@ export default function RegisterPage() {
 
           // map score -> thông báo
           if (score === 0) {
-            setPasswordError("Mật khẩu yếu"); // chỉ có chữ
+            setPasswordError('Mật khẩu yếu'); // chỉ có chữ
           } else if (score === 1) {
-            setPasswordError("Mật khẩu trung bình"); // chữ + 1 yếu tố
+            setPasswordError('Mật khẩu trung bình'); // chữ + 1 yếu tố
           } else if (score === 2) {
-            setPasswordError("Mật khẩu khá"); // chữ + 2 yếu tố
+            setPasswordError('Mật khẩu khá'); // chữ + 2 yếu tố
           } else {
             // score === 3
-            setPasswordError("Mật khẩu mạnh - tốt"); // đầy đủ
+            setPasswordError('Mật khẩu mạnh - tốt'); // đầy đủ
           }
         }
       }
@@ -163,24 +156,24 @@ export default function RegisterPage() {
   };
 
   const validateForm = () => {
-    if (!formData.full_name.trim()) return "Vui lòng nhập họ tên";
-    if (!formData.phone.trim()) return "Vui lòng nhập số điện thoại";
-    if (!formData.email.trim()) return "Vui lòng nhập email";
-    if (!formData.password) return "Vui lòng nhập mật khẩu";
-    if (!formData.confirmPassword) return "Vui lòng xác nhận mật khẩu";
+    if (!formData.full_name.trim()) return 'Vui lòng nhập họ tên';
+    if (!formData.phone.trim()) return 'Vui lòng nhập số điện thoại';
+    if (!formData.email.trim()) return 'Vui lòng nhập email';
+    if (!formData.password) return 'Vui lòng nhập mật khẩu';
+    if (!formData.confirmPassword) return 'Vui lòng xác nhận mật khẩu';
 
     // Email validation
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(formData.email)) {
-      return "Email không hợp lệ";
+      return 'Email không hợp lệ';
     }
 
     if (formData.password.length < 6) {
-      return "Mật khẩu phải có ít nhất 6 ký tự";
+      return 'Mật khẩu phải có ít nhất 6 ký tự';
     }
 
     if (formData.password !== formData.confirmPassword) {
-      return "Mật khẩu xác nhận không khớp";
+      return 'Mật khẩu xác nhận không khớp';
     }
 
     return null;
@@ -193,45 +186,51 @@ export default function RegisterPage() {
     if (validationError) {
       setError(validationError);
 
-      if (validationError.includes("họ tên")) {
-        document.getElementById("full_name").focus();
-      } else if (validationError.includes("số điện thoại")) {
-        document.getElementById("phone").focus();
-      } else if (validationError.includes("email")) {
-        document.getElementById("email").focus();
-      } else if (validationError.includes("Mật khẩu")) {
-        document.getElementById("pass").focus();
-      } else if (validationError.includes("Mật khẩu xác nhận")) {
-        document.getElementById("confirmPassword").focus();
+      if (validationError.includes('họ tên')) {
+        document.getElementById('full_name').focus();
+      } else if (validationError.includes('số điện thoại')) {
+        document.getElementById('phone').focus();
+      } else if (validationError.includes('email')) {
+        document.getElementById('email').focus();
+      } else if (validationError.includes('Mật khẩu')) {
+        document.getElementById('pass').focus();
+      } else if (validationError.includes('Mật khẩu xác nhận')) {
+        document.getElementById('confirmPassword').focus();
       }
       return;
     }
     // ✅ Kiểm tra phone hợp lệ trước submit
     if (phoneError || formData.phone.length !== 10) {
       //setError("Vui lòng nhập số điện thoại hợp lệ 10 chữ số");
-      document.getElementById("phone").focus();
+      document.getElementById('phone').focus();
       return;
     }
 
     // ✅ Kiểm tra email hợp lệ
     if (emailError) {
       //setError("Vui lòng nhập email hợp lệ");
-      document.getElementById("email").focus();
+      document.getElementById('email').focus();
       return;
     }
 
     if (!/[a-zA-Z]/.test(formData.password)) {
-      setPasswordError("Mật khẩu phải chứa ít nhất 1 chữ cái.");
-      document.getElementById("pass").focus();
+      setPasswordError('Mật khẩu phải chứa ít nhất 1 chữ cái.');
+      document.getElementById('pass').focus();
       return;
     }
 
     setIsLoading(true);
-    setError("");
+    setError('');
     setShowPhoneExists(false);
 
+    // const hosts = [
+    //   "/apiLocal/register",
+    //   // "/api192/register",
+    //   // "/api172/register",
+    //   // "/api/register", // fallback
+    // ];
     const hosts = [
-      "/apiLocal/register",
+      'https://badafuta-production.up.railway.app/api/register',
       // "/api192/register",
       // "/api172/register",
       // "/api/register", // fallback
@@ -243,8 +242,8 @@ export default function RegisterPage() {
         // const res = await fetch("http://172.20.10.3:3000/api/register", {
         // const res = await fetch("http://192.168.100.124:3000/api/register", {
         const res = await fetch(url, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             full_name: formData.full_name,
             phone: formData.phone,
@@ -255,43 +254,59 @@ export default function RegisterPage() {
 
         const data = await res.json(); // đây sẽ là { success: true, user: {...} }
 
+        // if (!res.ok) {
+        //   if (data.sdt) {
+        //     // Nếu số điện thoại đã có → điều hướng sang login
+        //     setShowPhoneExists(true);
+        //     return;
+        //   }
+        //   if (data.email) {
+        //     setEmailError("⚠️ Email này đã được đăng ký"); // ← hiển thị thông báo
+        //     document.getElementById("email").focus();
+        //     return;
+        //   }
+        //   setError(data.error || "Đăng ký thất bại");
+        //   return;
+        // }
         if (!res.ok) {
-          if (data.sdt) {
-            // Nếu số điện thoại đã có → điều hướng sang login
+          if (data.error_code === 'AUTH_PHONE_EXISTS') {
             setShowPhoneExists(true);
+            setIsLoading(false);
             return;
           }
-          if (data.email) {
-            setEmailError("⚠️ Email này đã được đăng ký"); // ← hiển thị thông báo
-            document.getElementById("email").focus();
+          if (data.error_code === 'AUTH_EMAIL_EXISTS') {
+            setEmailError(data.error);
+            document.getElementById('email').focus();
+            setIsLoading(false);
             return;
           }
-          setError(data.error || "Đăng ký thất bại");
+          setError(data.error || 'Đăng ký thất bại');
+          setIsLoading(false);
           return;
         }
 
         // Nếu success = true thì hiển thị popup
         setFormData({
-          full_name: "",
-          phone: "",
-          email: "",
-          password: "",
-          confirmPassword: "",
+          full_name: '',
+          phone: '',
+          email: '',
+          password: '',
+          confirmPassword: '',
         });
         // Thành công
-        alert("Đăng ký thành công!");
-        navigate("/login");
+        alert('Đăng ký thành công!');
+        navigate('/login');
         setShowSuccessDialog(true);
-        console.log("Đăng ký thành công từ host:", url);
+        console.log('Đăng ký thành công từ host:', url);
         return; // thoát loop nếu thành công
       } catch (err) {
-        console.error("Register error:", err);
-        setError("Có lỗi xảy ra, vui lòng thử lại");
+        console.error('Register error:', err);
+        setError('Có lỗi xảy ra, vui lòng thử lại');
       } finally {
         setIsLoading(false);
       }
     }
-    setError("Không thể đăng ký từ bất kỳ host nào");
+    setError('Không thể đăng ký từ bất kỳ host nào');
     setIsLoading(false);
   };
 
@@ -305,11 +320,7 @@ export default function RegisterPage() {
       <div className="min-h-screen bg-gradient-to-br from-orange-50 to-red-50 flex justify-center p-4">
         <div className="w-full max-w-md">
           {/* Back to home button */}
-          <Button
-            variant="ghost"
-            onClick={() => navigate("/")}
-            className="mb-6 flex items-center"
-          >
+          <Button variant="ghost" onClick={() => navigate('/')} className="mb-6 flex items-center">
             <ArrowLeft className="w-4 h-4 mr-2" />
             Về trang chủ
           </Button>
@@ -360,14 +371,12 @@ export default function RegisterPage() {
                           type="text"
                           placeholder="Nhập họ và tên đầy đủ"
                           value={formData.full_name}
-                          onChange={(e) =>
-                            handleChange("full_name", e.target.value)
-                          }
+                          onChange={(e) => handleChange('full_name', e.target.value)}
                           className={cn(
-                            "pl-10 ",
-                            !formData.full_name && error?.includes("họ tên")
-                              ? "border-red-500 focus:border-red-500"
-                              : " "
+                            'pl-10 ',
+                            !formData.full_name && error?.includes('họ tên')
+                              ? 'border-red-500 focus:border-red-500'
+                              : ' ',
                           )}
                           disabled={isLoading}
                         />
@@ -382,19 +391,17 @@ export default function RegisterPage() {
                           type="tel"
                           placeholder="Nhập số điện thoại"
                           value={formData.phone}
-                          onChange={(e) =>
-                            handleChange("phone", e.target.value)
-                          }
+                          onChange={(e) => handleChange('phone', e.target.value)}
                           disabled={true}
                           className={cn(
-                            "pl-10 pr-10 bg-gray-100 cursor-not-allowed",
-                            !formData.phone && error?.includes("số điện thoại")
-                              ? "border-red-500 focus:border-red-500"
+                            'pl-10 pr-10 bg-gray-100 cursor-not-allowed',
+                            !formData.phone && error?.includes('số điện thoại')
+                              ? 'border-red-500 focus:border-red-500'
                               : phoneError
-                              ? "border-red-500 hover:border-red-500 focus:border-red-500"
+                              ? 'border-red-500 hover:border-red-500 focus:border-red-500'
                               : formData.phone.length === 10 && !phoneError
-                              ? "border-green-500 hover:border-green-500 focus:border-green-500"
-                              : " "
+                              ? 'border-green-500 hover:border-green-500 focus:border-green-500'
+                              : ' ',
                           )}
                           // disabled={isLoading}
                         />
@@ -408,11 +415,7 @@ export default function RegisterPage() {
                           <Check className="absolute right-3 top-1/2 transform -translate-y-1/2 text-green-500 w-4 h-4" />
                         )}
                       </div>
-                      {phoneError && (
-                        <p className="text-xs text-red-500 text-left">
-                          {phoneError}
-                        </p>
-                      )}
+                      {phoneError && <p className="text-xs text-red-500 text-left">{phoneError}</p>}
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="email">Email *</Label>
@@ -423,18 +426,16 @@ export default function RegisterPage() {
                           type="email"
                           placeholder="Nhập địa chỉ email"
                           value={formData.email}
-                          onChange={(e) =>
-                            handleChange("email", e.target.value)
-                          }
+                          onChange={(e) => handleChange('email', e.target.value)}
                           className={cn(
-                            "pl-10 pr-10",
-                            !formData.email && error?.includes("email")
-                              ? "border-red-500 focus:border-red-500"
+                            'pl-10 pr-10',
+                            !formData.email && error?.includes('email')
+                              ? 'border-red-500 focus:border-red-500'
                               : emailError
-                              ? "border-red-500 hover:border-red-500 focus:border-red-500"
+                              ? 'border-red-500 hover:border-red-500 focus:border-red-500'
                               : formData.email && !emailError
-                              ? "border-green-500 hover:border-green-500 focus:border-green-500"
-                              : " "
+                              ? 'border-green-500 hover:border-green-500 focus:border-green-500'
+                              : ' ',
                           )}
                           disabled={isLoading}
                         />
@@ -450,11 +451,7 @@ export default function RegisterPage() {
                         )}
                       </div>
 
-                      {emailError && (
-                        <p className="text-xs text-red-500 text-left">
-                          {emailError}
-                        </p>
-                      )}
+                      {emailError && <p className="text-xs text-red-500 text-left">{emailError}</p>}
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="passwword">Mật khẩu *</Label>
@@ -462,29 +459,27 @@ export default function RegisterPage() {
                         <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
                         <Input
                           id="pass"
-                          type={showPassword ? "text" : "password"}
+                          type={showPassword ? 'text' : 'password'}
                           placeholder="Nhập mật khẩu (tối thiểu 6 ký tự)"
                           value={formData.password}
-                          onChange={(e) =>
-                            handleChange("password", e.target.value)
-                          }
+                          onChange={(e) => handleChange('password', e.target.value)}
                           className={cn(
-                            "pl-10 pr-10 ",
-                            !formData.password && error?.includes("mật khẩu")
-                              ? "border-red-500 focus:border-red-500"
+                            'pl-10 pr-10 ',
+                            !formData.password && error?.includes('mật khẩu')
+                              ? 'border-red-500 focus:border-red-500'
                               : passwordError
-                              ? passwordError.includes("ít nhất 6")
-                                ? "border-red-500 hover:border-red-500 focus:border-red-500"
-                                : passwordError === "Mật khẩu yếu"
-                                ? "border-red-500 hover:border-red-500 focus:border-red-500"
-                                : passwordError === "Mật khẩu trung bình"
-                                ? "border-yellow-500 hover:border-yellow-500 focus:border-yellow-500"
-                                : passwordError === "Mật khẩu khá"
-                                ? "border-yellow-300 hover:border-yellow-300 focus:border-yellow-300"
-                                : passwordError === "Mật khẩu mạnh - tốt"
-                                ? "border-green-500 hover:border-green-500 focus:border-green-500"
-                                : "border-gray-300 focus:border-orange-500"
-                              : " "
+                              ? passwordError.includes('ít nhất 6')
+                                ? 'border-red-500 hover:border-red-500 focus:border-red-500'
+                                : passwordError === 'Mật khẩu yếu'
+                                ? 'border-red-500 hover:border-red-500 focus:border-red-500'
+                                : passwordError === 'Mật khẩu trung bình'
+                                ? 'border-yellow-500 hover:border-yellow-500 focus:border-yellow-500'
+                                : passwordError === 'Mật khẩu khá'
+                                ? 'border-yellow-300 hover:border-yellow-300 focus:border-yellow-300'
+                                : passwordError === 'Mật khẩu mạnh - tốt'
+                                ? 'border-green-500 hover:border-green-500 focus:border-green-500'
+                                : 'border-gray-300 focus:border-orange-500'
+                              : ' ',
                           )}
                           disabled={isLoading}
                         />
@@ -505,18 +500,18 @@ export default function RegisterPage() {
                       {passwordError && (
                         <p
                           className={cn(
-                            "text-xs text-left transition-colors duration-200",
-                            passwordError.includes("ít nhất 6")
-                              ? "text-red-500"
-                              : passwordError === "Mật khẩu yếu"
-                              ? "text-red-500"
-                              : passwordError === "Mật khẩu trung bình"
-                              ? "text-yellow-500"
-                              : passwordError === "Mật khẩu khá"
-                              ? "text-yellow-300"
-                              : passwordError === "Mật khẩu mạnh - tốt"
-                              ? "text-green-500"
-                              : "text-red-500"
+                            'text-xs text-left transition-colors duration-200',
+                            passwordError.includes('ít nhất 6')
+                              ? 'text-red-500'
+                              : passwordError === 'Mật khẩu yếu'
+                              ? 'text-red-500'
+                              : passwordError === 'Mật khẩu trung bình'
+                              ? 'text-yellow-500'
+                              : passwordError === 'Mật khẩu khá'
+                              ? 'text-yellow-300'
+                              : passwordError === 'Mật khẩu mạnh - tốt'
+                              ? 'text-green-500'
+                              : 'text-red-500',
                           )}
                         >
                           {passwordError}
@@ -525,14 +520,12 @@ export default function RegisterPage() {
                     </div>
 
                     <div className="space-y-2">
-                      <Label htmlFor="confirmPassword">
-                        Xác nhận mật khẩu *
-                      </Label>
+                      <Label htmlFor="confirmPassword">Xác nhận mật khẩu *</Label>
                       <div className="relative">
                         <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
                         <Input
                           id="confirmPassword"
-                          type={showConfirmPassword ? "text" : "password"}
+                          type={showConfirmPassword ? 'text' : 'password'}
                           placeholder="Nhập lại mật khẩu *"
                           value={formData.confirmPassword}
                           onChange={(e) => {
@@ -544,38 +537,31 @@ export default function RegisterPage() {
 
                             if (!formData.password) {
                               // ❌ Chưa nhập mật khẩu chính mà lại nhập confirm
-                              setconfirmPassword(
-                                "⚠️ Vui lòng nhập mật khẩu trước"
-                              );
+                              setconfirmPassword('⚠️ Vui lòng nhập mật khẩu trước');
                             } else if (value !== formData.password) {
                               // ❌ Không khớp
-                              setconfirmPassword(
-                                "⚠️ Mật khẩu xác nhận không khớp"
-                              );
+                              setconfirmPassword('⚠️ Mật khẩu xác nhận không khớp');
                             } else {
                               // ✅ Khớp
-                              setconfirmPassword("");
+                              setconfirmPassword('');
                             }
                           }}
                           className={cn(
-                            "pl-10 pr-10 ",
-                            !formData.confirmPassword &&
-                              error?.includes("xác nhận mật khẩu")
-                              ? "border-red-500 focus:border-red-500"
+                            'pl-10 pr-10 ',
+                            !formData.confirmPassword && error?.includes('xác nhận mật khẩu')
+                              ? 'border-red-500 focus:border-red-500'
                               : confirmPassword
-                              ? "border-red-500 focus:border-red-500"
+                              ? 'border-red-500 focus:border-red-500'
                               : formData.confirmPassword && !confirmPassword
-                              ? "border-green-500 focus:border-green-500"
-                              : " " // mặc định nếu rỗng nhưng chưa submit
+                              ? 'border-green-500 focus:border-green-500'
+                              : ' ', // mặc định nếu rỗng nhưng chưa submit
                           )}
                           disabled={isLoading}
                         />
                         {/* Nút ẩn/hiện mật khẩu */}
                         <button
                           type="button"
-                          onClick={() =>
-                            setShowConfirmPassword(!showConfirmPassword)
-                          }
+                          onClick={() => setShowConfirmPassword(!showConfirmPassword)}
                           className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
                           disabled={isLoading}
                           F
@@ -588,33 +574,24 @@ export default function RegisterPage() {
                         </button>
                       </div>
                       {confirmPassword && (
-                        <p className="text-xs text-red-500 text-left">
-                          {confirmPassword}
-                        </p>
+                        <p className="text-xs text-red-500 text-left">{confirmPassword}</p>
                       )}
 
                       {!confirmPassword &&
                         formData.confirmPassword &&
                         formData.password === formData.confirmPassword && (
-                          <p className="text-xs text-green-500 text-left">
-                            ✅ Mật khẩu khớp
-                          </p>
+                          <p className="text-xs text-green-500 text-left">✅ Mật khẩu khớp</p>
                         )}
                     </div>
 
-                    <Button
-                      type="submit"
-                      variant=""
-                      className="w-full "
-                      disabled={isLoading}
-                    >
+                    <Button type="submit" variant="" className="w-full " disabled={isLoading}>
                       {isLoading ? (
                         <>
                           <Loader2 className="w-4 h-4 mr-2 animate-spin" />
                           Đang tạo tài khoản...
                         </>
                       ) : (
-                        "Đăng ký"
+                        'Đăng ký'
                       )}
                     </Button>
                   </div>
@@ -629,7 +606,7 @@ export default function RegisterPage() {
                       <Button
                         type="button"
                         variant="default"
-                        onClick={() => navigate("/login")}
+                        onClick={() => navigate('/login')}
                         className="px-4 py-2 w-[115px] h-[40px] rounded transition"
                       >
                         Đăng nhập
@@ -639,7 +616,7 @@ export default function RegisterPage() {
                         type="button"
                         // onClick={() => setShowPhoneExists(false)}
                         onClick={() => {
-                          navigate("/phone-otp"); // quay về trang xác nhận OTP
+                          navigate('/phone-otp'); // quay về trang xác nhận OTP
                         }}
                         className=" w-[130px] h-[40px] px-4 py-2 rounded transition"
                       >
@@ -670,10 +647,7 @@ export default function RegisterPage() {
                       Google
                     </Button>
 
-                    <Button
-                      variant="outline"
-                      className="flex-1 flex items-center justify-center"
-                    >
+                    <Button variant="outline" className="flex-1 flex items-center justify-center">
                       <img
                         src="https://upload.wikimedia.org/wikipedia/commons/thumb/b/b9/2023_Facebook_icon.svg/667px-2023_Facebook_icon.svg.png"
                         alt="Facebook"
@@ -704,17 +678,11 @@ export default function RegisterPage() {
 
                 <div className="text-xs text-gray-600 mt-4 text-center">
                   Bằng việc đăng kí, bạn đã đồng ý với BaDaFuTaFood về <br />
-                  <Link
-                    to="/"
-                    className="text-orange-600 hover:text-orange-700 hover:underline"
-                  >
+                  <Link to="/" className="text-orange-600 hover:text-orange-700 hover:underline">
                     Điều khoản dịch vụ
-                  </Link>{" "}
-                  và{" "}
-                  <Link
-                    to="/"
-                    className="text-orange-600 hover:text-orange-700 hover:underline"
-                  >
+                  </Link>{' '}
+                  và{' '}
+                  <Link to="/" className="text-orange-600 hover:text-orange-700 hover:underline">
                     Chính sách bảo mật
                   </Link>
                 </div>
@@ -724,7 +692,7 @@ export default function RegisterPage() {
             <CardFooter className="">
               <Separator />
               <div className="text-center text-sm text-gray-600">
-                Đã có tài khoản?{" "}
+                Đã có tài khoản?{' '}
                 <Link
                   to="/login"
                   className="text-orange-600 hover:text-orange-700 hover:underline font-medium"
@@ -741,9 +709,7 @@ export default function RegisterPage() {
         <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50">
           <div className="bg-white p-6 rounded-lg text-center">
             <p className="mb-4">Đăng ký thành công!</p>
-            <Button onClick={handleSuccessDialogClose}>
-              Sang trang đăng nhập
-            </Button>
+            <Button onClick={handleSuccessDialogClose}>Sang trang đăng nhập</Button>
           </div>
         </div>
       )}

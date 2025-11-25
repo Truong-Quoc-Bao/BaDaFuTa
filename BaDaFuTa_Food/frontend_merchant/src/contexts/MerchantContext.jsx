@@ -30,7 +30,7 @@ export function MerchantProvider({ children }) {
       const response = await fetch('http://localhost:3000/api/merchant/overview', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ user_id: '7a11116f-f677-4015-8fec-68836c743ed2' }),
+        body: JSON.stringify({ user_id: 'be32facc-e24e-4429-9059-a1298498584f' }),
       });
       const data = await response.json();
       setDashboardData(data); // lưu vào state

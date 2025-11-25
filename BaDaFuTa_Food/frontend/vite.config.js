@@ -13,6 +13,7 @@ export default defineConfig({
     },
     host: true,
     port: 5173,
+    strictPort: false,
     // ✅ Cho phép ngrok host truy cập
     allowedHosts: [
       "localhost",
