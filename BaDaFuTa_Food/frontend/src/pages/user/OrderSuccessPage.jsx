@@ -142,7 +142,7 @@ export default function OrderSuccessPage() {
         clearCart();
 
         setTimeout(() => {
-          if (decodedData?.status === 'DELIVERING') {
+          if (decodedData?.order_status === 'DELIVERING'){
             navigate(`/track-order/${decodedData.order_id}`, {
               state: { order: decodedData, from: 'OrderSuccess' },
             });
