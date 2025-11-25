@@ -137,8 +137,6 @@ export const momoRepository = {
         where: { id: txn.order_id },
         data: {
           status_payment: statusEnum,
-          // status: order_status.PENDING,
-          status: order_status.DELIVERING,
         },
       });
     }
