@@ -17,33 +17,47 @@ export function MerchantOrderCard({ order, onStatusUpdate }) {
       COMPLETED: { label: 'Đã giao', variant: 'outline' },
       CANCELED: { label: 'Đã hủy', variant: 'destructive' },
     };
-    // return statusMap[status];
     return statusMap[status] || { label: 'Không xác định', variant: 'secondary' };
   };
 
-  const handleConfirmOrder = () => {
-    updateOrderStatus(order.id, 'CONFIRMED');
-    onStatusUpdate?.(order.id, 'CONFIRMED');
-    toast.success('Đã xác nhận đơn hàng');
+  const handleConfirmOrder = async () => {
+    const updated = await updateOrderStatus(order.id, 'CONFIRMED', '', order);
+    if (updated) {
+      onStatusUpdate?.(order.id, 'CONFIRMED');
+      toast.success('Đã xác nhận đơn hàng');
+    }
   };
 
-  const handleStartPreparing = () => {
-    updateOrderStatus(order.id, 'PREPARING');
-    onStatusUpdate?.(order.id, 'PREPARING');
-    toast.success('Bắt đầu chuẩn bị đơn hàng');
+  const handleStartPreparing = async () => {
+    try {
+      await updateOrderStatus(order.id, 'PREPARING');
+      onStatusUpdate?.(order.id, 'PREPARING');
+      toast.success('Bắt đầu chuẩn bị đơn hàng');
+    } catch (error) {
+      toast.error('Cập nhật đơn hàng thất bại');
+    }
   };
 
-  const handleMarkReady = () => {
-    updateOrderStatus(order.id, 'READY');
-    onStatusUpdate?.(order.id, 'READY');
-    toast.success('Đơn hàng đã sẵn sàng giao');
+  const handleMarkReady = async () => {
+    try {
+      await updateOrderStatus(order.id, 'READY');
+      onStatusUpdate?.(order.id, 'READY');
+      toast.success('Đơn hàng đã sẵn sàng giao');
+    } catch (error) {
+      toast.error('Cập nhật đơn hàng thất bại');
+    }
   };
 
-  const handleCancelOrder = () => {
-    if (confirm('Bạn có chắc chắn muốn hủy đơn hàng này?')) {
-      const reason = prompt('Lý do hủy đơn:') || 'Merchant hủy đơn';
-      cancelOrder(order.id, reason);
+  const handleCancelOrder = async () => {
+    if (!confirm('Bạn có chắc chắn muốn hủy đơn hàng này?')) return;
+
+    const reason = prompt('Lý do hủy đơn:') || 'Merchant hủy đơn';
+    try {
+      await updateOrderStatus(order.id, 'CANCELED', reason); // gọi API update
+      onStatusUpdate?.(order.id, 'CANCELED');
       toast.success('Đã hủy đơn hàng');
+    } catch (error) {
+      toast.error('Cập nhật đơn hàng thất bại');
     }
   };
 
@@ -155,7 +169,11 @@ export function MerchantOrderCard({ order, onStatusUpdate }) {
         <div className="flex gap-2 flex-wrap">
           {order.status === 'PENDING' && (
             <>
-              <Button variant="default" onClick={handleConfirmOrder} className="">
+              <Button
+                variant="default"
+                onClick={() => updateOrderStatus(order.id, 'CONFIRMED', '', order)}
+                className=""
+              >
                 Xác nhận đơn hàng
               </Button>
               <Button variant="destructive" onClick={handleCancelOrder}>

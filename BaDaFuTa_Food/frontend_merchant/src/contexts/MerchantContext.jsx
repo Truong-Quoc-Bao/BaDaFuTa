@@ -1,6 +1,10 @@
-import { createContext, useContext, useState, useEffect, useCallback } from 'react';
-
+import { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
+import { toast } from 'sonner'; // <-- thêm import này
+import { io } from 'socket.io-client';
 const MerchantContext = createContext(undefined);
+const socket = io('https://badafuta-production.up.railway.app', {
+  transports: ['websocket'],
+});
 
 export function MerchantProvider({ children }) {
   const [merchantSettings, setMerchantSettings] = useState({
@@ -18,6 +22,36 @@ export function MerchantProvider({ children }) {
   // Dashboard data state
   const [dashboardData, setDashboardData] = useState(null);
 
+  useEffect(() => {
+    // Nếu đã có merchantAuth, join room
+    if (merchantAuth) {
+      socket.emit('joinMerchant', merchantAuth.user_id);
+    }
+
+    // Hàm nhận đơn mới
+    const handleNewOrder = (order) => {
+      console.log('🔥 Đơn mới:', order);
+      setOrders((prev) => [order, ...prev]);
+      toast.success('🔥 Có đơn hàng mới!');
+    };
+
+    socket.on('newOrder', handleNewOrder);
+
+    return () => {
+      socket.off('newOrder', handleNewOrder);
+    };
+  }, [merchantAuth]); // <-- thêm dependency để join room khi merchantAuth thay đổi
+
+  // Load merchantAuth từ localStorage khi Provider mount
+  useEffect(() => {
+    const stored = localStorage.getItem('merchantAuth');
+    if (stored) setMerchantAuth(JSON.parse(stored));
+  }, []);
+  const socket = io('https://badafuta-production.up.railway.app', {
+    transports: ['polling', 'websocket'], // thêm polling fallback
+    secure: true,
+  });
+
   // Load merchantAuth
   useEffect(() => {
     const stored = localStorage.getItem('merchantAuth');
@@ -27,11 +61,14 @@ export function MerchantProvider({ children }) {
   // ✅ Fetch dashboard và lưu vào state
   const fetchDashboard = useCallback(async () => {
     try {
-      const response = await fetch('https://badafuta-production.up.railway.app/api/merchant/overview', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ user_id: 'be32facc-e24e-4429-9059-a1298498584f' }),
-      });
+      const response = await fetch(
+        'https://badafuta-production.up.railway.app/api/merchant/overview',
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ user_id: 'be32facc-e24e-4429-9059-a1298498584f' }),
+        },
+      );
       const data = await response.json();
       setDashboardData(data); // lưu vào state
       console.log('Dashboard data:', data);
@@ -43,72 +80,47 @@ export function MerchantProvider({ children }) {
   // Gọi fetchDashboard khi Provider mount
   useEffect(() => {
     fetchDashboard();
-  }, []);
+  }, [fetchDashboard]);
 
-  // ================= WebSocket =================
-  useEffect(() => {
-    if (!merchantAuth) return;
-
-    const ws = new WebSocket('ws://localhost:3000/ws/merchant'); // endpoint WebSocket backend
-
-    ws.onopen = () => {
-      console.log('WebSocket connected for merchant dashboard');
-      // Có thể gửi thông tin nhận dạng nhà hàng
-      ws.send(JSON.stringify({ type: 'subscribe', restaurantId: merchantAuth.restaurantId }));
-    };
-
-    ws.onmessage = (event) => {
-      const message = JSON.parse(event.data);
-      console.log('WS message:', message);
-
-      if (message.type === 'newOrder') {
-        // Cập nhật recentOrders và các stats
-        setDashboardData((prev) => ({
-          ...prev,
-          data: {
-            ...prev.data,
-            todayOrders: prev.data.todayOrders + 1,
-            pendingOrders: prev.data.pendingOrders + 1,
-            totalRevenue: prev.data.totalRevenue + message.data.total_amount,
-            todayRevenue: prev.data.todayRevenue + message.data.total_amount,
-            recentOrders: [message.data, ...prev.data.recentOrders],
-          },
-        }));
-      }
-
-      if (message.type === 'orderUpdated') {
-        // Cập nhật trạng thái đơn
-        setDashboardData((prev) => ({
-          ...prev,
-          data: {
-            ...prev.data,
-            recentOrders: prev.data.recentOrders.map((o) =>
-              o.id === message.data.id ? { ...o, status: message.data.status } : o,
-            ),
-            pendingOrders:
-              message.data.status.toLowerCase() === 'completed'
-                ? prev.data.pendingOrders - 1
-                : prev.data.pendingOrders,
-          },
-        }));
-      }
-    };
-
-    ws.onclose = () => {
-      console.log('WebSocket disconnected');
-    };
-
-    ws.onerror = (err) => console.error('WebSocket error:', err);
-
-    return () => ws.close();
-  }, [merchantAuth]);
   // ===========================================
+  // MerchantContext.jsx
+
+  const updateOrderStatus = async (orderId, status, reason) => {
+    try {
+      const response = await fetch(
+        'https://badafuta-production.up.railway.app/api/merchant/update-status',
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            user_id: 'be32facc-e24e-4429-9059-a1298498584f', // <- thử trực tiếp
+            order_id: orderId,
+            action: status,
+            reason: reason || '',
+          }),
+        },
+      );
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData?.error || 'Cập nhật thất bại');
+      }
+
+      const updatedOrder = await response.json();
+
+      setOrders((prev) =>
+        prev.map((o) => (o.id === orderId ? { ...o, status, notes: reason || o.notes } : o)),
+      );
+
+      return updatedOrder;
+    } catch (error) {
+      console.error(error);
+      toast.error(error.message || 'Có lỗi khi cập nhật đơn hàng');
+    }
+  };
 
   const updateMerchantSettings = (newSettings) =>
     setMerchantSettings((prev) => ({ ...prev, ...newSettings }));
-
-  const updateOrderStatus = (orderId, status) =>
-    setOrders((prev) => prev.map((o) => (o.id === orderId ? { ...o, status } : o)));
 
   const cancelOrder = (orderId, reason) =>
     setOrders((prev) =>

@@ -36,35 +36,6 @@ export function MerchantOrderManagementPage() {
     ...(dashboardData?.data?.canceledOrdersList || []),
   ];
 
-  const handleConfirmOrder = async () => {
-    try {
-      const response = await fetch(
-        'https://badafuta-production.up.railway.app/api/merchant/update-status',
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            user_id: order.userId, // hoặc order.user_id nếu đúng key trong order
-            order_id: order.id,
-            action: 'CONFIRMED',
-          }),
-        },
-      );
-
-      if (!response.ok) {
-        throw new Error('Cập nhật thất bại');
-      }
-
-      const updatedOrder = await response.json();
-
-      toast.success('Đã xác nhận đơn hàng');
-      onStatusUpdate?.(order.id, 'CONFIRMED');
-    } catch (error) {
-      console.error(error);
-      toast.error('Có lỗi xảy ra khi xác nhận đơn hàng');
-    }
-  };
-
   // Filter orders based on tab and search
   const filteredOrders = allOrders.filter((order) => {
     const matchesSearch =
@@ -120,6 +91,7 @@ export function MerchantOrderManagementPage() {
   if (!dashboardData?.data) {
     return <div>Loading...</div>;
   }
+
 
   return (
     <div className="space-y-6 p-6">
