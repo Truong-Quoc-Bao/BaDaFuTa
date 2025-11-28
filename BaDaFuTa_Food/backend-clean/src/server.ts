@@ -72,7 +72,7 @@ io.on('connection', (socket) => {
 
   // Test emit đơn mới
   setTimeout(() => {
-    io.to('rest-1').emit('newOrder', { id: 'order123', status: 'pending' });
+    io.to('rest-1').emit('newOrder', { id: 'order123', status: 'PENDING' });
   }, 5000);
 });
 

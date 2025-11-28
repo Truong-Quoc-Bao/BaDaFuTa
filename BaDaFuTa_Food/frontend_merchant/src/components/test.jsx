@@ -218,93 +218,77 @@ export function useMerchant() {
 
 //
 //
-import { createContext, useContext, useState, useEffect, useCallback } from 'react';
-import { toast } from 'sonner';
-import { io } from 'socket.io-client';
+useEffect(() => {
+  if (merchantAuth) {
+    socket.emit('joinMerchant', merchantAuth.user_id); // room = merchant_id
+  }
 
-const MerchantContext = createContext(undefined);
+  const handleNewOrder = (order) => {
+    // Chỉ nhận đơn của merchant này
+    if (order.merchant_id !== merchantAuth.user_id) return;
 
-// **Tạo socket 1 lần duy nhất**
-const socket = io('https://badafuta-production.up.railway.app', {
-  path: '/socket.io',
-  transports: ['websocket', 'polling'],
-  secure: true,
-});
+    console.log('🔥 Đơn mới:', order);
+    setOrders((prev) => [order, ...prev]);
+    toast.success('🔥 Có đơn hàng mới!');
+  };
 
-export function MerchantProvider({ children }) {
-  const [merchantAuth, setMerchantAuth] = useState(null);
-  const [orders, setOrders] = useState([]);
-  const [merchantSettings, setMerchantSettings] = useState({
-    restaurantId: 'rest-1',
-    autoConfirmOrders: false,
-    maxOrdersPerHour: 20,
-    operatingHours: { open: '08:00', close: '22:00' },
+  socket.on('newOrder', handleNewOrder);
+  return () => socket.off('newOrder', handleNewOrder);
+}, [merchantAuth]);
+
+const response = await fetch(
+  'https://badafuta-production.up.railway.app/api/merchant/update-status',
+  {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      user_id: merchantAuth.user_id, // <-- merchant_id chính xác
+      order_id: orderId,
+      action: status,
+      reason: reason || '',
+    }),
+  },
+);
+
+import { Server as HttpServer } from 'http';
+import { Server as IOServer, Socket } from 'socket.io';
+
+export const initSocket = (server: HttpServer) => {
+  const io = new IOServer(server, {
+    cors: {
+      origin: [
+        'http://localhost:5173',
+        'http://localhost:5174',
+        'https://ba-da-fu-ta-partner.vercel.app',
+      ],
+      methods: ['GET', 'POST'],
+      credentials: true,
+    },
+    path: '/socket.io',
   });
-  const [dashboardData, setDashboardData] = useState(null);
 
-  // Load merchantAuth từ localStorage
-  useEffect(() => {
-    const stored = localStorage.getItem('merchantAuth');
-    if (stored) setMerchantAuth(JSON.parse(stored));
-  }, []);
+  io.on('connection', (socket: Socket) => {
+    console.log('✅ Client connected:', socket.id);
 
-  // Join room và nhận đơn mới
-  useEffect(() => {
-    if (!merchantAuth) return;
-    socket.emit('joinMerchant', merchantAuth.user_id);
+    // Merchant join room
+    socket.on('joinMerchant', (merchantId: string) => {
+      console.log(`Merchant ${merchantId} joined`);
+      socket.join(merchantId);
+    });
 
-    const handleNewOrder = (order) => {
-      console.log('🔥 Đơn mới:', order);
-      setOrders((prev) => [order, ...prev]);
-      toast.success('🔥 Có đơn hàng mới!');
-    };
+    // Khi khách tạo đơn, backend nhận orderData
+    socket.on('newOrder', (orderData: any) => {
+      const merchantId = orderData.merchant_id; // lấy từ orderData
+      if (!merchantId) return;
+      io.to(merchantId).emit('newOrder', orderData);
+    });
 
-    socket.on('newOrder', handleNewOrder);
-    return () => socket.off('newOrder', handleNewOrder);
-  }, [merchantAuth]);
+    // Test emit đơn mới sau 5s
+    setTimeout(() => {
+      const testOrder = { id: 'order123', status: 'pending', merchant_id: 'rest-1' };
+      io.to(testOrder.merchant_id).emit('newOrder', testOrder);
+    }, 5000);
+  });
 
-  // Fetch dashboard
-  const fetchDashboard = useCallback(async () => {
-    try {
-      const response = await fetch(
-        'https://badafuta-production.up.railway.app/api/merchant/overview',
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ user_id: merchantAuth?.user_id || 'be32facc-e24e-4429-9059-a1298498584f' }),
-        },
-      );
-      const data = await response.json();
-      setDashboardData(data);
-    } catch (error) {
-      console.error('Error fetching dashboard:', error);
-    }
-  }, [merchantAuth]);
-
-  useEffect(() => {
-    if (merchantAuth) fetchDashboard();
-  }, [merchantAuth, fetchDashboard]);
-
-  // Các hàm update đơn, settings
-  const updateOrderStatus = async (orderId, status, reason) => { /* giữ nguyên */ };
-  const updateMerchantSettings = (newSettings) => setMerchantSettings((prev) => ({ ...prev, ...newSettings }));
-  const cancelOrder = (orderId, reason) => { /* giữ nguyên */ };
-  const toggleAutoConfirm = useCallback(() => { /* giữ nguyên */ }, []);
-  const logout = useCallback(() => { /* giữ nguyên */ }, []);
-
-  return (
-    <MerchantContext.Provider value={{
-      merchantSettings, updateMerchantSettings, orders, updateOrderStatus,
-      cancelOrder, autoConfirmEnabled: merchantSettings.autoConfirmOrders,
-      toggleAutoConfirm, merchantAuth, logout, dashboardData, fetchDashboard,
-    }}>
-      {children}
-    </MerchantContext.Provider>
-  );
-}
-
-export function useMerchant() {
-  const context = useContext(MerchantContext);
-  if (!context) throw new Error('useMerchant must be used within a MerchantProvider');
-  return context;
-}
+  return io;
+};

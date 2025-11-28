@@ -475,6 +475,14 @@ export default function CheckOutPage() {
     navigate(`/cart/checkout/ordersuccess?orderId=${orderId}`);
   }, [location.search]);
 
+  // Gửi WebSocket cho merchant
+  ws.current.send(
+    JSON.stringify({
+      type: 'new_order',
+      order: { ...data, merchant_id: merchant.id }, // chắc chắn merchant_id chính xác
+    }),
+  );
+
   // 🧾 Hàm thay đổi input
   const handleInputChange = (e) => {
     const { name, value } = e.target;
