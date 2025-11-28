@@ -27,7 +27,7 @@ export function MerchantProvider({ children }) {
   // ✅ Fetch dashboard và lưu vào state
   const fetchDashboard = useCallback(async () => {
     try {
-      const response = await fetch('http://localhost:3000/api/merchant/overview', {
+      const response = await fetch('https://badafuta-production.up.railway.app/api/merchant/overview', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ user_id: 'be32facc-e24e-4429-9059-a1298498584f' }),
@@ -43,7 +43,7 @@ export function MerchantProvider({ children }) {
   // Gọi fetchDashboard khi Provider mount
   useEffect(() => {
     fetchDashboard();
-  }, [fetchDashboard]);
+  }, []);
 
   // ================= WebSocket =================
   useEffect(() => {
