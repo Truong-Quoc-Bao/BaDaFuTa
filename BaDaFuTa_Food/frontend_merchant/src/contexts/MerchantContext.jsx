@@ -2,9 +2,6 @@ import { createContext, useContext, useState, useEffect, useCallback, useRef } f
 import { toast } from 'sonner'; // <-- thêm import này
 import { io } from 'socket.io-client';
 const MerchantContext = createContext(undefined);
-const socket = io('https://badafuta-production.up.railway.app', {
-  transports: ['websocket'],
-});
 
 export function MerchantProvider({ children }) {
   const [merchantSettings, setMerchantSettings] = useState({
@@ -22,13 +19,18 @@ export function MerchantProvider({ children }) {
   // Dashboard data state
   const [dashboardData, setDashboardData] = useState(null);
 
+  // Socket.IO
+  const socket = io('https://badafuta-production.up.railway.app', {
+    transports: ['websocket', 'polling'], // fallback polling
+    path: '/socket.io', // phải trùng server
+  });
+
+  // Join merchant room khi merchantAuth có
   useEffect(() => {
-    // Nếu đã có merchantAuth, join room
     if (merchantAuth) {
       socket.emit('joinMerchant', merchantAuth.user_id);
     }
 
-    // Hàm nhận đơn mới
     const handleNewOrder = (order) => {
       console.log('🔥 Đơn mới:', order);
       setOrders((prev) => [order, ...prev]);
@@ -36,21 +38,8 @@ export function MerchantProvider({ children }) {
     };
 
     socket.on('newOrder', handleNewOrder);
-
-    return () => {
-      socket.off('newOrder', handleNewOrder);
-    };
-  }, [merchantAuth]); // <-- thêm dependency để join room khi merchantAuth thay đổi
-
-  // Load merchantAuth từ localStorage khi Provider mount
-  useEffect(() => {
-    const stored = localStorage.getItem('merchantAuth');
-    if (stored) setMerchantAuth(JSON.parse(stored));
-  }, []);
-  const socket = io('https://badafuta-production.up.railway.app', {
-    transports: ['polling', 'websocket'], // thêm polling fallback
-    secure: true,
-  });
+    return () => socket.off('newOrder', handleNewOrder);
+  }, [merchantAuth]);
 
   // Load merchantAuth
   useEffect(() => {
