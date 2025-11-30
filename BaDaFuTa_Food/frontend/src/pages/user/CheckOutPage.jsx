@@ -34,7 +34,7 @@ import { getDistanceKm, calculateDeliveryFee } from '../../utils/distanceUtils';
 import { Badge } from '../../components/ui/badge';
 import PopupVoucher from '@/components/VoucherDialog';
 import { CashIcon, VnPayIcon, MomoIcon } from '../../components/PaymentIcons';
-import { io } from 'socket.io-client';
+import { io } from 'socket.io-client/dist/socket.io.js';
 
 export default function CheckOutPage() {
   // 🟢 Khai báo socketRef
