@@ -82,6 +82,7 @@ io.on('connection', (socket) => {
     console.log(`Merchant ${merchantId} joined room`);
     socket.join(merchantId);
   });
+  
   socket.on('newOrder', (orderData) => {
     console.log('🔹 Backend nhận order:', orderData);
     const merchantId = orderData.merchant_id;
