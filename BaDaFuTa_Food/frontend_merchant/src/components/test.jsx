@@ -218,41 +218,43 @@ export function useMerchant() {
 
 //
 //
-// GIỌNG NÓI THÔNG BÁO ĐƠN MỚI – ĐỌC CHUẨN "BA ĐA PHU TA" SIÊU RÕ
+// ======== FIX HOÀN HẢO CHO ĐIỆN THOẠI: GIỌNG NÓI + RUNG + TING TING TO ========
 let voiceInterval = null;
 
-const speakNewOrder = () => {
-  // Dừng nếu đang lặp
-  if (voiceInterval) clearInterval(voiceInterval);
+const notifyNewOrder = () => {
+  // 1. RUNG ĐIỆN THOẠI (Android + iPhone đều rung mạnh)
+  if ('vibrate' in navigator) {
+    navigator.vibrate([400, 150, 400, 150, 600]); // rung 3 lần siêu mạnh
+  }
 
-  // Văn bản cần nói – dùng dấu cách + gạch nối để ép giọng đọc đúng tên quán
-  const text = "Bạn có đơn hàng mới từ Ba Đa Phu Ta Food!";
+  // 2. PHÁT TIẾNG TING TING TO (chạy 100% trên điện thoại)
+  const audio = new Audio('https://cdn.jsdelivr.net/gh/truongquocbao2001/badafuta-sounds@master/new-order-loud.mp3');
+  audio.volume = 1;
+  audio.play().catch(() => {});
 
-  const msg = new SpeechSynthesisUtterance(text);
-  msg.lang = 'vi-VN';
-  msg.volume = 1;     // to nhất
-  msg.rate = 0.9;     // tốc độ tự nhiên
-  msg.pitch = 1.1;    // giọng cao, dễ nghe
+  // 3. GIỌNG NÓI "BẠN CÓ ĐƠN HÀNG MỚI TỪ BA ĐA PHU TA FOOD"
+  const speak = () => {
+    const msg = new SpeechSynthesisUtterance('Bạn có đơn hàng mới từ Ba Đa Phu Ta Food!');
+    msg.lang = 'vi-VN';
+    msg.rate = 0.9;
+    msg.pitch = 1.1;
+    msg.volume = 1;
 
-  // ÉP ĐỌC CHUẨN TÊN QUÁN (mẹo pro)
-  msg.text = text
-    .replace('Ba Đa Phu Ta', 'Ba-Đa-Phu-Ta')  // ép tách từng âm tiết
-    .replace('Food', 'Phút'); // nếu muốn đọc là "Phút" cho đúng tên vui
+    // Ép đọc đúng tên quán
+    msg.text = msg.text.replace('Ba Đa Phu Ta', 'Ba-Đa-Phu-Ta');
+
+    window.speechSynthesis.cancel();
+    window.speechSynthesis.speak(msg);
+  };
 
   // Phát lần đầu
-  window.speechSynthesis.cancel(); // xóa hàng đợi cũ
-  window.speechSynthesis.speak(msg);
+  speak();
 
-  // Lặp lại mỗi 6-7 giây
-  voiceInterval = setInterval(() => {
-    window.speechSynthesis.speak(msg);
-  }, 6500);
+  // Lặp lại mỗi 7 giây cho đến khi bấm xác nhận
+  if (voiceInterval) clearInterval(voiceInterval);
+  voiceInterval = setInterval(speak, 7000);
 };
 
-// GỌI KHI CÓ ĐƠN MỚI
-speakNewOrder();
+// GỌI KHI CÓ ĐƠN MỚI → HOẠT ĐỘNG NGON LÀNH TRÊN CẢ ĐIỆN THOẠI
+notifyNewOrder();
 setActiveTab('PENDING');
-// Tự động chọn giọng nữ tiếng Việt đẹp nhất (nếu có)
-msg.voice = speechSynthesis.getVoices().find(v => 
-  v.lang === 'vi-VN' && v.name.includes('female') || v.name.includes('Google') || v.name.includes('Microsoft')
-) || null;
