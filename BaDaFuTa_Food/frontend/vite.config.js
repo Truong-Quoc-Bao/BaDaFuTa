@@ -43,11 +43,9 @@ export default defineConfig({
   resolve: {
     alias: {
       '@': '/src',
-      'socket.io-client': 'socket.io-client/dist/socket.io.js',
     },
   },
   optimizeDeps: {
-    // 🔹 Buộc Vite pre-bundle socket.io-client
     include: ['socket.io-client'],
   },
 });
