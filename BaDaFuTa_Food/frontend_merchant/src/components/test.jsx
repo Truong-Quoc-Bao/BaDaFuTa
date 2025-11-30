@@ -218,144 +218,28 @@ export function useMerchant() {
 
 //
 //
-// MerchantContext.jsx
-import { createContext, useContext, useState, useEffect, useCallback } from 'react';
-import { toast } from 'sonner';
-import { io } from 'socket.io-client';
+import express from 'express';
+import { createServer } from 'http';
+import { initSocket } from './initSocket';
 
-const MerchantContext = createContext(undefined);
+const app = express();
+const server = createServer(app);
+const io = initSocket(server);
 
-// **Tạo socket 1 lần duy nhất**
-const socket = io('https://badafuta-production.up.railway.app', {
-  path: '/socket.io',
-  transports: ['websocket', 'polling'],
-  secure: true,
+app.use(express.json());
+
+// --- Đây là chỗ dán /api/order ---
+app.post('/api/order', async (req, res) => {
+  const orderData = req.body;
+  
+  console.log('📦 Order received:', orderData);
+
+  if (orderData.merchant_id) {
+    io.to(orderData.merchant_id).emit('newOrder', orderData);
+    console.log(`📢 Emit order to merchant ${orderData.merchant_id}`);
+  }
+
+  res.json({ success: true });
 });
 
-export function MerchantProvider({ children }) {
-  const [merchantAuth, setMerchantAuth] = useState(null);
-  const [orders, setOrders] = useState([]);
-  const [merchantSettings, setMerchantSettings] = useState({
-    autoConfirmOrders: false,
-    maxOrdersPerHour: 20,
-    operatingHours: { open: '08:00', close: '22:00' },
-  });
-  const [dashboardData, setDashboardData] = useState(null);
-
-  // Load merchantAuth từ localStorage
-  useEffect(() => {
-    const stored = localStorage.getItem('merchantAuth');
-    if (stored) setMerchantAuth(JSON.parse(stored));
-  }, []);
-
-  // Join merchant room và lắng nghe đơn mới
-  useEffect(() => {
-    if (!merchantAuth) return;
-
-    // Join đúng room
-    socket.emit('joinMerchant', merchantAuth.user_id);
-
-    // Lắng nghe đơn mới
-    const handleNewOrder = (order) => {
-      if (order.merchant_id !== merchantAuth.user_id) return;
-      console.log('🔥 Đơn mới:', order);
-      setOrders((prev) => [order, ...prev]);
-      toast.success('🔥 Có đơn hàng mới!');
-    };
-
-    socket.on('newOrder', handleNewOrder);
-
-    return () => {
-      socket.off('newOrder', handleNewOrder);
-    };
-  }, [merchantAuth]);
-
-  // Fetch dashboard
-  const fetchDashboard = useCallback(async () => {
-    if (!merchantAuth) return;
-    try {
-      const res = await fetch(
-        'https://badafuta-production.up.railway.app/api/merchant/overview',
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ user_id: merchantAuth.user_id }),
-        }
-      );
-      const data = await res.json();
-      setDashboardData(data);
-      console.log('Dashboard:', data);
-    } catch (err) {
-      console.error('Error fetching dashboard:', err);
-    }
-  }, [merchantAuth]);
-
-  useEffect(() => {
-    fetchDashboard();
-  }, [fetchDashboard]);
-
-  // Cập nhật trạng thái đơn
-  const updateOrderStatus = async (orderId, status, reason) => {
-    if (!merchantAuth) return;
-    try {
-      const res = await fetch(
-        'https://badafuta-production.up.railway.app/api/merchant/update-status',
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            user_id: merchantAuth.user_id,
-            order_id: orderId,
-            action: status,
-            reason: reason || '',
-          }),
-        }
-      );
-      if (!res.ok) throw new Error('Cập nhật thất bại');
-      const updatedOrder = await res.json();
-      setOrders((prev) =>
-        prev.map((o) =>
-          o.id === orderId ? { ...o, status, notes: reason || o.notes } : o
-        )
-      );
-      return updatedOrder;
-    } catch (err) {
-      console.error(err);
-      toast.error(err.message || 'Có lỗi khi cập nhật đơn hàng');
-    }
-  };
-
-  const toggleAutoConfirm = () =>
-    setMerchantSettings((prev) => ({
-      ...prev,
-      autoConfirmOrders: !prev.autoConfirmOrders,
-    }));
-
-  const logout = () => {
-    setMerchantAuth(null);
-    localStorage.removeItem('merchantAuth');
-  };
-
-  return (
-    <MerchantContext.Provider
-      value={{
-        merchantAuth,
-        orders,
-        merchantSettings,
-        updateOrderStatus,
-        toggleAutoConfirm,
-        dashboardData,
-        fetchDashboard,
-        logout,
-      }}
-    >
-      {children}
-    </MerchantContext.Provider>
-  );
-}
-
-export function useMerchant() {
-  const context = useContext(MerchantContext);
-  if (!context) throw new Error('useMerchant must be used within a MerchantProvider');
-  return context;
-}
+server.listen(3000, () => console.log('Server running on port 3000'));
