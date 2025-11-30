@@ -34,21 +34,24 @@ export function MerchantProvider({ children }) {
 
   // Join merchant room khi merchantAuth có
   useEffect(() => {
-    if (merchantAuth) {
-      socket.emit('joinMerchant', merchantAuth.user_id); // room = merchant_id
-    }
+    if (!merchantAuth) return;
 
+    // Join đúng room
+    socket.emit('joinMerchant', merchantAuth.user_id);
+
+    // Lắng nghe đơn mới
     const handleNewOrder = (order) => {
-      // Chỉ nhận đơn của merchant này
       if (order.merchant_id !== merchantAuth.user_id) return;
-
       console.log('🔥 Đơn mới:', order);
       setOrders((prev) => [order, ...prev]);
       toast.success('🔥 Có đơn hàng mới!');
     };
 
     socket.on('newOrder', handleNewOrder);
-    return () => socket.off('newOrder', handleNewOrder);
+
+    return () => {
+      socket.off('newOrder', handleNewOrder);
+    };
   }, [merchantAuth]);
 
   // ✅ Fetch dashboard và lưu vào state

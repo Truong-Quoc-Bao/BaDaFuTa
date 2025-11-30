@@ -24,10 +24,9 @@ export const initSocket = (server: HttpServer) => {
       socket.join(merchantId);
     });
 
-    // Khi khách tạo đơn, backend nhận orderData
-    socket.on('newOrder', (orderData: any) => {
-      const merchantId = orderData.merchant_id; // lấy từ orderData
-      if (!merchantId) return;
+    socket.on('newOrder', (orderData) => {
+      console.log('🔹 Backend nhận order:', orderData);
+      const merchantId = orderData.merchant_id;
       io.to(merchantId).emit('newOrder', orderData);
     });
 
