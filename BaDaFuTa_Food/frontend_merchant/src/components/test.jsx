@@ -218,15 +218,41 @@ export function useMerchant() {
 
 //
 //
-<MerchantOrderCard
-  key={order.id}
-  order={order}
-  onStatusUpdate={handleStatusUpdate}
-  onOrderConfirmed={() => {
-    if (window.voiceInterval) {
-      clearInterval(window.voiceInterval);
-      window.voiceInterval = null;
-      window.speechSynthesis.cancel();
-    }
-  }}
-/>
+// GIỌNG NÓI THÔNG BÁO ĐƠN MỚI – ĐỌC CHUẨN "BA ĐA PHU TA" SIÊU RÕ
+let voiceInterval = null;
+
+const speakNewOrder = () => {
+  // Dừng nếu đang lặp
+  if (voiceInterval) clearInterval(voiceInterval);
+
+  // Văn bản cần nói – dùng dấu cách + gạch nối để ép giọng đọc đúng tên quán
+  const text = "Bạn có đơn hàng mới từ Ba Đa Phu Ta Food!";
+
+  const msg = new SpeechSynthesisUtterance(text);
+  msg.lang = 'vi-VN';
+  msg.volume = 1;     // to nhất
+  msg.rate = 0.9;     // tốc độ tự nhiên
+  msg.pitch = 1.1;    // giọng cao, dễ nghe
+
+  // ÉP ĐỌC CHUẨN TÊN QUÁN (mẹo pro)
+  msg.text = text
+    .replace('Ba Đa Phu Ta', 'Ba-Đa-Phu-Ta')  // ép tách từng âm tiết
+    .replace('Food', 'Phút'); // nếu muốn đọc là "Phút" cho đúng tên vui
+
+  // Phát lần đầu
+  window.speechSynthesis.cancel(); // xóa hàng đợi cũ
+  window.speechSynthesis.speak(msg);
+
+  // Lặp lại mỗi 6-7 giây
+  voiceInterval = setInterval(() => {
+    window.speechSynthesis.speak(msg);
+  }, 6500);
+};
+
+// GỌI KHI CÓ ĐƠN MỚI
+speakNewOrder();
+setActiveTab('PENDING');
+// Tự động chọn giọng nữ tiếng Việt đẹp nhất (nếu có)
+msg.voice = speechSynthesis.getVoices().find(v => 
+  v.lang === 'vi-VN' && v.name.includes('female') || v.name.includes('Google') || v.name.includes('Microsoft')
+) || null;

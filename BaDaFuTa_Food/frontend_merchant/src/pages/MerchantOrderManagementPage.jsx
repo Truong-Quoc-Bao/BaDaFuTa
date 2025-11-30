@@ -107,18 +107,27 @@ export function MerchantOrderManagementPage() {
         if (voiceInterval) clearInterval(voiceInterval);
 
         // Phát giọng nói lần đầu
-        const msg = new SpeechSynthesisUtterance('Bạn có đơn hàng mới từ Ba Đa Phu Ta Phút!');
-        msg.lang = 'vi-VN'; // giọng tiếng Việt
-        msg.volume = 2; // to nhất
-        msg.rate = 1; // tốc độ nói tự nhiên
-        msg.pitch = 1.2; // cao một chút cho dễ nghe
+        const text = 'Bạn có đơn hàng mới từ Ba Da Phu Ta Food!';
 
+        const msg = new SpeechSynthesisUtterance(text);
+        msg.lang = 'vi-VN'; // giọng tiếng Việt
+        msg.volume = 1; // to nhất
+        msg.rate = 0.9; // tốc độ nói tự nhiên
+        msg.pitch = 1.1; // cao một chút cho dễ nghe
+
+        // ÉP ĐỌC CHUẨN TÊN QUÁN (mẹo pro)
+        msg.text = text
+          .replace('Ba Da Phu Ta', 'Ba-Đa-Phu-Ta') // ép tách từng âm tiết
+          .replace('Food', 'Phút'); // nếu muốn đọc là "Phút" cho đúng tên vui
+
+        // Phát lần đầu
+        window.speechSynthesis.cancel(); // xóa hàng đợi cũ
         window.speechSynthesis.speak(msg);
 
         // Lặp lại mỗi 6 giây cho đến khi bấm xác nhận
         window.voiceInterval = setInterval(() => {
           window.speechSynthesis.speak(msg);
-        }, 6000);
+        }, 5000);
       };
 
       // GỌI HÀM KHI CÓ ĐƠN MỚI
@@ -126,8 +135,7 @@ export function MerchantOrderManagementPage() {
 
       // Tự động chuyển về tab chờ xác nhận + focus vào đơn mới nhất
       setActiveTab('PENDING');
-      // Tự động chuyển về tab Chờ xác nhận
-      setActiveTab('PENDING');
+
     });
 
     return () => socket.disconnect();
