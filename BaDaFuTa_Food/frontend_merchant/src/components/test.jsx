@@ -218,20 +218,38 @@ export function useMerchant() {
 
 //
 //
-import express from 'express';
+import 'module-alias/register';
+import 'dotenv/config';
+import { createApp } from './app';
 import { createServer } from 'http';
-import { initSocket } from './initSocket';
+import { Server as IOServer } from 'socket.io';
+import express from 'express';
 
-const app = express();
-const server = createServer(app);
-const io = initSocket(server);
+const PORT = Number(process.env.PORT) || 3000;
+const HOST = process.env.HOST || '0.0.0.0';
 
-app.use(express.json());
+const app = createApp();
+app.use(express.json()); // parse JSON
 
-// --- Đây là chỗ dán /api/order ---
-app.post('/api/order', async (req, res) => {
+const httpServer = createServer(app);
+
+// Socket.IO
+const io = new IOServer(httpServer, {
+  path: '/socket.io',
+  cors: {
+    origin: [
+      'http://localhost:5173',
+      'http://localhost:5174',
+      'https://ba-da-fu-ta-partner.vercel.app',
+    ],
+    methods: ['GET', 'POST'],
+    credentials: true,
+  },
+});
+
+// Khi khách gửi đơn
+app.post('/api/order', (req, res) => {
   const orderData = req.body;
-  
   console.log('📦 Order received:', orderData);
 
   if (orderData.merchant_id) {
@@ -242,4 +260,18 @@ app.post('/api/order', async (req, res) => {
   res.json({ success: true });
 });
 
-server.listen(3000, () => console.log('Server running on port 3000'));
+// Socket.IO connection
+io.on('connection', (socket) => {
+  console.log('✅ Client connected:', socket.id);
+
+  // Merchant join room
+  socket.on('joinMerchant', (merchantId: string) => {
+    console.log(`Merchant ${merchantId} joined room`);
+    socket.join(merchantId);
+  });
+});
+
+httpServer.listen(PORT, HOST, () => {
+  const shownHost = HOST === '0.0.0.0' ? 'localhost' : HOST;
+  console.log(`🚀 API + Socket.IO listening on http://${shownHost}:${PORT}`);
+});

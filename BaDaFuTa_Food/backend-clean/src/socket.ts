@@ -19,10 +19,10 @@ export const initSocket = (server: HttpServer) => {
     console.log('✅ Client connected:', socket.id);
 
     // Merchant join room
-    // socket.on('joinMerchant', (merchantId: string) => {
-    //   console.log(`Merchant ${merchantId} joined`);
-    //   socket.join(merchantId);
-    // });
+    socket.on('joinMerchant', (merchantId: string) => {
+      console.log(`Merchant ${merchantId} joined`);
+      socket.join(merchantId);
+    });
 
     socket.on('newOrder', (orderData) => {
       console.log('🔹 Backend nhận order:', orderData);

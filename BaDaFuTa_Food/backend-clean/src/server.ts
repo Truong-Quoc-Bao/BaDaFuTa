@@ -62,6 +62,19 @@ const io = new IOServer(httpServer, {
   },
 });
 
+// Khi khách gửi đơn
+app.post('/api/order', (req, res) => {
+  const orderData = req.body;
+  console.log('📦 Order received:', orderData);
+
+  if (orderData.merchant_id) {
+    io.to(orderData.merchant_id).emit('newOrder', orderData);
+    console.log(`📢 Emit order to merchant ${orderData.merchant_id}`);
+  }
+
+  res.json({ success: true });
+});
+
 io.on('connection', (socket) => {
   console.log('✅ Client connected:', socket.id);
 
@@ -69,11 +82,11 @@ io.on('connection', (socket) => {
     console.log(`Merchant ${merchantId} joined room`);
     socket.join(merchantId);
   });
-
-  // Test emit đơn mới
-  setTimeout(() => {
-    io.to('rest-1').emit('newOrder', { id: 'order123', status: 'PENDING' });
-  }, 5000);
+  socket.on('newOrder', (orderData) => {
+    console.log('🔹 Backend nhận order:', orderData);
+    const merchantId = orderData.merchant_id;
+    io.to(merchantId).emit('newOrder', orderData);
+  });
 });
 
 httpServer.listen(PORT, HOST, () => {
