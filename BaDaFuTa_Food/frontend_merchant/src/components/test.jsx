@@ -280,57 +280,28 @@ httpServer.listen(PORT, HOST, () => {
   "socket.io-client": "^4.7.2",
   ...
 }
-import { defineConfig } from "vite";
-import react from "@vitejs/plugin-react";
-import tailwindcss from "@tailwindcss/vite";
+import { defineConfig } from 'vite';
+import react from '@vitejs/plugin-react';
+import tailwindcss from '@tailwindcss/vite';
 
 export default defineConfig({
   plugins: [react(), tailwindcss()],
-
-  server: {
-    watch: {
-      usePolling: true,
-      interval: 2000,
-    },
-    host: true,
-    port: 5173,
-    strictPort: false,
-    allowedHosts: [
-      "localhost",
-      "127.0.0.1",
-      "172.20.10.3",
-      "192.168.100.124",
-      "unnibbed-unthrilled-averi.ngrok-free.dev",
-    ],
-    proxy: {
-      "/api192": {
-        target: "http://192.168.100.124:3000",
-        changeOrigin: true,
-        rewrite: (path) => path.replace(/^\/api192/, "/api"),
-      },
-      "/apiLocal": {
-        target: "http://localhost:3000",
-        changeOrigin: true,
-        rewrite: (path) => path.replace(/^\/apiLocal/, "/api"),
-      },
-      "/api172": {
-        target: "http://172.20.10.3:3000",
-        changeOrigin: true,
-        rewrite: (path) => path.replace(/^\/api172/, "/api"),
-      },
-    },
+  
+  resolve: {
+    alias: { '@': '/src' }
   },
 
-  resolve: {
-    alias: {
-      "@": "/src",
-      // 🔹 Thêm dòng này để fix socket.io-client build production
-      "socket.io-client": "socket.io-client/dist/socket.io.js",
-    },
+  build: {
+    rollupOptions: {
+      external: ['socket.io-client'] // 🔹 Thêm dòng này
+    }
   },
 
   optimizeDeps: {
-    // 🔹 Buộc Vite pre-bundle socket.io-client
-    include: ["socket.io-client"],
-  },
+    include: ['socket.io-client']
+  }
 });
+let io;
+if (typeof window !== "undefined") {
+  io = (await import("socket.io-client")).io;
+}

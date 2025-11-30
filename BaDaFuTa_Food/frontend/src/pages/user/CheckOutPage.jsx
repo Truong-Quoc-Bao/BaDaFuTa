@@ -85,32 +85,45 @@ export default function CheckOutPage() {
   }
 
   // ================= WebSocket =================
+  // ================= WebSocket =================
   useEffect(() => {
     if (!merchant?.id) return;
 
-    socketRef.current = io('https://badafuta-production.up.railway.app', {
-      transports: ['websocket'],
-      path: '/socket.io',
-      reconnection: true,
-      reconnectionAttempts: 5,
-      reconnectionDelay: 1000,
-    });
+    let socket;
 
-    socketRef.current.on('connect', () => {
-      console.log('✅ Connected:', socketRef.current.id);
-      socketRef.current.emit('joinMerchant', merchant.id);
-    });
+    const initSocket = async () => {
+      if (typeof window !== 'undefined') {
+        const { io } = await import('socket.io-client');
+        socket = io('https://badafuta-production.up.railway.app', {
+          transports: ['websocket'],
+          path: '/socket.io',
+          reconnection: true,
+          reconnectionAttempts: 5,
+          reconnectionDelay: 1000,
+        });
 
-    socketRef.current.on('newOrder', (order) => {
-      console.log('🔥 Nhận đơn mới:', order);
-    });
+        socket.on('connect', () => {
+          console.log('✅ Connected:', socket.id);
+          socket.emit('joinMerchant', merchant.id);
+        });
 
-    socketRef.current.on('disconnect', (reason) => {
-      console.log('⚠️ Disconnected:', reason);
-    });
+        socket.on('newOrder', (order) => {
+          console.log('🔥 Nhận đơn mới:', order);
+        });
+
+        socket.on('disconnect', (reason) => {
+          console.log('⚠️ Disconnected:', reason);
+        });
+
+        // Save socket ref
+        socketRef.current = socket;
+      }
+    };
+
+    initSocket();
 
     return () => {
-      socketRef.current.disconnect();
+      socketRef.current?.disconnect();
     };
   }, [merchant?.id]);
 

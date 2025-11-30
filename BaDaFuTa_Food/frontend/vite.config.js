@@ -45,6 +45,11 @@ export default defineConfig({
       '@': '/src',
     },
   },
+  build: {
+    rollupOptions: {
+      external: ['socket.io-client'], // 🔹 Thêm dòng này
+    },
+  },
   optimizeDeps: {
     include: ['socket.io-client'],
   },
