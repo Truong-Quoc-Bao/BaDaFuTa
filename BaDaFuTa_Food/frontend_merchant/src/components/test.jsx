@@ -218,90 +218,25 @@ export function useMerchant() {
 
 //
 //
-import 'module-alias/register';
-import 'dotenv/config';
-import { createApp } from './app';
-import { createServer } from 'http';
-import { Server as IOServer } from 'socket.io';
-import express from 'express';
+import { useEffect } from 'react';
+import { io } from 'socket.io-client';
 
-const PORT = Number(process.env.PORT) || 3000;
-const HOST = process.env.HOST || '0.0.0.0';
-
-const app = createApp();
-app.use(express.json()); // parse JSON
-
-const httpServer = createServer(app);
-
-// Socket.IO
-const io = new IOServer(httpServer, {
+const socket = io('https://badafuta-production.up.railway.app', {
   path: '/socket.io',
-  cors: {
-    origin: [
-      'http://localhost:5173',
-      'http://localhost:5174',
-      'https://ba-da-fu-ta-partner.vercel.app',
-    ],
-    methods: ['GET', 'POST'],
-    credentials: true,
-  },
+  transports: ['websocket', 'polling'],
 });
 
-// Khi khách gửi đơn
-app.post('/api/order', (req, res) => {
-  const orderData = req.body;
-  console.log('📦 Order received:', orderData);
+export default function TestMerchantOrders() {
+  useEffect(() => {
+    const testMerchantId = '00ea6129-7f16-4376-925f-d1eab34037fa';
+    
+    socket.emit('joinMerchant', testMerchantId);
+    socket.on('newOrder', (order) => {
+      console.log('🔥 Nhận order realtime:', order);
+    });
 
-  if (orderData.merchant_id) {
-    io.to(orderData.merchant_id).emit('newOrder', orderData);
-    console.log(`📢 Emit order to merchant ${orderData.merchant_id}`);
-  }
+    return () => socket.off('newOrder');
+  }, []);
 
-  res.json({ success: true });
-});
-
-// Socket.IO connection
-io.on('connection', (socket) => {
-  console.log('✅ Client connected:', socket.id);
-
-  // Merchant join room
-  socket.on('joinMerchant', (merchantId: string) => {
-    console.log(`Merchant ${merchantId} joined room`);
-    socket.join(merchantId);
-  });
-});
-
-httpServer.listen(PORT, HOST, () => {
-  const shownHost = HOST === '0.0.0.0' ? 'localhost' : HOST;
-  console.log(`🚀 API + Socket.IO listening on http://${shownHost}:${PORT}`);
-});
-
-"dependencies": {
-  "socket.io-client": "^4.7.2",
-  ...
-}
-import { defineConfig } from 'vite';
-import react from '@vitejs/plugin-react';
-import tailwindcss from '@tailwindcss/vite';
-
-export default defineConfig({
-  plugins: [react(), tailwindcss()],
-  
-  resolve: {
-    alias: { '@': '/src' }
-  },
-
-  build: {
-    rollupOptions: {
-      external: ['socket.io-client'] // 🔹 Thêm dòng này
-    }
-  },
-
-  optimizeDeps: {
-    include: ['socket.io-client']
-  }
-});
-let io;
-if (typeof window !== "undefined") {
-  io = (await import("socket.io-client")).io;
+  return <div>Listening for orders...</div>;
 }

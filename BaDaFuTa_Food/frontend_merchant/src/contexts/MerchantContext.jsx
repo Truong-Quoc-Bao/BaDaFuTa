@@ -3,11 +3,16 @@ import { toast } from 'sonner'; // <-- thêm import này
 import { io } from 'socket.io-client';
 const MerchantContext = createContext(undefined);
 
-// **Tạo socket 1 lần duy nhất**
+// =======================
+// 🟢 Tạo socket 1 lần duy nhất
+// =======================
 const socket = io('https://badafuta-production.up.railway.app', {
   path: '/socket.io',
   transports: ['websocket', 'polling'],
   secure: true,
+  reconnection: true,
+  reconnectionAttempts: Infinity,
+  reconnectionDelay: 1000,
 });
 
 export function MerchantProvider({ children }) {
@@ -26,33 +31,30 @@ export function MerchantProvider({ children }) {
   // Dashboard data state
   const [dashboardData, setDashboardData] = useState(null);
 
-  // Load merchantAuth từ localStorage
+  // =======================
+  // 🔹 Load merchantAuth từ localStorage ngay khi mount
+  // =======================
   useEffect(() => {
     const stored = localStorage.getItem('merchantAuth');
-    if (stored) setMerchantAuth(JSON.parse(stored));
+    if (stored) {
+      const parsed = JSON.parse(stored);
+      setMerchantAuth(parsed);
+    }
   }, []);
 
-  // Join merchant room khi merchantAuth có
+  // =======================
+  // 🔹 Join socket room ngay khi có merchantAuth
+  // =======================
   useEffect(() => {
-    if (!merchantAuth) return;
+    const testMerchantId = '00ea6129-7f16-4376-925f-d1eab34037fa';
 
-    // Join đúng room
-    socket.emit('joinMerchant', merchantAuth.user_id);
+    socket.emit('joinMerchant', testMerchantId);
+    socket.on('newOrder', (order) => {
+      console.log('🔥 Nhận order realtime:', order);
+    });
 
-    // Lắng nghe đơn mới
-    const handleNewOrder = (order) => {
-      if (order.merchant_id !== merchantAuth.user_id) return;
-      console.log('🔥 Đơn mới:', order);
-      setOrders((prev) => [order, ...prev]);
-      toast.success('🔥 Có đơn hàng mới!');
-    };
-
-    socket.on('newOrder', handleNewOrder);
-
-    return () => {
-      socket.off('newOrder', handleNewOrder);
-    };
-  }, [merchantAuth]);
+    return () => socket.off('newOrder');
+  }, []);
 
   // ✅ Fetch dashboard và lưu vào state
   const fetchDashboard = useCallback(async () => {

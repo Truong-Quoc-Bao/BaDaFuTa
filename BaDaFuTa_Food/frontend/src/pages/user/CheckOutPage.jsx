@@ -92,7 +92,7 @@ export default function CheckOutPage() {
       transports: ['websocket'],
       path: '/socket.io',
       reconnection: true,
-      reconnectionAttempts: 5,
+      reconnectionAttempts: Infinity,
       reconnectionDelay: 1000,
     });
 
@@ -420,17 +420,27 @@ export default function CheckOutPage() {
         })),
       };
       console.log('ORDER SEND VOUCHER:', selectedVoucher);
+      console.log('📤 Gửi order tới backend:', orderBody);
       const res = await fetch('https://badafuta-production.up.railway.app/api/order', {
         // const res = await fetch('http://localhost:3000/api/order', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(orderBody),
       });
+      console.log('📥 Response:', res.status);
 
       if (!res.ok) throw new Error(await res.text());
       const data = await res.json();
 
       console.log('✅ Đơn hàng tạo thành công:', data);
+      // emit socket để merchant nhận real-time
+      if (socketRef.current && socketRef.current.connected) {
+        socketRef.current.emit('newOrder', {
+          ...orderBody,
+          order_id: data.order_id,
+        });
+      }
+
       localStorage.setItem('orderConfirmed', 'true');
       clearCart();
       // navigate("/cart/checkout/ordersuccess");

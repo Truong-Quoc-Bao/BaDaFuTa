@@ -56,6 +56,8 @@ const io = new IOServer(httpServer, {
       'http://localhost:5173', // React dev
       'http://localhost:5174', // Merchant dev
       'https://ba-da-fu-ta-partner.vercel.app', // Prod
+      'https://badafuta-production.up.railway.app',
+      'https://ba-da-fu-ta-partner.vercel.app',
     ],
     methods: ['GET', 'POST'],
     credentials: true,
@@ -65,14 +67,15 @@ const io = new IOServer(httpServer, {
 // Khi khách gửi đơn
 app.post('/api/order', (req, res) => {
   const orderData = req.body;
-  console.log('📦 Order received:', orderData);
+  console.log('🔹 Backend nhận order:', orderData);
 
+  // Hardcode gửi trực tiếp đến merchant_id từ order
   if (orderData.merchant_id) {
     io.to(orderData.merchant_id).emit('newOrder', orderData);
-    console.log(`📢 Emit order to merchant ${orderData.merchant_id}`);
+    console.log(`📢 Emit order đến merchant ${orderData.merchant_id}`);
   }
 
-  res.json({ success: true });
+  res.status(201).json({ success: true, order: orderData });
 });
 
 io.on('connection', (socket) => {
@@ -82,7 +85,7 @@ io.on('connection', (socket) => {
     console.log(`Merchant ${merchantId} joined room`);
     socket.join(merchantId);
   });
-  
+
   socket.on('newOrder', (orderData) => {
     console.log('🔹 Backend nhận order:', orderData);
     const merchantId = orderData.merchant_id;
