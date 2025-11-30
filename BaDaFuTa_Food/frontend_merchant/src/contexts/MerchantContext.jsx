@@ -46,15 +46,24 @@ export function MerchantProvider({ children }) {
   // 🔹 Join socket room ngay khi có merchantAuth
   // =======================
   useEffect(() => {
-    const testMerchantId = '00ea6129-7f16-4376-925f-d1eab34037fa';
+    if (!merchantAuth?.user_id) return;
 
-    socket.emit('joinMerchant', testMerchantId);
-    socket.on('newOrder', (order) => {
-      console.log('🔥 Nhận order realtime:', order);
-    });
+    // Join đúng room
+    socket.emit('joinMerchant', merchantAuth.user_id);
+    console.log('✅ Joined merchant room:', merchantAuth.user_id);
 
-    return () => socket.off('newOrder');
-  }, []);
+    // Lắng nghe đơn mới
+    const handleNewOrder = (order) => {
+      if (order.merchant_id !== merchantAuth.user_id) return;
+      console.log('🔥 Đơn mới:', order);
+      setOrders((prev) => [order, ...prev]);
+      toast.success('🔥 Có đơn hàng mới!');
+    };
+
+    socket.on('newOrder', handleNewOrder);
+
+    return () => socket.off('newOrder', handleNewOrder);
+  }, [merchantAuth?.user_id]);
 
   // ✅ Fetch dashboard và lưu vào state
   const fetchDashboard = useCallback(async () => {
@@ -70,6 +79,19 @@ export function MerchantProvider({ children }) {
       const data = await response.json();
       setDashboardData(data); // lưu vào state
       console.log('Dashboard data:', data);
+
+      // CHỈ SET ORDERS 1 LẦN DUY NHẤT TỪ API Ở ĐÂY
+      if (data?.data) {
+        const allOrders = [
+          ...(data.data.pendingOrderList || []),
+          ...(data.data.confirmedOrdersList || []),
+          ...(data.data.preparingOrdersList || []),
+          ...(data.data.deliveringOrdersList || []),
+          ...(data.data.completedOrdersList || []),
+          ...(data.data.canceledOrdersList || []),
+        ];
+        setOrders(allOrders); // ← Chỉ set 1 lần ở đây thôi!
+      }
     } catch (error) {
       console.error('Error fetching dashboard:', error);
     }
@@ -143,6 +165,7 @@ export function MerchantProvider({ children }) {
         merchantSettings,
         updateMerchantSettings,
         orders,
+        setOrders, // thêm dòng này
         updateOrderStatus,
         cancelOrder,
         autoConfirmEnabled: merchantSettings.autoConfirmOrders,

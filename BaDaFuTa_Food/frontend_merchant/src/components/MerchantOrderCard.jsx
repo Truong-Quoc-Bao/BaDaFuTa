@@ -4,9 +4,17 @@ import { Badge } from './ui/badge';
 import { Clock, MapPin, Phone, User, FileText } from 'lucide-react';
 import { useMerchant } from '../contexts/MerchantContext';
 import { toast } from 'sonner';
+import { useState } from 'react';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 
 export function MerchantOrderCard({ order, onStatusUpdate }) {
   const { updateOrderStatus, cancelOrder } = useMerchant();
+
+  // Thêm state loading riêng cho từng card
+  const [loadingStatus, setLoadingStatus] = useState(null); // 'CONFIRMED' | 'PREPARING' | 'READY' | null
+  const [isCanceling, setIsCanceling] = useState(false);
+  const [cancelReason, setCancelReason] = useState('');
+  const [selectOpen, setSelectOpen] = useState(false);
 
   const getStatusBadge = (status) => {
     const statusMap = {
@@ -20,46 +28,91 @@ export function MerchantOrderCard({ order, onStatusUpdate }) {
     return statusMap[status] || { label: 'Không xác định', variant: 'secondary' };
   };
 
+  // Hàm xác nhận đơn – mượt như ShopeeFood
   const handleConfirmOrder = async () => {
-    const updated = await updateOrderStatus(order.id, 'CONFIRMED', '', order);
-    if (updated) {
-      onStatusUpdate?.(order.id, 'CONFIRMED');
-      toast.success('Đã xác nhận đơn hàng');
+    if (window.voiceInterval) {
+      clearInterval(window.voiceInterval);
+      window.voiceInterval = null;
+      window.speechSynthesis.cancel();
+    }
+
+    setLoadingStatus('CONFIRMED');
+
+    // Optimistic update – đơn bay liền!
+    onStatusUpdate?.(order.id, 'CONFIRMED');
+
+    try {
+      await updateOrderStatus(order.id, 'CONFIRMED', '', order);
+      toast.success('Đã xác nhận đơn hàng thành công!');
+    } catch (error) {
+      // Rollback nếu lỗi
+      onStatusUpdate?.(order.id, 'PENDING');
+      toast.error('Xác nhận thất bại, vui lòng thử lại');
+    } finally {
+      setLoadingStatus(null);
     }
   };
-
+  // Các hàm khác (có thể thêm loading tương tự)
   const handleStartPreparing = async () => {
+    setLoadingStatus('PREPARING');
+    onStatusUpdate?.(order.id, 'PREPARING');
     try {
       await updateOrderStatus(order.id, 'PREPARING');
-      onStatusUpdate?.(order.id, 'PREPARING');
       toast.success('Bắt đầu chuẩn bị đơn hàng');
-    } catch (error) {
-      toast.error('Cập nhật đơn hàng thất bại');
+    } catch {
+      onStatusUpdate?.(order.id, 'CONFIRMED');
+      toast.error('Cập nhật thất bại');
+    } finally {
+      setLoadingStatus(null);
     }
   };
 
   const handleMarkReady = async () => {
+    setLoadingStatus('READY');
+    onStatusUpdate?.(order.id, 'READY');
     try {
       await updateOrderStatus(order.id, 'READY');
-      onStatusUpdate?.(order.id, 'READY');
-      toast.success('Đơn hàng đã sẵn sàng giao');
-    } catch (error) {
-      toast.error('Cập nhật đơn hàng thất bại');
+      toast.success('Đơn hàng đã sẵn sàng!');
+    } catch {
+      onStatusUpdate?.(order.id, 'PREPARING');
+      toast.error('Cập nhật thất bại');
+    } finally {
+      setLoadingStatus(null);
     }
   };
 
   const handleCancelOrder = async () => {
     if (!confirm('Bạn có chắc chắn muốn hủy đơn hàng này?')) return;
 
-    const reason = prompt('Lý do hủy đơn:') || 'Merchant hủy đơn';
+    let finalReason = cancelReason;
+    if (!finalReason || finalReason === 'Lý do khác (ghi chú)') {
+      finalReason = prompt('Nhập lý do hủy đơn:', cancelReason) || 'Merchant hủy đơn';
+    }
+
+    if (!finalReason) return;
+
     try {
-      await updateOrderStatus(order.id, 'CANCELED', reason); // gọi API update
+      await updateOrderStatus(order.id, 'CANCELED', finalReason);
       onStatusUpdate?.(order.id, 'CANCELED');
       toast.success('Đã hủy đơn hàng');
+      setCancelReason(''); // reset
     } catch (error) {
-      toast.error('Cập nhật đơn hàng thất bại');
+      toast.error('Hủy đơn thất bại');
     }
   };
+
+  const CANCEL_REASONS = [
+    'Quán hết món / nguyên liệu',
+    'Quán tạm nghỉ / đóng cửa',
+    'Khách đặt nhầm món',
+    'Khách hủy đơn',
+    'Quán quá tải, không kịp giao',
+    'Khách không nghe máy',
+    'Địa chỉ giao không hợp lệ / xa quá',
+    'Thời tiết xấu, không thể giao',
+    'Lỗi hệ thống / đơn trùng',
+    'Lý do khác (ghi chú)',
+  ];
 
   const formatTime = (dateString) => {
     const date = new Date(dateString);
@@ -99,13 +152,17 @@ export function MerchantOrderCard({ order, onStatusUpdate }) {
               <div className="flex items-center gap-2 sm:gap-1 bg-gray-50 p-2 rounded-md shadow-sm">
                 <User className="w-4 h-4 text-blue-500" />
                 <span className="font-medium text-gray-700">Tên khách hàng:</span>
-                <span className="text-gray-900">{order.user_name || 'Khách ẩn danh'}</span>
+                <span className="text-gray-900">
+                  {order.customerName || order.user_name || 'Khách vãng lai'}
+                </span>
               </div>
 
               <div className="flex items-center gap-2 sm:gap-1 bg-gray-50 p-2 rounded-md shadow-sm">
                 <Phone className="w-4 h-4 text-green-500" />
                 <span className="font-medium text-gray-700">Số điện thoại khách hàng:</span>
-                <span className="text-gray-900">{order.user_phone || 'Chưa có'}</span>
+                <span className="text-gray-900">
+                  {order.phone || order.user_phone || 'Không có số'}
+                </span>
               </div>
             </div>
           </div>
@@ -118,7 +175,7 @@ export function MerchantOrderCard({ order, onStatusUpdate }) {
         <div className="mb-4">
           {order.items.map((item) => (
             <div
-              key={item.id}
+              key={item.id || item.menu_item_id || `fallback-${order.id}-${index}`}
               className="flex justify-between items-center py-2 border-b last:border-b-0"
             >
               <div className="flex-1">
@@ -171,17 +228,78 @@ export function MerchantOrderCard({ order, onStatusUpdate }) {
             <>
               <Button
                 variant="default"
-                onClick={() => updateOrderStatus(order.id, 'CONFIRMED', '', order)}
-                className=""
+                onClick={handleConfirmOrder}
+                disabled={loadingStatus === 'CONFIRMED'}
+                className="font-medium min-w-44 relative"
               >
-                Xác nhận đơn hàng
+                {loadingStatus === 'CONFIRMED' ? (
+                  <>
+                    <div className="flex items-center gap-2">
+                      <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                      <span>Đang xác nhận...</span>
+                    </div>
+                  </>
+                ) : (
+                  'Xác nhận đơn hàng'
+                )}
               </Button>
-              <Button variant="destructive" onClick={handleCancelOrder}>
-                Hủy đơn
-              </Button>
+
+              {/* Hủy đơn – chỉ hiện nút trước, bấm mới hiện dropdown */}
+              <div className="flex gap-2 items-center">
+                {!isCanceling ? (
+                  <Button
+                    variant="destructive"
+                    onClick={() => {
+                      setIsCanceling(true);
+                      setSelectOpen(true); // mở dropdown
+                    }}
+                    className="font-medium"
+                  >
+                    Hủy đơn
+                  </Button>
+                ) : (
+                  <>
+                    <Select
+                      value={cancelReason}
+                      onValueChange={setCancelReason}
+                      open={selectOpen} // kiểm soát dropdown mở
+                      onOpenChange={setSelectOpen} // khi người dùng click ngoài dropdown
+                    >
+                      <SelectTrigger className="w-72">
+                        <SelectValue placeholder="Chọn lý do hủy" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {CANCEL_REASONS.map((reason) => (
+                          <SelectItem key={reason} value={reason}>
+                            {reason}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+
+                    <Button
+                      variant="destructive"
+                      onClick={handleCancelOrder}
+                      disabled={!cancelReason || loadingStatus !== null}
+                    >
+                      Xác nhận hủy
+                    </Button>
+
+                    <Button
+                      variant="outline"
+                      onClick={() => {
+                        setIsCanceling(false);
+                        setCancelReason('');
+                        setSelectOpen(false);
+                      }}
+                    >
+                      Hủy bỏ
+                    </Button>
+                  </>
+                )}
+              </div>
             </>
           )}
-
           {order.status === 'CONFIRMED' && (
             <>
               <Button variant="default" onClick={handleStartPreparing} className="">

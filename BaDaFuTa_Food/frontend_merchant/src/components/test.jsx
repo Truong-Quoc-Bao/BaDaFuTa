@@ -218,25 +218,15 @@ export function useMerchant() {
 
 //
 //
-import { useEffect } from 'react';
-import { io } from 'socket.io-client';
-
-const socket = io('https://badafuta-production.up.railway.app', {
-  path: '/socket.io',
-  transports: ['websocket', 'polling'],
-});
-
-export default function TestMerchantOrders() {
-  useEffect(() => {
-    const testMerchantId = '00ea6129-7f16-4376-925f-d1eab34037fa';
-    
-    socket.emit('joinMerchant', testMerchantId);
-    socket.on('newOrder', (order) => {
-      console.log('🔥 Nhận order realtime:', order);
-    });
-
-    return () => socket.off('newOrder');
-  }, []);
-
-  return <div>Listening for orders...</div>;
-}
+<MerchantOrderCard
+  key={order.id}
+  order={order}
+  onStatusUpdate={handleStatusUpdate}
+  onOrderConfirmed={() => {
+    if (window.voiceInterval) {
+      clearInterval(window.voiceInterval);
+      window.voiceInterval = null;
+      window.speechSynthesis.cancel();
+    }
+  }}
+/>

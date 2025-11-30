@@ -419,6 +419,7 @@ export default function CheckOutPage() {
           })),
         })),
       };
+      
       console.log('ORDER SEND VOUCHER:', selectedVoucher);
       console.log('📤 Gửi order tới backend:', orderBody);
       const res = await fetch('https://badafuta-production.up.railway.app/api/order', {

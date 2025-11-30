@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../components/ui/tabs';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
 import { Badge } from '../components/ui/badge';
@@ -8,6 +8,7 @@ import { MerchantOrderCard } from '../components/MerchantOrderCard';
 import { useMerchant } from '../contexts/MerchantContext';
 import { Clock, Package, CheckCircle, XCircle, Search, Filter } from 'lucide-react';
 import { toast } from 'sonner';
+import { io } from 'socket.io-client';
 
 export function MerchantOrderManagementPage() {
   const [activeTab, setActiveTab] = useState('PENDING');
@@ -21,26 +22,129 @@ export function MerchantOrderManagementPage() {
     updateOrderStatus,
     autoConfirmEnabled,
     toggleAutoConfirm,
+    setOrders,
   } = useMerchant();
+
+  const socketRef = useRef(null);
+  // Init orders từ dashboardData
+  // useEffect(() => {
+  //   if (dashboardData?.data && orders.length === 0) {
+  //     const initialOrders = [
+  //       ...(dashboardData.data.pendingOrderList || []),
+  //       ...(dashboardData.data.confirmedOrdersList || []),
+  //       ...(dashboardData.data.preparingOrdersList || []),
+  //       ...(dashboardData.data.deliveringOrdersList || []),
+  //       ...(dashboardData.data.completedOrdersList || []),
+  //       ...(dashboardData.data.canceledOrdersList || []),
+  //     ];
+  //     setOrders(initialOrders);
+  //   }
+  // }, [dashboardData, orders.length, setOrders]);
+
+  useEffect(() => {
+    const merchantId = '00ea6129-7f16-4376-925f-d1eab34037fa'; // hardcode tạm
+
+    const socket = io('https://badafuta-production.up.railway.app', {
+      path: '/socket.io',
+      transports: ['websocket'],
+      reconnection: true,
+    });
+
+    socket.emit('joinMerchant', merchantId);
+
+    socket.on('connect', () => {
+      console.log('✅ Connected merchant socket:', socket.id);
+    });
+
+    socket.on('newOrder', (rawOrder) => {
+      console.log('Nhận order realtime:', rawOrder);
+
+      // Chuẩn hóa dữ liệu để giống hệt với dashboardData
+      const newOrder = {
+        ...rawOrder,
+        id: rawOrder.order_id,
+        order_id: rawOrder.order_id,
+        status: 'PENDING', // BẮT BUỘC
+        customerName: rawOrder.customerName || 'Khách vãng lai',
+        created_at: new Date().toISOString(),
+        total_amount:
+          rawOrder.delivery_fee +
+          (rawOrder.items || []).reduce((sum, item) => {
+            const optionPrice = (item.selected_option_items || []).reduce(
+              (s, opt) => s + (opt.price || 0),
+              0,
+            );
+            return sum + (item.price + optionPrice) * item.quantity;
+          }, 0),
+      };
+
+      // Thêm vào đầu danh sách, tránh duplicate
+      setOrders((prev) => {
+        if (prev.some((o) => o.order_id === newOrder.order_id)) return prev;
+        return [newOrder, ...prev];
+      });
+
+      // Thông báo + chuyển tab
+      toast.success('Đơn hàng mới đến!', {
+        description: `#${newOrder.order_id.slice(-6).toUpperCase()} • ${newOrder.customerName}`,
+        duration: 8000,
+      });
+      toast.success(`Đơn mới #${newOrder.order_id.slice(-6).toUpperCase()}`, {
+        description: `${newOrder.customerName} • ${newOrder.items.length} món • ${newOrder.payment_method}`,
+        duration: 8000,
+        action: {
+          label: 'Xem ngay',
+          onClick: () => setActiveTab('PENDING'),
+        },
+      });
+
+      // ======== ÂM THANH + GIỌNG NÓI LẶP LẠI CHO ĐẾN KHI XÁC NHẬN ========
+      // Biến toàn cục để kiểm soát việc lặp
+      window.voiceInterval = null; // ← thêm window.
+
+      const speakNewOrder = () => {
+        // Dừng nếu đang lặp
+        if (voiceInterval) clearInterval(voiceInterval);
+
+        // Phát giọng nói lần đầu
+        const msg = new SpeechSynthesisUtterance('Bạn có đơn hàng mới từ Ba Đa Phu Ta Phút!');
+        msg.lang = 'vi-VN'; // giọng tiếng Việt
+        msg.volume = 2; // to nhất
+        msg.rate = 1; // tốc độ nói tự nhiên
+        msg.pitch = 1.2; // cao một chút cho dễ nghe
+
+        window.speechSynthesis.speak(msg);
+
+        // Lặp lại mỗi 6 giây cho đến khi bấm xác nhận
+        window.voiceInterval = setInterval(() => {
+          window.speechSynthesis.speak(msg);
+        }, 6000);
+      };
+
+      // GỌI HÀM KHI CÓ ĐƠN MỚI
+      speakNewOrder();
+
+      // Tự động chuyển về tab chờ xác nhận + focus vào đơn mới nhất
+      setActiveTab('PENDING');
+      // Tự động chuyển về tab Chờ xác nhận
+      setActiveTab('PENDING');
+    });
+
+    return () => socket.disconnect();
+  }, [setOrders]);
 
   console.log('Merchant Auth:', merchantAuth);
   console.log('Dashboard Data:', dashboardData);
   console.log('dashboardData hiện tại:', dashboardData);
 
-  const allOrders = [
-    ...(dashboardData?.data?.pendingOrderList || []),
-    ...(dashboardData?.data?.confirmedOrdersList || []),
-    ...(dashboardData?.data?.preparingOrdersList || []),
-    ...(dashboardData?.data?.deliveringOrdersList || []),
-    ...(dashboardData?.data?.completedOrdersList || []),
-    ...(dashboardData?.data?.canceledOrdersList || []),
-  ];
+  // Dùng orders làm nguồn dữ liệu duy nhất
+  const allOrders = orders;
 
   // Filter orders based on tab and search
   const filteredOrders = allOrders.filter((order) => {
     const matchesSearch =
-      order.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      order.customerName?.toLowerCase().includes(searchTerm.toLowerCase());
+      `${order.order_id ?? ''}`.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      `${order.customerName ?? ''}`.toLowerCase().includes(searchTerm.toLowerCase());
 
     switch (activeTab) {
       case 'PENDING':
@@ -91,7 +195,6 @@ export function MerchantOrderManagementPage() {
   if (!dashboardData?.data) {
     return <div>Loading...</div>;
   }
-
 
   return (
     <div className="space-y-6 p-6">
