@@ -34,8 +34,11 @@ import { getDistanceKm, calculateDeliveryFee } from '../../utils/distanceUtils';
 import { Badge } from '../../components/ui/badge';
 import PopupVoucher from '@/components/VoucherDialog';
 import { CashIcon, VnPayIcon, MomoIcon } from '../../components/PaymentIcons';
+import { io } from 'socket.io-client';
 
 export default function CheckOutPage() {
+  // 🟢 Khai báo socketRef
+  const socketRef = useRef(null);
   // 🧩 Lấy user từ AuthContext
   const { state: authState } = useAuth();
   const user = authState.user;
@@ -80,6 +83,37 @@ export default function CheckOutPage() {
     );
     deliveryFee = calculateDeliveryFee(distanceKm);
   }
+
+  // ================= WebSocket =================
+  useEffect(() => {
+    if (!merchant?.id) return;
+
+    socketRef.current = io('https://badafuta-production.up.railway.app', {
+      transports: ['websocket'],
+      path: '/socket.io',
+      reconnection: true,
+      reconnectionAttempts: 5,
+      reconnectionDelay: 1000,
+    });
+
+    socketRef.current.on('connect', () => {
+      console.log('✅ Connected:', socketRef.current.id);
+      socketRef.current.emit('joinMerchant', merchant.id);
+    });
+
+    socketRef.current.on('newOrder', (order) => {
+      console.log('🔥 Nhận đơn mới:', order);
+    });
+
+    socketRef.current.on('disconnect', (reason) => {
+      console.log('⚠️ Disconnected:', reason);
+    });
+
+    return () => {
+      socketRef.current.disconnect();
+    };
+  }, [merchant?.id]);
+
   // 🏦 Handler khi chọn phương thức
   const handlePaymentMethodSelect = (method) => {
     setSelectedPaymentMethod(method);
@@ -474,14 +508,6 @@ export default function CheckOutPage() {
     // Điều hướng sang trang thành công – CHỈ GỬI orderId
     navigate(`/cart/checkout/ordersuccess?orderId=${orderId}`);
   }, [location.search]);
-
-  // Gửi WebSocket cho merchant
-  ws.current.send(
-    JSON.stringify({
-      type: 'new_order',
-      order: { ...data, merchant_id: merchant.id }, // chắc chắn merchant_id chính xác
-    }),
-  );
 
   // 🧾 Hàm thay đổi input
   const handleInputChange = (e) => {

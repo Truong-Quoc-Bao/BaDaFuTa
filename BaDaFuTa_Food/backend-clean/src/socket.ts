@@ -32,9 +32,14 @@ export const initSocket = (server: HttpServer) => {
     });
 
     // Test emit đơn mới sau 5s
-    setTimeout(() => {
-      const testOrder = { id: 'order123', status: 'pending', merchant_id: 'rest-1' };
+    setInterval(() => {
+      const testOrder = {
+        id: `order_${Date.now()}`,
+        status: 'pending',
+        merchant_id: '00ea6129-7f16-4376-925f-d1eab34037fa',
+      };
       io.to(testOrder.merchant_id).emit('newOrder', testOrder);
+      console.log('📦 Emit test order:', testOrder);
     }, 5000);
   });
 
