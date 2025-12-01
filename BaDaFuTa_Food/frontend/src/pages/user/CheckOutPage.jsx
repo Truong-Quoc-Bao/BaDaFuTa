@@ -66,6 +66,7 @@ export default function CheckOutPage() {
 
   console.log("ORDER SEND VOUCHER:", selectedVoucher || null);
   console.log("TYPE:", typeof selectedVoucher);
+  console.log("TYPE:", user.full_name || null);
 
   // merchant
   const merchant =
@@ -282,6 +283,7 @@ export default function CheckOutPage() {
     // Tạo body chung cho cả 2 phương thức
     const orderBody = {
       user_id: user.id,
+      full_name: user.full_name,
       merchant_id: merchant.id,
       phone: finalAddress.phone,
       delivery_address: finalAddress.address,
@@ -416,6 +418,7 @@ export default function CheckOutPage() {
 
       const orderBody = {
         user_id: user.id,
+        full_name: user.full_name,
         merchant_id: merchant.id,
         phone: selectedAddress.phone,
         delivery_address: selectedAddress.address,
