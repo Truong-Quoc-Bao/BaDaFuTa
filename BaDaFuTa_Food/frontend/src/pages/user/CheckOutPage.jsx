@@ -966,18 +966,20 @@ export default function CheckOutPage() {
                           </span>
                         )}
                       </span>
-                      {/* 🔥 NÚT LẤY VỊ TRÍ HIỆN TẠI (Thêm vào đây) */}
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="text-blue-600 hover:text-blue-800 hover:bg-blue-50 p-0 h-auto font-normal mt-2 w-fit flex items-center gap-1"
-                        onClick={handleGetCurrentLocation} // 👈 Gọi hàm khi bấm
-                      >
-                        <LocateFixed className="w-4 h-4" />
-                        Lấy vị trí hiện tại
-                      </Button>
                     </span>
                   </p>
+                  <div className="mt-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="text-blue-600 border-blue-200 hover:bg-blue-50 hover:text-blue-700 h-8 px-3 text-xs font-medium flex items-center gap-2 transition-colors"
+                      onClick={handleGetCurrentLocation}
+                      type="button" // Để không bị submit form nếu nằm trong form
+                    >
+                      <LocateFixed className="w-3.5 h-3.5" />
+                      Lấy vị trí hiện tại
+                    </Button>
+                  </div>
 
                   {/* 📝 Ghi chú giao hàng */}
                   <div className="w-full space-y-2">
