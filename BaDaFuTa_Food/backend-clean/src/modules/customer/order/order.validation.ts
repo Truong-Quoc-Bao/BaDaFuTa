@@ -2,6 +2,7 @@ import { z } from "zod";
 
 export const CreateCODOrderSchema = z.object({
   user_id: z.string().uuid({ message: "user_id không hợp lệ" }),
+  full_name: z.string().nullable().optional(),
   merchant_id: z.string().uuid({ message: "merchant_id không hợp lệ" }),
   phone: z.string().trim().min(8, "Số điện thoại không hợp lệ"),
   delivery_address: z.string().trim().min(5, "Địa chỉ quá ngắn"),
