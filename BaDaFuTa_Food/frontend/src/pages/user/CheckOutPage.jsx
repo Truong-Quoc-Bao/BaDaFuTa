@@ -66,42 +66,19 @@ export default function CheckOutPage() {
   const merchant =
     state.items.length > 0 ? state.items[0].restaurant || state.items[0].merchant : null;
   // Lấy lat/lon nhà hàng và địa chỉ
-  const restaurantLat = merchant?.lat;
-  const restaurantLon = merchant?.lng;
-  //Tính khoảng cách
-  const deliveryLat = selectedAddress?.lat;
-  const deliveryLon = selectedAddress?.lng;
+  const merchantLat = merchant?.location?.lat ?? 0;
+  const merchantLng = merchant?.location?.lng ?? 0;
 
-  let distanceKm = 0;
-  let deliveryFee = 0;
-  let deliveryTime = 0;
+  const deliveryLat = selectedAddress?.lat ?? 0;
+  const deliveryLng = selectedAddress?.lng ?? 0;
 
-  // 🔹 Hàm tính phí giao hàng
-  function calculateDeliveryFee(distance) {
-    // distance tính theo km
-    if (distance <= 3) return 16000;
-    return 16000 + Math.ceil(distance - 3) * 4000;
-  }
+  const distanceKm = getDistanceKm(merchantLat, merchantLng, deliveryLat, deliveryLng);
+  const deliveryFee = distanceKm <= 3 ? 16000 : 16000 + Math.ceil(distanceKm - 3) * 4000;
 
-  // 🔹 Hàm tính thời gian giao hàng (phút)
-  function calculateDeliveryTime(distance) {
-    return Math.max(10, Math.round(distance * 8));
-  }
-  
-  if (merchant && selectedAddress) {
-    distanceKm = getDistanceKm(
-      merchant.lat,
-      merchant.lng,
-      selectedAddress.lat,
-      selectedAddress.lng,
-    );
-    deliveryFee = calculateDeliveryFee(distanceKm);
-    deliveryTime = calculateDeliveryTime(distanceKm);
-  }
 
   console.log('Distance (km):', distanceKm);
   console.log('Delivery Fee (VND):', deliveryFee);
-  console.log('Estimated Delivery Time (min):', deliveryTime);
+  // console.log('Estimated Delivery Time (min):', deliveryTime);
 
   // ================= WebSocket =================
   useEffect(() => {
