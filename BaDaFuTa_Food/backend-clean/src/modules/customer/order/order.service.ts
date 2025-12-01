@@ -215,7 +215,7 @@ export const orderService = {
         delivery_fee: BigInt(data.delivery_fee),
         note: data.note,
         total_amount: finalTotal,
-        status: "DELIVERING",
+        status: "PENDING",
         status_payment: "PENDING",
         voucher_id: voucherRecord?.id ?? null, // <- thêm voucher_id
       });

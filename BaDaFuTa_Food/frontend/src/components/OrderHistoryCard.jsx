@@ -301,7 +301,7 @@ export const OrderHistoryCard = ({ order, onRatingSubmit, onCancel }) => {
                   variant="outline"
                   size="sm"
                   onClick={() => setShowRatingDialog(true)}
-                  className="flex max-w-xs items-center gap-1 w-full sm:w-auto justify-center"
+                  className="flex-1 max-w-xs items-center gap-1 w-full sm:w-auto justify-center"
                 >
                   <Star className="w-4 h-4" />
                   <span>Đánh giá</span>
