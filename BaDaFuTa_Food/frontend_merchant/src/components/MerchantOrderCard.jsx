@@ -153,7 +153,7 @@ export function MerchantOrderCard({ order, onStatusUpdate }) {
                 <User className="w-4 h-4 text-blue-500" />
                 <span className="font-medium text-gray-700">Tên khách hàng:</span>
                 <span className="text-gray-900">
-                  {order.customerName || order.user_name || 'Khách vãng lai'}
+                  {order.fullname || order.user_name || 'Khách vãng lai'}
                 </span>
               </div>
 

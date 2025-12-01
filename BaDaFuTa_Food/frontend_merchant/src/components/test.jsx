@@ -218,43 +218,32 @@ export function useMerchant() {
 
 //
 //
-// ======== FIX HOÀN HẢO CHO ĐIỆN THOẠI: GIỌNG NÓI + RUNG + TING TING TO ========
-let voiceInterval = null;
+// Trong hàm updateStatus, sau khi cập nhật DB thành công
 
-const notifyNewOrder = () => {
-  // 1. RUNG ĐIỆN THOẠI (Android + iPhone đều rung mạnh)
-  if ('vibrate' in navigator) {
-    navigator.vibrate([400, 150, 400, 150, 600]); // rung 3 lần siêu mạnh
-  }
+// ... code cũ của bạn: findByIdAndUpdate, populate ...
 
-  // 2. PHÁT TIẾNG TING TING TO (chạy 100% trên điện thoại)
-  const audio = new Audio('https://cdn.jsdelivr.net/gh/truongquocbao2001/badafuta-sounds@master/new-order-loud.mp3');
-  audio.volume = 1;
-  audio.play().catch(() => {});
+// THÊM ĐOẠN NÀY VÀO – CHỈ CẦN 1 LẦN DUY NHẤT!
+const statusLabel = {
+  PENDING: 'Chờ xác nhận',
+  CONFIRMED: 'Đã xác nhận',
+  PREPARING: 'Đang chuẩn bị',
+  READY: 'Sẵn sàng giao hàng',
+  'on-way': 'Đang giao',
+  COMPLETED: 'Đã hoàn thành',
+  CANCELED: 'Đã hủy',
+}[newStatus];
 
-  // 3. GIỌNG NÓI "BẠN CÓ ĐƠN HÀNG MỚI TỪ BA ĐA PHU TA FOOD"
-  const speak = () => {
-    const msg = new SpeechSynthesisUtterance('Bạn có đơn hàng mới từ Ba Đa Phu Ta Food!');
-    msg.lang = 'vi-VN';
-    msg.rate = 0.9;
-    msg.pitch = 1.1;
-    msg.volume = 1;
+// GỬI REALTIME CHO KHÁCH HÀNG (đây là thứ bạn đang thiếu!)
+if (updatedOrder?.user_id) {
+  global.io.to(`user_${updatedOrder.user_id}`).emit('order_status_updated', {
+    order_id: updatedOrder._id.toString(),
+    status: newStatus,
+    status_label: statusLabel,
+    merchant_name: updatedOrder.merchant?.name || 'Quán ăn',
+    estimated_prep_time: newStatus === 'PREPARING' ? 15 : null,
+    updated_at: new Date().toISOString(),
+  });
+}
 
-    // Ép đọc đúng tên quán
-    msg.text = msg.text.replace('Ba Đa Phu Ta', 'Ba-Đa-Phu-Ta');
-
-    window.speechSynthesis.cancel();
-    window.speechSynthesis.speak(msg);
-  };
-
-  // Phát lần đầu
-  speak();
-
-  // Lặp lại mỗi 7 giây cho đến khi bấm xác nhận
-  if (voiceInterval) clearInterval(voiceInterval);
-  voiceInterval = setInterval(speak, 7000);
-};
-
-// GỌI KHI CÓ ĐƠN MỚI → HOẠT ĐỘNG NGON LÀNH TRÊN CẢ ĐIỆN THOẠI
-notifyNewOrder();
-setActiveTab('PENDING');
+// (Tùy chọn) Gửi lại cho merchant khác cùng quán nếu có nhiều máy
+global.io.to(`merchant_${merchant_id}`).emit('order_updated', updatedOrder);
