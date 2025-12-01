@@ -162,7 +162,9 @@ export const RestaurantPage = () => {
               <Award className="w-6 h-6 text-yellow-400" />
             </div>
             <div className="flex items-center gap-3">
-              <Badge className="bg-orange-500 text-white border-0 px-3 py-1">Việt Nam</Badge>
+              <Badge className="bg-orange-500 text-white border-0 px-3 py-1">
+                {restaurant?.cuisine}
+              </Badge>
               <Badge variant="outline" className="bg-gray-600 border-gray-500 text-white px-3 py-1">
                 Cao cấp
               </Badge>
@@ -177,7 +179,15 @@ export const RestaurantPage = () => {
                   <Star className="w-3 h-3 text-white fill-current" />
                 </div>
                 <div>
-                  <div className="text-white font-bold text-sm">{restaurant?.rating ?? '4.8'}</div>
+                  <div className="text-white font-bold text-sm flex items-center gap-1">
+                    {restaurant?.rating != null ? (
+                      <>
+                        {restaurant.rating} <Star className="w-4 h-4 text-yellow-400" />
+                      </>
+                    ) : (
+                      'Chưa có đánh giá nhà hàng'
+                    )}
+                  </div>
                   <div className="text-xs text-gray-300">Đánh giá</div>
                 </div>
               </div>
@@ -190,7 +200,7 @@ export const RestaurantPage = () => {
                 </div>
                 <div>
                   <div className="text-white font-bold text-sm">
-                    {restaurant?.delivery_time ?? '25-35 phút'}
+                    {restaurant?.deliveryTime ?? '30-40 phút'}
                   </div>
                   <div className="text-xs text-gray-300">Giao hàng</div>
                 </div>
@@ -205,8 +215,8 @@ export const RestaurantPage = () => {
                 <div>
                   <div className="text-white font-bold text-sm">
                     {restaurant?.delivery_fee
-                      ? `${restaurant.delivery_fee.toLocaleString('vi-VN')}đ`
-                      : 'Miễn phí'}
+                      ? `${restaurant.deliveryFee.toLocaleString('vi-VN')}đ`
+                      : 'Thu theo App'}
                   </div>
                   <div className="text-xs text-gray-300">Phí ship</div>
                 </div>
