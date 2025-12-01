@@ -65,15 +65,40 @@ export const TrackOrderPage = () => {
 
   // Hàm tính khoảng cách giữa 2 điểm lat/lng (km)
   async function getLatLngFromAddress(address) {
-    const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(
-      address,
-    )}`;
-    const res = await fetch(url);
-    const data = await res.json();
-    if (data && data.length > 0) {
-      return { lat: parseFloat(data[0].lat), lng: parseFloat(data[0].lon) };
+    if (!address) return null;
+
+    // YOUR FREE KEY ở đây (đăng ký xong copy-paste vào)
+    const LOCATIONIQ_TOKEN = 'pk.4e0ece0ff0632fae5010642d702d5dfa'; // thay bằng key thật của bạn
+
+    // Chuẩn hóa nhẹ địa chỉ (không cần quá tay)
+    const cleanAddress = address
+      .replace(/TP\.? ?HCM/g, 'Thành phố Hồ Chí Minh')
+      .replace(/Q\.?/g, 'Quận')
+      .trim();
+
+    const url = `https://us1.locationiq.com/v1/search.php?key=${LOCATIONIQ_TOKEN}&q=${encodeURIComponent(
+      cleanAddress,
+    )}&format=json&limit=1&countrycodes=vn&addressdetails=1`;
+
+    try {
+      const res = await fetch(url);
+      const data = await res.json();
+
+      console.log('LocationIQ response:', data); 
+
+      if (data && data.length > 0 && !data.error) {
+        return {
+          lat: parseFloat(data[0].lat),
+          lng: parseFloat(data[0].lon),
+        };
+      } else {
+        console.warn('LocationIQ không tìm thấy:', cleanAddress);
+        return null;
+      }
+    } catch (err) {
+      console.error('Lỗi LocationIQ:', err);
+      return null;
     }
-    return null;
   }
 
   // Sử dụng khi fetch order
@@ -111,13 +136,18 @@ export const TrackOrderPage = () => {
   console.log('Địa chỉ giao hàng: ', order.delivery_address);
   console.log('Khoảng cách chim bay:', distanceKm, 'km');
 
-  // Tốc độ drone (km/h)
-  const droneSpeed = 30; // có thể thay đổi tùy drone
+  // TỐC ĐỘ DRONE
+  const droneSpeed = 200;
 
-  // Khoảng cách (km) → thời gian bay (ms)
+  // Khoảng cách (km) → thời gian bay (ms) – giữ nguyên công thức cũ
   const droneTravelTime = (distanceKm / droneSpeed) * 60 * 60 * 1000; // km / (km/h) → giờ → ms
 
-  console.log('⏱ Thời gian bay drone (ms):', droneTravelTime);
+  console.log('Thời gian bay drone (ms):', droneTravelTime);
+  console.log(
+    `Drone tốc độ ${droneSpeed} km/h → bay ${distanceKm.toFixed(2)}km chỉ mất ${(
+      droneTravelTime / 1000
+    ).toFixed(1)} giây`,
+  );
 
   // --- Helpers: orderKey (dùng để lưu localStorage) và apiId (dùng cho API) ---
   const orderKey = useMemo(() => {
@@ -197,7 +227,7 @@ export const TrackOrderPage = () => {
   }, [id, orderFromState]);
 
   // -------- Persist currentStep and stepStartTime keyed by the actual orderKey --------
-  const stepDuration = 20000; // 20s mỗi step
+  const stepDuration = 30000; // 20s mỗi step
 
   useEffect(() => {
     if (!orderKey) return;
@@ -240,7 +270,7 @@ export const TrackOrderPage = () => {
     : null;
 
   const createdAt = new Date(order.created_at);
-  const estimatedDelivery = new Date(createdAt.getTime() + 40 * 60 * 1000);
+  const estimatedDelivery = new Date(createdAt.getTime() + 10 * 60 * 1000);
   // Xác định màu theo trạng thái
   const truckColor = () => {
     switch (currentStep) {
@@ -311,6 +341,9 @@ export const TrackOrderPage = () => {
 
   // For UI: compute stepProgress for active step using stepStartTime
   const activeElapsed = Math.min(Math.max(0, Date.now() - stepStartTime), 20000);
+
+  const droneAnimationStarted = useRef(false);
+  const droneAnimationStartTime = useRef(null); // Lưu thời gian thực tế bắt đầu bay
 
   console.log('Order object received:', order);
   console.log('Order ID:', order?.order_id);
@@ -396,7 +429,6 @@ export const TrackOrderPage = () => {
                       ease: 'linear',
                     }}
                   />
-                  
                 </div>
               )}
 
@@ -469,80 +501,111 @@ export const TrackOrderPage = () => {
             url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
             attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
           />
-
           <Marker position={restaurantPos}>
             <Popup>
               Nhà hàng: {order.merchant_name} <br />
               Địa chỉ: {order.merchant_address || 'Không có'}
             </Popup>
           </Marker>
-
           {deliveryPos && (
             <Marker position={deliveryPos}>
               <Popup>Địa chỉ giao hàng: {order.delivery_address}</Popup>
             </Marker>
           )}
-
           {deliveryPos && <Polyline positions={[restaurantPos, deliveryPos]} color="orange" />}
-
           {/* Drone bay realtime */}
-          {/* Drone bay realtime - CHỈ chạy khi bước 2 trở lên */}
           {currentStep >= 2 && deliveryPos && (
             <Marker
               icon={droneIcon}
-              position={restaurantPos}
+              position={restaurantPos} // vẫn để position ban đầu để Leaflet không lỗi
               ref={(marker) => {
-                if (!marker) return;
+                if (!marker || !deliveryPos) return;
 
-                // Nếu đã chạy rồi thì không chạy lại
-                if (marker._droneAnimationStarted) return;
-                marker._droneAnimationStarted = true;
+                // === 1. Kiểm tra đã từng bắt đầu animation chưa ===
+                const storageKey = `order_${orderKey}_drone_anim`;
+                const saved = localStorage.getItem(storageKey);
+                let shouldStartNew = !saved;
 
-                const path = [restaurantPos, deliveryPos];
+                if (!droneAnimationStarted.current) {
+                  if (saved) {
+                    const parsed = JSON.parse(saved);
+                    droneAnimationStartTime.current = parsed.startTime;
+                    droneAnimationStarted.current = true;
+                  } else {
+                    // Chưa từng bay → bắt đầu mới
+                    droneAnimationStartTime.current = Date.now();
+                    droneAnimationStarted.current = true;
+                    localStorage.setItem(
+                      storageKey,
+                      JSON.stringify({ startTime: droneAnimationStartTime.current }),
+                    );
+                  }
+                }
+
+                // Nếu đã tới nơi rồi (bước 4+) → đặt luôn vị trí đích + thoát
+                if (currentStep >= 4) {
+                  marker.setLatLng(deliveryPos);
+                  return;
+                }
+
+                // === 2. Tính toán thông số bay ===
+                const startPos = restaurantPos;
+                const endPos = deliveryPos;
                 const totalDistance = haversineDistance(
-                  restaurantPos[0],
-                  restaurantPos[1],
-                  deliveryPos[0],
-                  deliveryPos[1],
+                  startPos[0],
+                  startPos[1],
+                  endPos[0],
+                  endPos[1],
                 );
-                const speedKmh = 30;
+
+                const speedKmh = 200;
                 const duration = (totalDistance / speedKmh) * 3600 * 1000; // ms
 
-                // Tính thời gian đã trôi qua từ khi bắt đầu bước 2
-                const timeElapsedInStep2And3 = Math.min(
-                  Date.now() - stepStartTime, // từ lúc bước hiện tại bắt đầu
-                  40000, // tối đa 40s (bước 2 + bước 3)
-                );
+                // Thời gian đã trôi qua kể từ lúc thực sự bắt đầu bay
+                const timeElapsed = Date.now() - droneAnimationStartTime.current;
 
-                // Tính tiến độ hiện tại (0 → 1)
-                const progress = Math.min(timeElapsedInStep2And3 / duration, 1);
-
-                let startTime = performance.now() - timeElapsedInStep2And3; // giả lập đã chạy trước đó
-
-                function animate(time) {
-                  const elapsed = time - startTime;
-                  const t = Math.min(elapsed / duration, 1);
-
-                  const lat = restaurantPos[0] + (deliveryPos[0] - restaurantPos[0]) * t;
-                  const lng = restaurantPos[1] + (deliveryPos[1] - restaurantPos[1]) * t;
-
-                  marker.setLatLng([lat, lng]);
-
-                  // Nếu chưa tới nơi và vẫn ở bước 3 hoặc 4 → tiếp tục bay
-                  if (t < 1 && currentStep >= 2 && currentStep < 4) {
-                    requestAnimationFrame(animate);
-                  }
-                  // Đã tới nơi → bước 4
-                  else if (t >= 1 && currentStep < 4) {
-                    // Tự động chuyển sang bước 4 khi drone đến nơi
+                // Nếu đã bay quá duration → nhảy thẳng tới đích
+                if (timeElapsed >= duration) {
+                  marker.setLatLng(endPos);
+                  if (currentStep < 4) {
                     setCurrentStep(4);
                     localStorage.setItem(`order_${orderKey}_step`, '4');
                     localStorage.setItem(`order_${orderKey}_step_start`, Date.now().toString());
                   }
+                  return;
                 }
 
-                // Bắt đầu animation (có delay nhẹ để tránh lỗi ref)
-                setTimeout(() => requestAnimationFrame(animate), 500);
+                // === 3. Hàm animation ===
+                function animate(time) {
+                  if (!marker?.setLatLng) return;
+
+                  const elapsed = Date.now() - droneAnimationStartTime.current;
+                  const t = Math.min(elapsed / duration, 1);
+
+                  const lat = startPos[0] + (endPos[0] - startPos[0]) * t;
+                  const lng = startPos[1] + (endPos[1] - startPos[1]) * t;
+
+                  marker.setLatLng([lat, lng]);
+
+                  if (t < 1) {
+                    requestAnimationFrame(animate);
+                  } else {
+                    // ĐÃ TỚI NƠI
+                    if (currentStep < 4) {
+                      setCurrentStep(4);
+                      localStorage.setItem(`order_${orderKey}_step`, '4');
+                      localStorage.setItem(`order_${orderKey}_step_start`, Date.now().toString());
+                    }
+                    // Xóa data cũ nếu muốn (tùy bạn)
+                    // localStorage.removeItem(storageKey);
+                  }
+                }
+
+                // Bắt đầu animation (chỉ chạy 1 lần duy nhất)
+                if (shouldStartNew || !marker._animationRunning) {
+                  marker._animationRunning = true;
+                  setTimeout(() => requestAnimationFrame(animate), 300);
+                }
               }}
             />
           )}
