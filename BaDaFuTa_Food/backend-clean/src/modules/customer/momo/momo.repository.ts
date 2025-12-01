@@ -8,7 +8,7 @@ export const momoRepository = {
       where: {
         user_id: data.user_id,
         merchant_id: data.merchant_id,
-        status: order_status.PENDING,
+        status: order_status.DELIVERING,
         status_payment: PaymentStatus.PENDING,
         payment_method: { in: ["MOMO", "VNPAY"] },
       },
@@ -138,7 +138,6 @@ export const momoRepository = {
         where: { id: txn.order_id },
         data: {
           status_payment: statusEnum,
-          status: order_status.PENDING,
         },
       });
     }
@@ -182,7 +181,10 @@ export const momoRepository = {
       "address" in fullOrder.merchant.location
         ? fullOrder.merchant.location.address
         : "Chưa có địa chỉ";
-
+    const merchant_location = {
+      lat: (fullOrder.merchant.location as any)?.lat ?? "Chưa có lat",
+      lng: (fullOrder.merchant.location as any)?.lng ?? "Chưa có lng",
+    };
     return {
       success: true,
       message: "Tạo đơn hàng thành công",
@@ -191,6 +193,7 @@ export const momoRepository = {
 
       merchant_name: fullOrder.merchant?.merchant_name ?? "",
       merchant_address,
+      merchant_location,
       merchant_image: fullOrder.merchant?.profile_image ?? null,
       merchant_phone: fullOrder.merchant?.phone ?? null,
 

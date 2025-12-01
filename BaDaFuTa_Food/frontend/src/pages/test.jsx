@@ -39,7 +39,7 @@
 //   const location = useLocation();
 //   const navigate = useNavigate(); // ✅ thêm dòng này
 //   const { id } = useParams();
-  
+
 //   const { orderId } = location.state || {}; // nhận orderId từ state
 //   // ✅ Lấy order từ state
 //   const orderFromState = location.state?.order;
@@ -358,9 +358,8 @@
 //   );
 // };
 
-
 //
-app
+app;
 // import { Layout } from "./components/Layout";
 // import { Routes, Route, Navigate, useLocation } from "react-router-dom";
 // import ProtectedRoute from "./components/ProtectedRoute";
@@ -384,7 +383,6 @@ app
 // import { Toaster } from "react-hot-toast";
 // import OrderSuccess from "./pages/OrderSuccess";
 // import "./index.css";
-
 
 // // --------- Protected route wrapper sử dụng CartProvider ---------
 
@@ -422,7 +420,7 @@ app
 //         element={<MenuItemDetailPage />}
 //       />
 //       <Route path="/cart" element={<CartPage />} />
-     
+
 //       <Route
 //         path="/cart/checkout"
 //         element={
@@ -496,10 +494,6 @@ app
 
 // export default App;
 
-
-
-
-
 //
 
 //
@@ -509,482 +503,437 @@ app
 //
 //Mới nhất
 
-import { useState, useEffect, useMemo } from 'react';
-import axios from 'axios';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { Search, TrendingUp, MapPin } from 'lucide-react';
+import { Input } from '../../components/ui/input';
 import { Button } from '../../components/ui/button';
-import { Card, CardContent } from '../../components/ui/card';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../components/ui/tabs';
-import { OrderHistoryCard } from '../../components/OrderHistoryCard';
-// import { ProtectedRoute } from "../components/ProtectedRoute";
-import { ShoppingBag, Package2, X, Clock } from 'lucide-react';
-import { orderHistory as initialOrderHistory } from '../../../data/mockData';
-import { useAuth } from '../../contexts/AuthContext';
-import { Dialog, DialogContent, DialogOverlay, DialogPortal } from '@radix-ui/react-dialog';
+import RestaurantCard from '../../components/RestaurantCard';
+import { FeaturedRestaurant } from '../../components/FeaturedRestaurant';
+import { PromotionBanner } from '../../components/PromotionBanner';
+import { restaurants, featuredRestaurants, promotions } from '../../../data/mockData';
+import { useLocation } from '../../contexts/LocationContext';
+//import { useState, useMemo } from "react";
+import React, { useEffect, useState, useMemo } from 'react';
+export default function HomePage() {
+  const [selectedCuisine, setSelectedCuisine] = useState('Tất cả');
+  const [selectedDistrict, setSelectedDistrict] = useState('Tất cả');
 
-export const MyOrdersPage = () => {
-  const navigate = useNavigate();
-  // const [orders, setOrders] = useState(initialOrderHistory);
-  // const [orders, setOrders] = useState([]);
-  const [orders, setOrders] = useState([]); // ✅ KHỞI TẠO MẢNG RỖNG
+  const { state: locationState, calculateDistance } = useLocation();
 
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-  const location = useLocation();
-  const [activeTab, setActiveTab] = useState(location.state?.activeTab || 'PENDING');
-  const { state: authState } = useAuth();
-  const user = authState?.user;
-  //state huỷ đơn
-  const [orderToCancel, setOrderToCancel] = useState(null);
-  const [showCancelDialog, setShowCancelDialog] = useState(false);
+  const [restaurants, setRestaurants] = useState([]);
+  const [searchQuery, setSearchQuery] = useState('');
 
-  useEffect(() => {
-    if (location.state?.updatedOrder) {
-      const updatedOrder = location.state.updatedOrder;
-      setOrders((prev) => prev.map((o) => (o.id === updatedOrder.id ? updatedOrder : o)));
+  const [restaurantList, setRestaurantList] = useState([]);
+  const [maxDistance, setMaxDistance] = useState(2); // km
+  // Chuẩn hóa dữ liệu
+  const normalizedRestaurants = restaurantList.map((r) => {
+    let district = 'Không xác định';
+    if (r.location?.address) {
+      const parts = r.location.address.split(',');
+      if (parts.length >= 2) district = parts[1].trim();
     }
-  }, [location.state?.updatedOrder]);
-
-  // 🧩 Gọi API lấy danh sách đơn hàng
-  useEffect(() => {
-    if (user === null) return; // Chờ user load từ context
-
-    if (!user) {
-      navigate('/login');
-      return;
-    }
-
-    // Tạo body
-    const orderBody = {
-      user_id: user.id,
+    return {
+      ...r,
+      coordinates: r.location ? { lat: r.location.lat, lng: r.location.lng } : null,
+      district,
     };
+  });
 
-    const fetchOrders = async () => {
-      const hosts = ['/apiLocal/order/getOrder'];
-      for (const host of hosts) {
-        try {
-          setLoading(true);
-          const token = localStorage.getItem('accessToken');
+  // ⭐ Tính khoảng cách
+  const restaurantsWithDistance = useMemo(() => {
+    if (!locationState.currentLocation) return normalizedRestaurants;
 
-          const res = await fetch(host, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              ...(token ? { Authorization: `Bearer ${token}` } : {}),
-            },
-            body: JSON.stringify({ user_id: user.id }),
-          });
+    return normalizedRestaurants
+      .map((r) => {
+        if (!r.coordinates) return { ...r, distance: Infinity };
+        const distance = calculateDistance(
+          locationState.currentLocation.coordinates.lat,
+          locationState.currentLocation.coordinates.lng,
+          r.coordinates.lat,
+          r.coordinates.lng,
+        );
+        return { ...r, distance: Math.round(distance * 10) / 10 };
+      })
+      .filter((r) => r.distance <= maxDistance)
+      .filter(
+        (r) =>
+          selectedDistrict === 'Tất cả' ||
+          r.district.toLowerCase() === selectedDistrict.toLowerCase(),
+      )
+      .sort((a, b) => (a.distance || 0) - (b.distance || 0));
+  }, [
+    normalizedRestaurants,
+    locationState.currentLocation,
+    calculateDistance,
+    maxDistance,
+    selectedDistrict,
+  ]);
 
-          if (!res.ok) throw new Error(`❌ Lỗi khi gọi ${host}`);
-          const data = await res.json();
-          console.log('📦 API trả về:', data);
+  // ⭐ Lọc theo search
+  const filteredRestaurants = restaurantsWithDistance.filter((restaurant) => {
+    const name = restaurant?.name?.toLowerCase() || '';
+    const cuisine = restaurant?.cuisine?.toLowerCase() || '';
+    const query = searchQuery.toLowerCase();
 
-          const formattedOrders = Array.isArray(data.items)
-          ? data.items.map(o => ({ ...o, id: o.order_id }))
-          : [{ ...data, id: data.order_id }];
-        
-          setOrders(formattedOrders);
-          // setOrders(data.orders);
-          setOrders(Array.isArray(data) ? data : [data]);
-          console.log('✅ Lấy dữ liệu đơn hàng từ:', host);
-          return;
-        } catch (err) {
-          console.warn(err.message);
-        } finally {
-          setLoading(false);
-        }
+    return name.includes(query) || cuisine.includes(query);
+  });
+
+  const cuisineTypes = ['Tất cả', 'Việt Nam', 'Coffee', 'Philippin', 'Thái Lan', 'Hàn Quốc', 'Mỹ'];
+
+  const finalFilteredRestaurants =
+    selectedCuisine === 'Tất cả'
+      ? filteredRestaurants
+      : filteredRestaurants.filter((restaurant) => restaurant.cuisine === selectedCuisine);
+
+  useEffect(() => {
+    const fetchRestaurants = async () => {
+      const host = 'https://badafuta-production.up.railway.app/api/restaurants';
+
+      const params = new URLSearchParams();
+
+      // Search param
+      if (searchQuery.trim() !== '') {
+        params.append('search', searchQuery);
       }
 
-      console.error('❌ Không thể lấy dữ liệu đơn hàng từ bất kỳ host nào');
-      setError('Không thể tải dữ liệu đơn hàng.');
+      // Cuisine param
+      if (selectedCuisine !== 'Tất cả') {
+        params.append('cuisine', selectedCuisine);
+      }
+
+      let url = host;
+
+      if (params.toString() !== '') {
+        url = `${host}?${params.toString()}`;
+      }
+
+      try {
+        const res = await fetch(url);
+        if (!res.ok) throw new Error('Fetch failed');
+
+        const data = await res.json();
+        setRestaurantList(data); // ✅ set vào list chuẩn để tính khoảng cách
+        setRestaurants(data); // ✅ set vào list để hiển thị "All Restaurants"
+        console.log('Fetch:', url);
+      } catch (err) {
+        console.error('Error:', err.message);
+      }
     };
 
-    fetchOrders();
-  }, [user]);
+    fetchRestaurants();
+  }, [searchQuery, selectedCuisine]);
+  console.log(normalizedRestaurants.map((r) => r.district));
 
-  // Khi nhấn nút Huỷ
-  const handleOpenCancelDialog = (order) => {
-    if (order.status === 'CONFIRMED') {
-      alert('❌ Đơn hàng đã được xác nhận, không thể huỷ.');
-      return;
+  //Voucher
+  const [vouchers, setVouchers] = useState([]);
+
+  useEffect(() => {
+    async function loadVouchers() {
+      try {
+        const res = await fetch('http://localhost:3000/api/voucher/getAll', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({}),
+        });
+
+        const json = await res.json();
+
+        console.log('Voucher API response:', json);
+
+        const list = [
+          ...(json.data?.appVouchers || []),
+          ...(json.data?.merchantVouchers || []),
+          ...(json.data?.userVouchers || []),
+        ];
+
+        setVouchers(list);
+      } catch (err) {
+        console.error('Lỗi load vouchers:', err);
+      }
     }
-    setOrderToCancel(order);
-    setShowCancelDialog(true);
-  };
 
-  // Xác nhận hủy
-  const handleConfirmCancel = () => {
-    if (orderToCancel) handleCancelOrder(orderToCancel.order_id);
-  };
-  // Khi xác nhận huỷ
-  // const handleCancelOrder = async (order) => {
-  //   if (!orderToCancel) return;
-  //   const order_id = order.order_id;
-  //   const oldStatus = order.status; // lưu trạng thái cũ
-  //   // Optimistic update
-  //   setOrders((prev) => prev.map((o) => (o.id === order_id ? { ...o, status: 'CANCELED' } : o)));
-
-  //   // Đóng dialog
-  //   setShowCancelDialog(false);
-  //   setOrderToCancel(null);
-
-  //   try {
-  //     const token = localStorage.getItem('accessToken');
-  //     const res = await fetch(`/apiLocal/order/${order_id}/cancel`, {
-  //       method: 'PUT',
-  //       headers: {
-  //         'Content-Type': 'application/json',
-  //         ...(token ? { Authorization: `Bearer ${token}` } : {}),
-  //       },
-  //     });
-
-  //     if (!res.ok) throw new Error('❌ Hủy đơn thất bại');
-
-  //     // // Cập nhật ngay state orders
-  //     // setOrders((prev) => prev.map((o) => (o.id === order_id ? { ...o, status: 'CANCELED' } : o)));
-  //     console.log('✔ Đã hủy đơn:', order_id);
-  //   } catch (err) {
-  //     console.error('❌ Lỗi hủy đơn:', err);
-  //     // 🔹 Rollback dùng trạng thái cũ đã lưu
-  //     setOrders((prev) => prev.map((o) => (o.id === order_id ? { ...o, status: oldStatus } : o)));
-  //     alert('❌ Hủy đơn thất bại, vui lòng thử lại.');
-  //   }
-  //   // } finally {
-  //   //   setShowCancelDialog(false);
-  //   //   setOrderToCancel(null);
-  //   // }
-  // };
-  const handleCancelOrder = async () => {
-    if (!orderToCancel) return;
-
-    const order_id = orderToCancel.order_id;
-    const oldStatus = orderToCancel.status;
-
-    // ✅ Optimistic update
-    setOrders(prev => prev.map(o => o.order_id === order_id ? { ...o, status: 'CANCELED' } : o));
-    setShowCancelDialog(false);
-    setOrderToCancel(null);
-    setActiveTab('CANCELED'); // đổi tab ngay
-
-    try {
-      const token = localStorage.getItem('accessToken');
-      const res = await fetch(`/apiLocal/order/${order_id}/cancel`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          ...(token ? { Authorization: `Bearer ${token}` } : {}),
-        },
-      });
-
-      if (!res.ok) throw new Error('❌ Hủy đơn thất bại');
-
-      console.log('✔ Đã hủy đơn:', order_id);
-    } catch (err) {
-      console.error('❌ Lỗi hủy đơn:', err);
-
-      // rollback nếu lỗi
-      setOrders(prev => prev.map(o => o.order_id === order_id ? { ...o, status: oldStatus } : o));
-      alert('❌ Hủy đơn thất bại, vui lòng thử lại.');
-    }
-  };
-
-  //Rating
-  const handleRatingSubmit = (rating) => {
-    setOrders((prevOrders) =>
-      prevOrders.map((order) =>
-        order.id === rating.orderId
-          ? {
-              ...order,
-              rating: rating.rating,
-              review: rating.review,
-              canRate: false,
-            }
-          : order,
-      ),
-    );
-  };
-
-  // 🧠 Lọc đơn hàng theo trạng thái
-  const pendingOrders = useMemo(
-    () => (orders ? orders.filter((order) => order.status === 'PENDING') : []),
-    [orders],
-  );
-
-  const deliveredOrders = useMemo(
-    () => (orders ? orders.filter((order) => order.status === 'COMPLETED') : []),
-    [orders],
-  );
-
-  const shippingOrders = useMemo(
-    () =>
-      orders
-        ? orders.filter((order) => order.status === 'DELIVERING' || order.status === 'CONFIRMED')
-        : [],
-    [orders],
-  );
-
-  const cancelledOrders = useMemo(
-    () => (orders ? orders.filter((order) => order.status === 'CANCELED') : []),
-    [orders],
-  );
-
-  //    const ratingOrders = useMemo(
-  //     () => orders.fillter((order) => order.status === "rating"),
-  //     [orders]
-  //   );
-
-  // console.log('📦 Orders:', data); // xem key của ID là gì
-
-  const EmptyState = ({ type, icon: Icon, message }) => (
-    <Card className="hover:scale-100">
-      <CardContent className="text-center py-12">
-        <Icon className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-        <h3 className="font-semibold text-lg mb-2">{message}</h3>
-        <p className="text-gray-500 mb-6">
-          {type === 'shipping' && 'Bạn chưa có đơn hàng nào đang được giao. Hãy đặt hàng ngay!'}
-          {type === 'delivered' &&
-            'Bạn chưa có đơn hàng nào đã mua. Khám phá các nhà hàng ngon ngay!'}
-          {type === 'cancelled' && 'Bạn chưa có đơn hàng nào bị hủy. Thật tuyệt vời!'}
-        </p>
-        <Button variant="default" onClick={() => navigate('/')} className="w-max">
-          Khám phá nhà hàng
-        </Button>
-      </CardContent>
-    </Card>
-  );
-
-  // ⏳ Hiển thị khi đang tải hoặc lỗi
-  if (loading) return <p className="text-center py-10">Đang tải đơn hàng...</p>;
-  if (error) return <p className="text-center py-10 text-red-500">{error}</p>;
-
-  //Giao diện chính
+    loadVouchers();
+  }, []);
   return (
-    // <ProtectedRoute>
-    <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8 ">
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold mb-2">Đơn hàng của tôi</h1>
-        <p className="text-gray-600">Theo dõi và quản lý các đơn hàng của bạn</p>
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      {/* Hero Section */}
+      <div className="text-center mb-8">
+        <h1 className="text-4xl font-bold text-gray-900 mb-4">Đặt món yêu thích của bạn</h1>
+        <p className="text-xl text-gray-600 mb-8">
+          Giao hàng nhanh chóng từ các nhà hàng tốt nhất trong khu vực
+        </p>
+
+        {/* Search Bar */}
+        <div className="max-w-md mx-auto relative">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+          <Input
+            type="text"
+            placeholder="Tìm kiếm nhà hàng hoặc món ăn..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="pl-10 pr-4 py-3 w-full"
+          />
+        </div>
       </div>
 
-      {/* <Tabs defaultValue="DELIVERING" className="space-y-6"> */}
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-        <TabsList className="grid w-full grid-cols-4">
-          <TabsTrigger value="PENDING" className="flex items-center space-x-2">
-            <ShoppingBag className="w-4 h-4" />
-            <span>Chờ xác nhận ({pendingOrders.length})</span>
-          </TabsTrigger>
+      {/* Promotions */}
+      <div className="mb-8">
+        <h2 className="text-2xl font-bold mb-4">Ưu đãi hôm nay</h2>
 
-          <TabsTrigger value="DELIVERING" className="flex items-center space-x-2">
-            <Clock className="w-4 h-4" />
-            <span>Đang giao ({shippingOrders.length})</span>
-          </TabsTrigger>
-          <TabsTrigger value="COMPLETED" className="flex items-center space-x-2">
-            <Package2 className="w-4 h-4" />
-            <span>Đã giao ({deliveredOrders.length})</span>
-          </TabsTrigger>
-          <TabsTrigger value="CANCELED" className="flex items-center space-x-2">
-            <X className="w-4 h-4" />
-            <span>Đã hủy ({cancelledOrders.length})</span>
-          </TabsTrigger>
-          {/* <TabsTrigger
-            value="delivered"
-            className="flex items-center space-x-2"
-          >
-            <Package2 className="w-4 h-4" />
-            <span>Đánh giá ({ratingOrders.length})</span>
-          </TabsTrigger> */}
-        </TabsList>
-        <TabsContent value="PENDING" className="space-y-4">
-          {pendingOrders.length > 0 ? (
-            pendingOrders.map((order) => (
-              <OrderHistoryCard
-                key={order.id}
-                order={order}
-                onRatingSubmit={handleRatingSubmit}
-                onCancel={handleOpenCancelDialog} // ✅ truyền hàm mở dialog
-              />
-            ))
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {vouchers.map((voucher) => (
+            <PromotionBanner key={voucher.id} promotion={voucher} />
+          ))}
+        </div>
+      </div>
+
+      {/* Featured Restaurants */}
+      <div className="mb-8">
+        <div className="flex items-center space-x-2 mb-6">
+          <TrendingUp className="w-6 h-6 text-orange-500" />
+          <h2 className="text-xl md:text-2xl font-bold">Nhà hàng nổi bật</h2>
+        </div>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+          {featuredRestaurants.map((restaurant, index) => (
+            <FeaturedRestaurant
+              key={restaurant.id}
+              restaurant={restaurant}
+              promotion={
+                index === 0
+                  ? {
+                      title: promotions[0].title,
+                      description: promotions[0].description,
+                    }
+                  : undefined
+              }
+            />
+          ))}
+        </div>
+      </div>
+
+      {/* Restaurants Near You */}
+      {locationState.currentLocation && (
+        <div className="mb-8">
+          <div className="flex items-center space-x-2 mb-6">
+            <MapPin className="w-6 h-6 text-orange-500" />
+            <h2 className="text-xl md:text-2xl font-bold">
+              Nhà hàng gần bạn tại {locationState.currentLocation.name}
+            </h2>
+          </div>
+
+          {finalFilteredRestaurants.length > 0 ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {finalFilteredRestaurants.slice(0, 6).map((r) => {
+                const distance = r.distance || 0; // km
+                let deliveryFee = 0;
+
+                if (distance <= 3) {
+                  deliveryFee = 16000; // 3 km đầu
+                } else {
+                  deliveryFee = 16000 + Math.ceil(distance - 3) * 4000; // km > 3
+                }
+
+                const deliveryTime = Math.max(10, Math.round(distance * 8));
+
+                return (
+                  <RestaurantCard
+                    key={r.id}
+                    restaurant={{
+                      ...r,
+                      cover_image: { url: r.cover_image?.url },
+                      profile_image: { url: r.profile_image?.url },
+                      distance,
+                      deliveryFee,
+                      deliveryTime,
+                    }}
+                  />
+                );
+              })}
+            </div>
           ) : (
-            <EmptyState type="PENDING" icon={ShoppingBag} message="Chưa có đơn hàng chờ xác nhận" />
+            <div className="text-center py-12">
+              <p className="text-gray-500 text-lg">
+                Không có nhà hàng nào ở {locationState.currentLocation.name}
+              </p>
+            </div>
           )}
-        </TabsContent>
-
-        <TabsContent value="DELIVERING" className="space-y-4">
-          {shippingOrders.length > 0 ? (
-            shippingOrders.map((order) => (
-              <OrderHistoryCard key={order.id} order={order} onRatingSubmit={handleRatingSubmit} />
-            ))
-          ) : (
-            <EmptyState type="DELIVERING" icon={Clock} message="Chưa có đơn hàng đang giao" />
-          )}
-        </TabsContent>
-
-        <TabsContent value="COMPLETED" className="space-y-4">
-          {deliveredOrders.length > 0 ? (
-            deliveredOrders.map((order) => (
-              <OrderHistoryCard key={order.id} order={order} onRatingSubmit={handleRatingSubmit} />
-            ))
-          ) : (
-            <EmptyState type="COMPLETED" icon={Package2} message="Chưa có đơn hàng mua" />
-          )}
-        </TabsContent>
-
-        <TabsContent value="CANCELED" className="space-y-4">
-          {cancelledOrders.length > 0 ? (
-            cancelledOrders.map((order) => (
-              <OrderHistoryCard key={order.id} order={order} onRatingSubmit={handleRatingSubmit} />
-            ))
-          ) : (
-            <EmptyState type="CANCELED" icon={X} message="Chưa có đơn hàng hủy" />
-          )}
-        </TabsContent>
-      </Tabs>
-      {showCancelDialog && orderToCancel && (
-        <Dialog open={showCancelDialog} onOpenChange={setShowCancelDialog}>
-          <DialogPortal>
-            <DialogOverlay className="fixed inset-0 bg-black/30" />
-            <DialogContent className="fixed top-1/2 left-1/2 w-full max-w-md -translate-x-1/2 -translate-y-1/2 rounded-lg bg-white p-6 shadow-lg">
-              <h3 className="text-lg mb-4">
-                Bạn có chắc muốn huỷ đơn gồm:{' '}
-                {orderToCancel.items.map((item, index) => (
-                  <span key={index}>
-                    <strong>{item.name_item}</strong>
-                    {index < orderToCancel.items.length - 1 ? ', ' : ''}
-                  </span>
-                ))}{' '}
-                không?
-              </h3>
-
-              <div className="flex justify-end space-x-4">
-                <Button variant="outline" onClick={() => setShowCancelDialog(false)}>
-                  Huỷ
-                </Button>
-                <Button variant="default" className="w-max" onClick={handleCancelOrder}>
-                  Xác nhận
-                </Button>
-              </div>
-            </DialogContent>
-          </DialogPortal>
-        </Dialog>
+        </div>
       )}
+
+      {/* {/* Cuisine Filter */}
+      <div className="mb-8">
+        <h2 className="text-xl md:text-2xl font-bold mb-4">Lọc theo loại ẩm thực</h2>
+        <div className="flex flex-wrap gap-2">
+          {cuisineTypes.map((cuisine) => (
+            <Button
+              key={cuisine}
+              variant={selectedCuisine === cuisine ? 'default' : 'outline'}
+              onClick={() => setSelectedCuisine(cuisine)}
+              className={`rounded-xl w-max px-5 py-2 text-base font-semibold border transition-all duration-200
+               ${
+                 selectedCuisine === cuisine
+                   ? 'bg-orange-500 text-white border-orange-500'
+                   : 'bg-white text-black border-gray-300 hover:bg-gray-100'
+               }`}
+            >
+              {cuisine}
+            </Button>
+          ))}
+        </div>
+      </div>
+
+      {/* All Restaurants */}
+      <div className="mb-8">
+        <h2 className="text-xl md:text-2xl font-bold mb-6">Tất cả nhà hàng</h2>
+        {restaurants.length > 0 ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {normalizedRestaurants.map((r) => {
+              const distance =
+                r.coordinates && locationState.currentLocation
+                  ? Math.round(
+                      calculateDistance(
+                        locationState.currentLocation.coordinates.lat,
+                        locationState.currentLocation.coordinates.lng,
+                        r.coordinates.lat,
+                        r.coordinates.lng,
+                      ) * 10,
+                    ) / 10
+                  : 0;
+
+              // Tính phí giao hàng: 3 km đầu 16k, km tiếp theo 4k/km
+              let deliveryFee = 0;
+              if (distance <= 3) {
+                deliveryFee = 16000;
+              } else {
+                deliveryFee = 16000 + Math.ceil(distance - 3) * 4000;
+              }
+
+              // Tính thời gian giao hàng: 10 phút cơ bản + 8 phút mỗi km
+              const deliveryTime = 10 + Math.round(distance * 8);
+
+              return (
+                <RestaurantCard
+                  key={r.id}
+                  restaurant={{
+                    ...r,
+                    cover_image: { url: r.cover_image?.url },
+                    profile_image: { url: r.profile_image?.url },
+                    distance,
+                    deliveryFee,
+                    deliveryTime,
+                  }}
+                />
+              );
+            })}
+          </div>
+        ) : (
+          <div className="text-center py-12">
+            <p className="text-gray-500 text-lg">Không tìm thấy nhà hàng nào phù hợp</p>
+          </div>
+        )}{' '}
+      </div>
     </div>
-    // </ProtectedRoute>
   );
-};
-///
-///
-//
-const handleSubmit = () => {
-  if (rating === 0) {
-    alert("Vui lòng chọn số sao đánh giá");
-    return;
-  }
+}
 
-  const newRating = {
-    orderId: order.id,
-    rating,
-    review: review.trim(),
-    date: new Date().toISOString(),
-  };
+{timelineSteps.map((step, index) => {
+  const StepIcon = step.icon;
+  const isCompleted = index + 1 < currentStep;
+  const isActive = index + 1 === currentStep;
 
-  if (order.rating) {
-    onUpdateRating?.(newRating.orderId, newRating.rating, newRating.review);
-  } else {
-    onCreateRating?.(newRating.orderId, newRating.rating, newRating.review);
-  }
+  const stepDuration = 20000;
+  const now = Date.now();
+  const elapsed = Math.max(0, now - stepStartTime);
+  const stepProgress = Math.min(elapsed / stepDuration, 1);
 
-  setRating(0);
-  setReview("");
-  setHoveredRating(0);
-  onOpenChange(false);
-};
-
-
-{order.canRate && activeTab === 'COMPLETED' && (
-  <Button
-    variant="outline"
-    size="sm"
-    onClick={() => setShowRatingDialog(true)}
-    className="flex items-center gap-1"
-  >
-    <Star className="w-4 h-4" />
-    <span>Đánh giá</span>
-  </Button>
-)}
-<TabsContent value="COMPLETED" className="space-y-4">
-  {deliveredOrders.length > 0 ? (
-    deliveredOrders.map((order) => (
-      <OrderHistoryCard
-        key={order.id}
-        order={order}
-        onCreateRating={handleCreateRating}
-        onUpdateRating={handleUpdateRating}
-        onDeleteRating={handleDeleteRating}
-        onCancel={handleOpenCancelDialog}
-      />
-    ))
-  ) : (
-    <EmptyState type="COMPLETED" icon={Package2} message="Chưa có đơn hàng mua" />
-  )}
-</TabsContent>
-const updatedOrder = {
-  ...order,
-  rating: data.data?.rating || null,
-  review: data.data?.review || '',
-  canRate: !data.data?.rating,
-};
-{/* Hiển thị đánh giá với icon chỉnh */}
-{order.status === 'COMPLETED' && order.rating && (
-  <div className="flex items-center gap-1">
-    <Star className="w-4 h-4 fill-yellow-400 text-yellow-400" />
-    <span className="text-sm font-medium">{order.rating}</span>
-
-    {/* Icon cây bút nhỏ để chỉnh */}
-    <button
-      type="button"
-      className="ml-1 text-gray-500 hover:text-gray-700"
-      onClick={() => {
-        setEditingOrder(order); // lưu order đang chỉnh
-        setShowRatingDialog(true); // mở dialog rating
-      }}
+  return (
+    <div
+      key={step.id}
+      className="flex md:flex-1 flex-col items-center text-center relative"
     >
-      <svg
-        xmlns="http://www.w3.org/2000/svg"
-        className="w-3 h-3"
-        fill="none"
-        viewBox="0 0 24 24"
-        stroke="currentColor"
-        strokeWidth={2}
+      {/* Line between steps */}
+      {index < timelineSteps.length - 1 && (
+        <div
+          className="hidden md:block absolute top-5 left-2/2 transform -translate-x-1/2 h-1 z-0 bg-gray-300 overflow-visible"
+          style={{ width: '100%' }}
+        >
+          <motion.div
+            key={`progress-${currentStep}`}
+            className="h-full bg-orange-500 origin-left"
+            initial={{ scaleX: isCompleted ? 1 : stepProgress }}
+            animate={{ scaleX: isCompleted ? 1 : isActive ? 1 : 0 }}
+            transition={{
+              duration: isActive ? (1 - stepProgress) * 20 : 0,
+              ease: 'linear',
+            }}
+          />
+          
+          {/* Drone animation chỉ hiện từ bước 2 */}
+          {isActive && currentStep >= 2 && (
+            <motion.div
+              className="absolute top-[-40px] z-10"
+              initial={{ left: `${stepProgress * 100}%` }}
+              animate={{ left: '100%' }}
+              transition={{ duration: (1 - stepProgress) * 20, ease: 'linear' }}
+            >
+              <DeliveryDrone size={120} autoPlay={true} />
+            </motion.div>
+          )}
+        </div>
+      )}
+
+      {/* Icon */}
+      <motion.div
+        className="w-10 h-10 md:w-12 md:h-12 flex items-center justify-center rounded-full border-2 mb-2 z-10"
+        initial={{
+          backgroundColor: '#f3f3f3',
+          borderColor: '#d1d5db',
+          color: '#9ca3af',
+        }}
+        animate={{
+          backgroundColor: isCompleted
+            ? '#f97316'
+            : isActive
+            ? ['#f3f3f3', '#f97316']
+            : '#f3f3f3',
+          borderColor: isCompleted
+            ? '#f97316'
+            : isActive
+            ? ['#d1d5db', '#fb923c']
+            : '#d1d5db',
+          color: isCompleted
+            ? '#ffffff'
+            : isActive
+            ? ['#9ca3af', '#f97316']
+            : '#9ca3af',
+        }}
+        transition={{
+          duration: isActive ? 3 : 0,
+          ease: 'easeInOut',
+        }}
       >
-        <path
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          d="M15.232 5.232l3.536 3.536M4 13v7h7l11-11-7-7L4 13z"
+        <StepIcon
+          className="w-5 h-5 md:w-6 md:h-6"
+          style={{
+            stroke: isCompleted || isActive ? '#ffffff' : '#9ca3af',
+          }}
         />
-      </svg>
-    </button>
-  </div>
-)}
-//
-//
-<div className="flex justify-between items-start p-4 rounded-xl border border-gray-200 bg-white shadow-sm mb-4">
-  <div className="space-y-2 w-full">
-    <!-- nội dung địa chỉ -->
-  </div>
+      </motion.div>
 
-  <!-- Nút sửa thu gọn -->
-  <div className="flex-shrink-0">
-    <Button
-      variant="outline"
-      onClick={() => {
-        setFormData(selectedAddress);
-        setIsEditing(true);
-        setIsAdding(false);
-        setIsDialogOpen(true);
-      }}
-      className="flex items-center gap-1"
-    >
-      <Edit className="w-4 h-4" /> Sửa
-    </Button>
-  </div>
-</div>
+      {/* Label */}
+      <motion.span
+        className="text-xs md:text-sm font-medium"
+        initial={{ color: '#9ca3af' }}
+        animate={{
+          color: isCompleted
+            ? '#f97316'
+            : isActive
+            ? ['#9ca3af', '#f97316']
+            : '#9ca3af',
+        }}
+        transition={{ duration: isActive ? 3 : 0, ease: 'easeInOut' }}
+      >
+        {step.label}
+      </motion.span>
+    </div>
+  );
+})}

@@ -1,10 +1,10 @@
-import { useState } from 'react';
-import { Dialog, DialogContent, DialogTrigger } from '@radix-ui/react-dialog'; // nếu dùng Radix UI
-import { Card, CardContent } from './ui/card';
-import { Button } from './ui/button';
-import { Badge } from './ui/badge';
-import { OrderStatusBadge } from './OrderStatusBadge';
-import { Separator } from './ui/separator';
+import { useState } from "react";
+import { Dialog, DialogContent, DialogTrigger } from "@radix-ui/react-dialog"; // nếu dùng Radix UI
+import { Card, CardContent } from "./ui/card";
+import { Button } from "./ui/button";
+import { Badge } from "./ui/badge";
+import { OrderStatusBadge } from "./OrderStatusBadge";
+import { Separator } from "./ui/separator";
 import {
   Star,
   Calendar,
@@ -16,10 +16,10 @@ import {
   CreditCard,
   ForkKnife,
   FileText,
-} from 'lucide-react';
-import { RatingDialog } from './RatingDialog';
-import { useCart } from '../contexts/CartContext';
-import { useNavigate } from 'react-router-dom';
+} from "lucide-react";
+import { RatingDialog } from "./RatingDialog";
+import { useCart } from "../contexts/CartContext";
+import { useNavigate } from "react-router-dom";
 
 export const OrderHistoryCard = ({ order, onRatingSubmit, onCancel }) => {
   const [showDetails, setShowDetails] = useState(false);
@@ -29,51 +29,51 @@ export const OrderHistoryCard = ({ order, onRatingSubmit, onCancel }) => {
 
   const getStatusColor = (status) => {
     switch (status) {
-      case 'PENDING':
-        return 'bg-yellow-100 text-yellow-800'; // màu vàng cho chờ xác nhận
-      case 'DELIVERING':
-        return 'bg-blue-100 text-blue-800';
-      case 'COMPLETED':
-        return 'bg-green-100 text-green-800';
-      case 'CANCELED':
-        return 'bg-red-100 text-red-800';
-      case 'CONFIRMED':
-        return 'bg-orange-100 text-orange-800';
+      case "PENDING":
+        return "bg-yellow-100 text-yellow-800"; // màu vàng cho chờ xác nhận
+      case "DELIVERING":
+        return "bg-blue-100 text-blue-800";
+      case "COMPLETED":
+        return "bg-green-100 text-green-800";
+      case "CANCELED":
+        return "bg-red-100 text-red-800";
+      case "CONFIRMED":
+        return "bg-orange-100 text-orange-800";
       default:
-        return 'bg-gray-100 text-gray-800';
+        return "bg-gray-100 text-gray-800";
     }
   };
 
   const getStatusText = (status) => {
     switch (status) {
-      case 'PENDING':
-        return 'Chờ xác nhận';
-      case 'DELIVERING':
-        return 'Đang giao';
-      case 'COMPLETED':
-        return 'Đã giao';
-      case 'CANCELED':
-        return 'Đã hủy';
-      case 'CONFIRMED':
-        return 'Đã xác nhận';
+      case "PENDING":
+        return "Chờ xác nhận";
+      case "DELIVERING":
+        return "Đang giao";
+      case "COMPLETED":
+        return "Đã giao";
+      case "CANCELED":
+        return "Đã hủy";
+      case "CONFIRMED":
+        return "Đã xác nhận";
       default:
         return status;
     }
   };
 
   const formatDate = (dateString) => {
-    return new Date(dateString).toLocaleString('vi-VN', {
-      year: 'numeric',
-      month: '2-digit',
-      day: '2-digit',
-      hour: '2-digit',
-      minute: '2-digit',
+    return new Date(dateString).toLocaleString("vi-VN", {
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit",
     });
   };
 
   const handleReorder = () => {
     // Clear cart first to avoid mixing orders from different restaurants
-    dispatch({ type: 'CLEAR_CART' });
+    dispatch({ type: "CLEAR_CART" });
 
     // Add all items from this order to cart
     order.items.forEach((item) => {
@@ -88,18 +88,18 @@ export const OrderHistoryCard = ({ order, onRatingSubmit, onCancel }) => {
       }));
       for (let i = 0; i < Number(item.quantity || 1); i++) {
         dispatch({
-          type: 'ADD_ITEM',
+          type: "ADD_ITEM",
           payload: {
             restaurant: {
               id: order.merchant_id, // ID quán/nhà hàng
               name: order.merchant_name, // Tên quán
-              image: order.merchant_image?.url ?? '', // Ảnh quán
+              image: order.merchant_image?.url ?? "", // Ảnh quán
             },
             menuItem: {
               id: item.menu_item_id,
               // id: item.id, // ID món
               name: item.name_item, // Tên món
-              image: item.image_item?.url ?? '', // Ảnh món
+              image: item.image_item?.url ?? "", // Ảnh món
               price: Number(item.price), // Giá món
               orderId: item.order_id, // ID đơn hàng gốc
             },
@@ -111,13 +111,13 @@ export const OrderHistoryCard = ({ order, onRatingSubmit, onCancel }) => {
     });
 
     // Navigate to cart
-    navigate('/cart');
+    navigate("/cart");
   };
 
   const handleTrack = () => {
     navigate(`/track-order/${order.id}`, { state: { order } });
   };
-  console.log('ORDER:', order);
+  console.log("ORDER:", order);
 
   return (
     <>
@@ -137,7 +137,9 @@ export const OrderHistoryCard = ({ order, onRatingSubmit, onCancel }) => {
                   <h3 className="text-gray-700">{order.merchant_name}</h3>
                 </span>
 
-                <p className="text-sm text-gray-500">Mã đơn: {order.order_id}</p>
+                <p className="text-sm text-gray-500">
+                  Mã đơn: {order.order_id}
+                </p>
               </div>
             </div>
             <OrderStatusBadge status={order.status} showIcon={true} />
@@ -165,19 +167,22 @@ export const OrderHistoryCard = ({ order, onRatingSubmit, onCancel }) => {
                             {item.quantity} x {item.name_item}
                           </span>
                           <span>
-                            {' '}
-                            Option:{' '}
+                            {" "}
+                            Option:{" "}
                             {item.options.length > 0
                               ? item.options
-                                  .map((opt) => `${opt.option_name}: ${opt.option_item_name}`)
-                                  .join(', ')
-                              : 'Không có'}
+                                  .map(
+                                    (opt) =>
+                                      `${opt.option_name}: ${opt.option_item_name}`
+                                  )
+                                  .join(", ")
+                              : "Không có"}
                           </span>
                         </div>
                       </div>
 
                       <span className="mt-2 md:mt-0 font-medium text-gray-800">
-                        {(item.price * item.quantity).toLocaleString('vi-VN')}đ
+                        {(item.price * item.quantity).toLocaleString("vi-VN")}đ
                       </span>
                     </div>
                   ))}
@@ -188,7 +193,7 @@ export const OrderHistoryCard = ({ order, onRatingSubmit, onCancel }) => {
                       <span>Phí giao hàng</span>
                     </div>
                     <span className="font-medium text-gray-800">
-                      {Number(order.delivery_fee || 0).toLocaleString('vi-VN')}đ
+                      {Number(order.delivery_fee || 0).toLocaleString("vi-VN")}đ
                     </span>
                   </div>
                   {/* Giảm giá */}
@@ -198,7 +203,7 @@ export const OrderHistoryCard = ({ order, onRatingSubmit, onCancel }) => {
                       <span>Giảm giá</span>
                     </div>
                     <span className="font-medium text-gray-800">
-                      {Number(order.discount || 0).toLocaleString('vi-VN')}đ
+                      {Number(order.discount || 0).toLocaleString("vi-VN")}đ
                     </span>
                   </div>
                 </div>
@@ -207,14 +212,16 @@ export const OrderHistoryCard = ({ order, onRatingSubmit, onCancel }) => {
 
                 {/* Order Info */}
                 <div className="space-y-3 mb-4">
-                  <p className="px-2 text-sm font-semibold">Thông tin đơn hàng:</p>
+                  <p className="px-2 text-sm font-semibold">
+                    Thông tin đơn hàng:
+                  </p>
                   <div className="flex justify-between gap-2 text-sm text-gray-600 px-2 ml-6">
                     <div className="flex items-center gap-2 ">
                       <ForkKnife className="w-4 h-4 text-orange-500" />
                       <span>Dụng cụ ăn uống</span>
                     </div>
                     <span className="font-medium text-gray-800">
-                      {order.utensils || 'Không có'}
+                      {order.utensils || "Không có"}
                     </span>
                   </div>
                   <div className="flex justify-between gap-2  text-sm text-gray-600 px-2 ml-6">
@@ -222,14 +229,16 @@ export const OrderHistoryCard = ({ order, onRatingSubmit, onCancel }) => {
                       <FileText className="w-4 h-4 text-blue-500" />
                       <span>Ghi chú</span>
                     </div>
-                    <span className="font-medium text-gray-800">{order.note || 'Không có'}</span>
+                    <span className="font-medium text-gray-800">
+                      {order.note || "Không có"}
+                    </span>
                   </div>
                   <div className="flex justify-between gap-2  text-sm text-gray-600 px-2 ml-6">
                     <div className="flex items-center gap-2 ">
                       <Calendar className="w-4 h-4 text-green-500" />
                       <span>Thời gian đặt hàng</span>
                     </div>
-                    <span className="font-medium text-gray-800 ml-20">
+                    <span className="font-medium text-gray-800 text-right ml-20">
                       {formatDate(order.created_at)}
                     </span>
                   </div>
@@ -240,12 +249,12 @@ export const OrderHistoryCard = ({ order, onRatingSubmit, onCancel }) => {
                         <span>Giao lúc</span>
                       </div>
                       <span className="font-medium text-gray-800">
-                        {new Date(order.delivered_at).toLocaleString('vi-VN', {
-                          hour: '2-digit',
-                          minute: '2-digit',
-                          day: '2-digit',
-                          month: '2-digit',
-                          year: 'numeric',
+                        {new Date(order.delivered_at).toLocaleString("vi-VN", {
+                          hour: "2-digit",
+                          minute: "2-digit",
+                          day: "2-digit",
+                          month: "2-digit",
+                          year: "numeric",
                         })}
                       </span>
                     </div>
@@ -256,7 +265,9 @@ export const OrderHistoryCard = ({ order, onRatingSubmit, onCancel }) => {
                       <CreditCard className="w-4 h-4 text-purple-500" />
                       <span>Thanh toán</span>
                     </div>
-                    <span className="font-medium text-gray-800">{order.payment_method}</span>
+                    <span className="font-medium text-gray-800">
+                      {order.payment_method}
+                    </span>
                   </div>
 
                   {order.deliveryDate && (
@@ -278,17 +289,17 @@ export const OrderHistoryCard = ({ order, onRatingSubmit, onCancel }) => {
                 Tổng: {(order.total_amount || 0).toLocaleString("vi-VN")}đ
               </p> */}
               <p className="font-semibold text-lg text-gray-600">
-                Tổng cộng:{' '}
+                Tổng cộng:{" "}
                 <span className="text-gray-600 text-lg">
-                  {Number(order.total_amount || 0).toLocaleString('vi-VN')}
+                  {Number(order.total_amount || 0).toLocaleString("vi-VN")}
                 </span>
                 <span className="text-lg text-gray-600 ml-1">đ</span>
               </p>
             </div>
 
-            <div className="flex flex-wrap gap-2 md:gap-3 items-center">
+            <div className="flex flex-wrap gap-2 justify-center md:gap-3 items-center w-full sm:w-max">
               {/* Existing Rating Display */}
-              {order.status === 'COMPLETED' && order.rating && (
+              {order.status === "COMPLETED" && order.rating && (
                 <div className="flex items-center gap-1">
                   <Star className="w-4 h-4 fill-yellow-400 text-yellow-400" />
                   <span className="text-sm font-medium">{order.rating}</span>
@@ -296,12 +307,12 @@ export const OrderHistoryCard = ({ order, onRatingSubmit, onCancel }) => {
               )}
 
               {/* Rating Button */}
-              {order.status === 'COMPLETED' && order.canRate && (
+              {order.status === "COMPLETED" && order.canRate && (
                 <Button
                   variant="outline"
                   size="sm"
                   onClick={() => setShowRatingDialog(true)}
-                  className="flex items-center gap-1"
+                  className="flex-1 max-w-xs items-center gap-1 w-full sm:w-auto justify-center"
                 >
                   <Star className="w-4 h-4" />
                   <span>Đánh giá</span>
@@ -313,36 +324,36 @@ export const OrderHistoryCard = ({ order, onRatingSubmit, onCancel }) => {
                 variant="outline"
                 size="sm"
                 onClick={() => setShowDetails(!showDetails)}
-                className=""
+                className="flex-1 w-full max-w-xs sm:w-auto justify-center"
               >
-                {showDetails ? 'Thu gọn' : 'Xem chi tiết đơn'}
+                {showDetails ? "Thu gọn" : "Xem chi tiết đơn"}
               </Button>
               {/* Reorder Button */}
-              {order.status === 'DELIVERING' || order.status === 'CONFIRMED' ? (
+              {order.status === "DELIVERING" || order.status === "CONFIRMED" ? (
                 <Button
                   variant="default"
                   size="sm"
                   onClick={handleTrack}
-                  className="bg-orange-500 text-white border-orange-500 hover:bg-orange-600 px-4 py-1 rounded-md w-max flex items-center gap-2 transition"
+                  className="flex-1 w-full max-w-xs sm:w-auto bg-orange-500 text-white border-orange-500 hover:bg-orange-600 px-4 py-1 rounded-md flex items-center gap-2 justify-center transition"
                 >
                   <Truck className="w-4 h-4" />
                   <span>Theo dõi đơn hàng</span>
                 </Button>
-              ) : order.status === 'PENDING' ? (
+              ) : order.status === "PENDING" ? (
                 <Button
                   variant="outline"
                   size="sm"
                   onClick={() => onCancel(order)} // mở dialog ở MyOrdersPage
-                  className="bg-red-500 hover:bg-red-600 text-white border-red-500"
+                  className="flex-1 bg-green-500 hover:bg-red-600 w-full max-w-xs text-white border-red-500"
                 >
                   Huỷ đơn
                 </Button>
-              ) : order.status === 'CONFIRMED' ? (
+              ) : order.status === "CONFIRMED" ? (
                 <Button
                   variant="outline"
                   size="sm"
                   disabled
-                  className="bg-gray-300 text-gray-600 cursor-not-allowed"
+                  className="flex-1 w-full max-w-xs sm:w-auto bg-gray-300 text-gray-600 cursor-not-allowed justify-center"
                 >
                   Không thể huỷ
                 </Button>
@@ -351,7 +362,7 @@ export const OrderHistoryCard = ({ order, onRatingSubmit, onCancel }) => {
                   variant="outline"
                   size="sm"
                   onClick={handleReorder}
-                  className="bg-orange-500 w-max hover:bg-orange-600 text-white border-orange-500"
+                  className="flex-1 w-full max-w-xs sm:w-auto bg-orange-500 hover:bg-orange-600 text-white border-orange-500 justify-center"
                 >
                   Đặt lại
                 </Button>

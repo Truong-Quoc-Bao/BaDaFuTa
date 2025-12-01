@@ -70,7 +70,9 @@ export const RestaurantPage = () => {
     async function fetchMenu() {
       const hosts = [
         // `/api192/restaurants/${encodeURIComponent(id)}/menu`,
-        `/apiLocal/restaurants/${encodeURIComponent(id)}/menu`,
+        // `/apiLocal/restaurants/${encodeURIComponent(id)}/menu`,
+        `https://badafuta-production.up.railway.app/api/restaurants/${encodeURIComponent(id)}/menu`,
+
         // `/api172/restaurants/${encodeURIComponent(id)}/menu`,
       ];
       setLoading(true);
@@ -335,6 +337,7 @@ export const RestaurantPage = () => {
                     originalPrice: rawItem.originalPrice ?? rawItem.price,
                     // Thêm
                     categoryId: category.id ?? category.category_id,
+                    categoryName: category.category_name,
                     restaurantId: restaurant?.id,
                     sku: rawItem.sku ?? null,
                     tags: rawItem.tags ?? [],

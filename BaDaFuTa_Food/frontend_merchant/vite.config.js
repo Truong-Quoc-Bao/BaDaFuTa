@@ -10,7 +10,7 @@ export default defineConfig({
       interval: 2000,
     },
     host: true,
-    port: 5174, // ⚠️ Merchant chạy port khác
+    port: 5174,
     allowedHosts: [
       "localhost",
       "127.0.0.1",
@@ -36,6 +36,30 @@ export default defineConfig({
       },
     },
   },
+
+  // ⚡ Tối ưu build
+  build: {
+    chunkSizeWarningLimit: 1000, // Tăng limit để không cảnh báo
+
+    rollupOptions: {
+      output: {
+        // Chia nhỏ để giảm file index.js từ 557KB xuống còn <250KB
+        manualChunks: {
+          react: ["react", "react-dom"],
+          radix: [
+            "@radix-ui/react-label",
+            "@radix-ui/react-select",
+            "@radix-ui/react-dropdown-menu",
+            "@radix-ui/react-dialog",
+            "@radix-ui/react-avatar",
+            "@radix-ui/react-separator",
+          ],
+          utils: ["zustand", "axios"],
+        },
+      },
+    },
+  },
+
   resolve: {
     alias: {
       "@": "/src",

@@ -9,9 +9,8 @@ const MOMO_CONFIG = {
   accessKey: process.env.MOMO_ACCESS_KEY || "F8BBA842ECF85",
   secretKey: process.env.MOMO_SECRET_KEY || "K951B6PE1waDMi640xX08PD3vg6EkVlz",
   partnerCode: process.env.MOMO_PARTNER_CODE || "MOMO",
-  redirectUrl:
-    process.env.MOMO_RETURN_URL || "http://localhost:3000/api/momo/return",
-  ipnUrl: process.env.MOMO_IPN_URL || "http://localhost:3000/api/momo/callback",
+  redirectUrl: "https://badafuta-production.up.railway.app/api/momo/return",
+  ipnUrl: "https://badafuta-production.up.railway.app/api/momo/callback",
   requestType: "payWithMethod",
 };
 
@@ -45,8 +44,8 @@ export const momoService = {
       throw new Error("Phương thức thanh toán không hợp lệ (phải là MOMO)");
     }
 
-    const { order, orderId, amount, response } = await prisma.$transaction(
-      async (tx) => {
+    const { order, orderId, amount, breakdown, response } =
+      await prisma.$transaction(async (tx) => {
         const user = await tx.users.findUnique({
           where: { id: data.user_id },
           select: { full_name: true, phone: true },
@@ -54,7 +53,7 @@ export const momoService = {
         if (!user) throw new Error("Không tìm thấy user");
 
         // ============================
-        // 1) TÍNH TỔNG TIỀN CÓ TOPPING
+        // 1) TÍNH TỔNG TIỀN MÓN + TOPPING
         // ============================
         const totalItems = data.items.reduce((sum: number, item: any) => {
           const toppingTotal = (item.selected_option_items ?? []).reduce(
@@ -64,12 +63,129 @@ export const momoService = {
           return sum + (item.price + toppingTotal) * item.quantity;
         }, 0);
 
-        const amount = totalItems + (data.delivery_fee || 0);
+        const deliveryFee = data.delivery_fee || 0;
+
+        let beforeItems = totalItems;
+        let afterItems = totalItems;
+
+        let beforeDelivery = deliveryFee;
+        let afterDelivery = deliveryFee;
+
+        let beforeTotal = totalItems + deliveryFee;
+        let afterTotal = beforeTotal;
+
+        let discountValue = 0;
+        let discount = 0;
+
+        let voucherRecord: any = null;
+        let applyType: "TOTAL" | "DELIVERY" | "MERCHANT" | null = null;
 
         // ============================
-        // 2) TÌM HOẶC TẠO ORDER PENDING
+        // 2) XỬ LÝ VOUCHER (GIỐNG COD 100%)
         // ============================
-        let order = await tx.order.findFirst({
+        if (data.voucher) {
+          voucherRecord = await tx.voucher.findUnique({
+            where: { code: data.voucher },
+          });
+          if (!voucherRecord) throw new Error("Voucher không tồn tại");
+          if (!voucherRecord.is_active)
+            throw new Error("Voucher đã hết hiệu lực");
+
+          const now = new Date();
+          if (now < voucherRecord.start_date || now > voucherRecord.end_date) {
+            throw new Error("Voucher không còn hiệu lực");
+          }
+
+          applyType = voucherRecord.apply_type;
+
+          // ⭐ DELIVERY
+          if (applyType === "DELIVERY") {
+            const conditionBase = beforeItems + beforeDelivery;
+            let discountRaw = 0;
+
+            if (conditionBase >= (voucherRecord.min_order_value ?? 0)) {
+              const shipBase = deliveryFee;
+
+              if (voucherRecord.discount_type === "AMOUNT") {
+                discountRaw = voucherRecord.discount_value;
+              } else {
+                discountRaw = (shipBase * voucherRecord.discount_value) / 100;
+                if (voucherRecord.max_discount) {
+                  discountRaw = Math.min(
+                    discountRaw,
+                    voucherRecord.max_discount
+                  );
+                }
+              }
+
+              discount = Math.min(discountRaw, shipBase);
+            }
+
+            afterDelivery = Math.max(0, deliveryFee - discount);
+            afterItems = beforeItems;
+            discountValue = beforeDelivery - afterDelivery;
+          }
+          // ⭐ MERCHANT
+          else if (applyType === "MERCHANT") {
+            const isAllowed = await tx.voucher_merchant.findFirst({
+              where: {
+                voucher_id: voucherRecord.id,
+                merchant_id: data.merchant_id,
+              },
+            });
+            if (!isAllowed)
+              throw new Error("Voucher không áp dụng cho merchant này");
+
+            let target = totalItems;
+
+            if (target >= (voucherRecord.min_order_value ?? 0)) {
+              if (voucherRecord.discount_type === "AMOUNT") {
+                discount = voucherRecord.discount_value;
+              } else {
+                discount = (target * voucherRecord.discount_value) / 100;
+                if (voucherRecord.max_discount) {
+                  discount = Math.min(discount, voucherRecord.max_discount);
+                }
+              }
+            }
+
+            afterItems = Math.max(0, totalItems - discount);
+            afterDelivery = beforeDelivery;
+            discountValue = beforeItems - afterItems;
+          }
+          // ⭐ TOTAL
+          else if (applyType === "TOTAL") {
+            let target = beforeTotal;
+
+            if (target >= (voucherRecord.min_order_value ?? 0)) {
+              if (voucherRecord.discount_type === "AMOUNT") {
+                discount = voucherRecord.discount_value;
+              } else {
+                discount = (target * voucherRecord.discount_value) / 100;
+                if (voucherRecord.max_discount) {
+                  discount = Math.min(discount, voucherRecord.max_discount);
+                }
+              }
+            }
+
+            afterTotal = Math.max(0, target - discount);
+            discountValue = target - afterTotal;
+          }
+        }
+
+        // ⭐ FINAL AMOUNT giống COD
+        let finalAmount = 0;
+        if (applyType === "TOTAL") {
+          finalAmount = afterTotal;
+        } else {
+          finalAmount = afterItems + afterDelivery;
+          afterTotal = finalAmount;
+        }
+
+        // ============================
+        // 3) TẠO ORDER
+        // ============================
+        const existing = await tx.order.findFirst({
           where: {
             user_id: data.user_id,
             merchant_id: data.merchant_id,
@@ -79,17 +195,18 @@ export const momoService = {
           },
         });
 
-        if (order) {
-          await tx.order_item.deleteMany({ where: { order_id: order.id } });
-
+        let order;
+        if (existing) {
+          await tx.order_item.deleteMany({ where: { order_id: existing.id } });
           order = await tx.order.update({
-            where: { id: order.id },
+            where: { id: existing.id },
             data: {
               payment_method: "MOMO",
-              total_amount: BigInt(amount),
+              total_amount: BigInt(finalAmount),
               delivery_address: data.delivery_address,
-              delivery_fee: BigInt(data.delivery_fee || 0),
-              note: data.note ?? order.note,
+              delivery_fee: BigInt(deliveryFee),
+              note: data.note ?? existing.note,
+              voucher_id: voucherRecord?.id ?? null,
               updated_at: new Date(),
             },
           });
@@ -101,18 +218,19 @@ export const momoService = {
               full_name: user.full_name || "",
               phone: user.phone,
               delivery_address: data.delivery_address,
-              delivery_fee: BigInt(data.delivery_fee || 0),
+              delivery_fee: BigInt(deliveryFee),
               note: data.note ?? null,
-              total_amount: BigInt(amount),
-              status: "PENDING",
+              total_amount: BigInt(finalAmount),
+              status: "DELIVERING",
               status_payment: "PENDING",
               payment_method: "MOMO",
+              voucher_id: voucherRecord?.id ?? null,
             },
           });
         }
 
         // ============================
-        // 3) TẠO ORDER ITEMS + OPTIONS
+        // 4) TẠO ORDER ITEMS + OPTIONS
         // ============================
         for (const item of data.items) {
           const orderItem = await tx.order_item.create({
@@ -125,7 +243,6 @@ export const momoService = {
             },
           });
 
-          // FE gửi [{ option_item_id, price }]
           const optionIds =
             item.selected_option_items?.map((o: any) => o.option_item_id) ?? [];
 
@@ -147,7 +264,7 @@ export const momoService = {
         }
 
         // ============================
-        // 4) TẠO PAYLOAD MOMO
+        // 5) TẠO PAYLOAD MoMo VỚI AMOUNT = finalAmount
         // ============================
         const momoOrderId = MOMO_CONFIG.partnerCode + Date.now();
         const requestId = momoOrderId;
@@ -155,7 +272,7 @@ export const momoService = {
 
         const rawSignature =
           `accessKey=${MOMO_CONFIG.accessKey}` +
-          `&amount=${amount}` +
+          `&amount=${finalAmount}` +
           `&extraData=` +
           `&ipnUrl=${MOMO_CONFIG.ipnUrl}` +
           `&orderId=${momoOrderId}` +
@@ -175,7 +292,7 @@ export const momoService = {
           partnerName: "BaDaFuTa",
           storeId: "BaDaFuTaStore",
           requestId,
-          amount,
+          amount: finalAmount,
           orderId: momoOrderId,
           orderInfo,
           redirectUrl: MOMO_CONFIG.redirectUrl,
@@ -216,7 +333,7 @@ export const momoService = {
             user_id: data.user_id,
             merchant_id: data.merchant_id,
             order_id: order.id,
-            amount: BigInt(amount),
+            amount: BigInt(finalAmount),
             payment_method: "MOMO",
             txn_ref: momoOrderId,
             raw_payload: data,
@@ -224,9 +341,28 @@ export const momoService = {
           },
         });
 
-        return { order, orderId: momoOrderId, amount, response };
-      }
-    );
+        return {
+          order,
+          orderId: momoOrderId,
+          amount: finalAmount,
+          breakdown: {
+            apply_type: applyType,
+            voucher_code: voucherRecord?.code ?? null,
+
+            items_before: beforeItems,
+            items_after: afterItems,
+
+            delivery_before: beforeDelivery,
+            delivery_after: afterDelivery,
+
+            total_before: beforeTotal,
+            total_after: afterTotal,
+
+            discount_value: discountValue,
+          },
+          response,
+        };
+      });
 
     return {
       success: true,
@@ -235,6 +371,7 @@ export const momoService = {
       order_id: order.id,
     };
   },
+
   /**  Xác minh trạng thái MoMo */
   async verifyMomoTransaction(params: any): Promise<MomoVerifyResult> {
     if (!params.orderId)
@@ -292,7 +429,8 @@ export const momoService = {
 
       await prisma.order.update({
         where: { id: txn.order_id },
-        data: { status_payment: "SUCCESS", status: "PENDING" },
+        // data: { status_payment: 'SUCCESS', status: 'PENDING' },
+        data: { status_payment: "SUCCESS", status: "DELIVERING" },
       });
 
       await prisma.payment_transaction.updateMany({
