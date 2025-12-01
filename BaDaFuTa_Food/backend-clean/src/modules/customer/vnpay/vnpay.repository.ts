@@ -215,6 +215,10 @@ export const paymentRepository = {
       "address" in fullOrder.merchant.location
         ? fullOrder.merchant.location.address
         : "Chưa có địa chỉ";
+    const merchant_location = {
+      lat: (fullOrder.merchant.location as any)?.lat ?? "Chưa có lat",
+      lng: (fullOrder.merchant.location as any)?.lng ?? "Chưa có lng",
+    };
 
     return {
       success: true,
@@ -224,6 +228,7 @@ export const paymentRepository = {
 
       merchant_name: fullOrder.merchant?.merchant_name ?? "",
       merchant_address,
+      merchant_location,
       merchant_image: fullOrder.merchant?.profile_image ?? null,
       merchant_phone: fullOrder.merchant?.phone ?? null,
 
