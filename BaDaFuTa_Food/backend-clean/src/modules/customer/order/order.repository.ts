@@ -139,6 +139,10 @@ export const CreateOrder = {
 
     const merchant_address =
       (fullOrder.merchant.location as any)?.address ?? "Chưa có địa chỉ";
+    const merchant_location = {
+      lat: (fullOrder.merchant.location as any)?.lat ?? "Chưa có lat",
+      lng: (fullOrder.merchant.location as any)?.lng ?? "Chưa có lng",
+    };
 
     // 👇 Tạo object price_breakdown tùy theo apply_type
     let price_breakdown: any = null;
@@ -227,6 +231,7 @@ export const CreateOrder = {
       merchant_id: fullOrder.merchant_id,
       merchant_name: fullOrder.merchant.merchant_name,
       merchant_address,
+      merchant_location,
       merchant_image: fullOrder.merchant.profile_image,
       merchant_phone: fullOrder.merchant.phone,
 

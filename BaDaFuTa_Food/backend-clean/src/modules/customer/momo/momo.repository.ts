@@ -1,5 +1,5 @@
-import { prisma } from '@/libs/prisma';
-import { PaymentStatus, order_status } from '@prisma/client';
+import { prisma } from "@/libs/prisma";
+import { PaymentStatus, order_status } from "@prisma/client";
 
 export const momoRepository = {
   /** 🔹 Tạo hoặc cập nhật order + items + option */
@@ -10,7 +10,7 @@ export const momoRepository = {
         merchant_id: data.merchant_id,
         status: order_status.DELIVERING,
         status_payment: PaymentStatus.PENDING,
-        payment_method: { in: ['MOMO', 'VNPAY'] },
+        payment_method: { in: ["MOMO", "VNPAY"] },
       },
     });
 
@@ -20,7 +20,7 @@ export const momoRepository = {
       order = await tx.order.update({
         where: { id: order.id },
         data: {
-          payment_method: 'MOMO',
+          payment_method: "MOMO",
           total_amount: BigInt(data.total_amount),
           note: data.note ?? order.note,
           delivery_address: data.delivery_address,
@@ -41,7 +41,7 @@ export const momoRepository = {
           total_amount: BigInt(data.total_amount),
           status: order_status.DELIVERING,
           status_payment: PaymentStatus.PENDING,
-          payment_method: 'MOMO',
+          payment_method: "MOMO",
         },
       });
     }
@@ -58,7 +58,8 @@ export const momoRepository = {
           },
         });
 
-        const optionIds = item.selected_option_items?.map((o: any) => o.option_item_id) ?? [];
+        const optionIds =
+          item.selected_option_items?.map((o: any) => o.option_item_id) ?? [];
 
         if (optionIds.length > 0) {
           const validOptions = await tx.option_item.findMany({
@@ -67,7 +68,7 @@ export const momoRepository = {
           });
 
           if (validOptions.length !== optionIds.length) {
-            throw new Error('Một số option không tồn tại hoặc không hợp lệ');
+            throw new Error("Một số option không tồn tại hoặc không hợp lệ");
           }
 
           for (const opt of validOptions) {
@@ -93,7 +94,7 @@ export const momoRepository = {
         merchant_id: data.merchant_id,
         order_id: data.order_id,
         amount: BigInt(data.amount),
-        payment_method: 'MOMO',
+        payment_method: "MOMO",
         txn_ref: data.orderId,
         status: PaymentStatus.PENDING,
         raw_payload: data,
@@ -106,13 +107,13 @@ export const momoRepository = {
     let statusEnum: PaymentStatus;
 
     switch (data.status?.toLowerCase()) {
-      case 'success':
+      case "success":
         statusEnum = PaymentStatus.SUCCESS;
         break;
-      case 'failed':
+      case "failed":
         statusEnum = PaymentStatus.FAILED;
         break;
-      case 'canceled':
+      case "canceled":
         statusEnum = PaymentStatus.CANCELED;
         break;
       default:
@@ -172,23 +173,27 @@ export const momoRepository = {
       },
     });
 
-    if (!fullOrder) throw new Error('Không tìm thấy order');
+    if (!fullOrder) throw new Error("Không tìm thấy order");
 
     const merchant_address =
-      typeof fullOrder.merchant?.location === 'object' &&
+      typeof fullOrder.merchant?.location === "object" &&
       fullOrder.merchant.location &&
-      'address' in fullOrder.merchant.location
+      "address" in fullOrder.merchant.location
         ? fullOrder.merchant.location.address
-        : 'Chưa có địa chỉ';
-
+        : "Chưa có địa chỉ";
+    const merchant_location = {
+      lat: (fullOrder.merchant.location as any)?.lat ?? "Chưa có lat",
+      lng: (fullOrder.merchant.location as any)?.lng ?? "Chưa có lng",
+    };
     return {
       success: true,
-      message: 'Tạo đơn hàng thành công',
+      message: "Tạo đơn hàng thành công",
 
       order_id: fullOrder.id,
 
-      merchant_name: fullOrder.merchant?.merchant_name ?? '',
+      merchant_name: fullOrder.merchant?.merchant_name ?? "",
       merchant_address,
+      merchant_location,
       merchant_image: fullOrder.merchant?.profile_image ?? null,
       merchant_phone: fullOrder.merchant?.phone ?? null,
 
@@ -199,18 +204,18 @@ export const momoRepository = {
       payment_method: fullOrder.payment_method,
       status_payment: fullOrder.status_payment,
 
-      delivery_fee: fullOrder.delivery_fee?.toString() ?? '0',
-      total_amount: fullOrder.total_amount?.toString() ?? '0',
+      delivery_fee: fullOrder.delivery_fee?.toString() ?? "0",
+      total_amount: fullOrder.total_amount?.toString() ?? "0",
 
       status: fullOrder.status,
-      note: fullOrder.note ?? '',
+      note: fullOrder.note ?? "",
       created_at: fullOrder.created_at,
 
       items: fullOrder.items.map((item) => ({
         id: item.id,
         menu_item_id: item.menu_item_id,
 
-        name_item: item.menu_item?.name_item ?? '',
+        name_item: item.menu_item?.name_item ?? "",
         image_item: item.menu_item?.image_item ?? null,
 
         quantity: item.quantity.toString(),
