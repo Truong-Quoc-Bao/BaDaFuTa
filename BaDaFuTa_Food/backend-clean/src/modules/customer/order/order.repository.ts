@@ -341,12 +341,19 @@ export const getOrder = {
 
     return orders.map((order) => {
       let merchant_address = "Chưa có địa chỉ";
+      let merchant_location: { lat: number | null; lng: number | null } | null =
+        null;
+
       if (
         typeof order.merchant?.location === "object" &&
-        order.merchant.location !== null &&
-        "address" in order.merchant.location
+        order.merchant.location !== null
       ) {
-        merchant_address = (order.merchant.location as any).address;
+        const loc = order.merchant.location as any;
+        merchant_address = loc.address ?? "Chưa có địa chỉ";
+        merchant_location = {
+          lat: loc.lat ?? null,
+          lng: loc.lng ?? null,
+        };
       }
 
       return {
@@ -355,8 +362,9 @@ export const getOrder = {
         order_id: order.id,
         merchant_name: order.merchant?.merchant_name ?? "Không xác định",
         merchant_address,
+        merchant_location,
         merchant_id: order.merchant_id,
-        merchant_image: order.merchant.profile_image,
+        merchant_image: order.merchant?.profile_image ?? null,
         merchant_phone: order.merchant?.phone ?? null,
         receiver_name: order.user?.full_name ?? "Không xác định",
         receiver_phone: order.user?.phone ?? null,
@@ -375,7 +383,6 @@ export const getOrder = {
           image_item: item.menu_item?.image_item,
           quantity: item.quantity,
           price: item.price.toString(),
-          // note: item.note,
           options:
             item.options?.map((opt) => ({
               option_id: opt.option_item.option.id,
@@ -389,7 +396,6 @@ export const getOrder = {
     });
   },
 };
-
 export const updateOrderBody = {
   async updateStatus(
     orderId: string,
