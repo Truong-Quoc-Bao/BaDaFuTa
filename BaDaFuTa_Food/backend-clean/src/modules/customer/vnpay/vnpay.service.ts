@@ -193,7 +193,7 @@ export const paymentService = {
             delivery_fee: BigInt(deliveryFee),
             note: data.note ?? null,
             total_amount: BigInt(finalAmount),
-            status: "DELIVERING",
+            status: "PENDING",
             status_payment: "PENDING",
             payment_method: "VNPAY",
             voucher_id: voucherRecord?.id ?? null,

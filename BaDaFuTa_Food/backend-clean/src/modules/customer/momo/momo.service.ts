@@ -221,7 +221,7 @@ export const momoService = {
               delivery_fee: BigInt(deliveryFee),
               note: data.note ?? null,
               total_amount: BigInt(finalAmount),
-              status: "DELIVERING",
+              status: "PENDING",
               status_payment: "PENDING",
               payment_method: "MOMO",
               voucher_id: voucherRecord?.id ?? null,
@@ -430,7 +430,7 @@ export const momoService = {
       await prisma.order.update({
         where: { id: txn.order_id },
         // data: { status_payment: 'SUCCESS', status: 'PENDING' },
-        data: { status_payment: "SUCCESS", status: "DELIVERING" },
+        data: { status_payment: "SUCCESS", status: "PENDING" },
       });
 
       await prisma.payment_transaction.updateMany({

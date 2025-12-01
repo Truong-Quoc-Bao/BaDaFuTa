@@ -35,7 +35,7 @@ import { Badge } from '../../components/ui/badge';
 import PopupVoucher from '@/components/VoucherDialog';
 import { CashIcon, VnPayIcon, MomoIcon } from '../../components/PaymentIcons';
 import { io } from 'socket.io-client/dist/socket.io.js';
-
+import { LocateFixed } from 'lucide-react';
 export default function CheckOutPage() {
   // 🟢 Khai báo socketRef
   const socketRef = useRef(null);
@@ -73,15 +73,16 @@ export default function CheckOutPage() {
   // Lấy tọa độ giao hàng
   const deliveryLat = selectedAddress?.lat ?? 0;
   const deliveryLng = selectedAddress?.lng ?? 0;
+  // 🛠️ FIX: Kiểm tra xem đã có địa chỉ VÀ có tọa độ hợp lệ chưa
+  const hasValidAddress = selectedAddress && deliveryLat !== 0 && deliveryLng !== 0;
 
-  // Tính khoảng cách (km)
-  const distanceKm = getDistanceKm(merchantLat, merchantLng, deliveryLat, deliveryLng);
+  // Tính khoảng cách (km) -> Nếu chưa có địa chỉ thì là 0
+  const distanceKm = hasValidAddress
+    ? getDistanceKm(merchantLat, merchantLng, deliveryLat, deliveryLng)
+    : 0;
 
-  // Tính phí ship
-  const deliveryFee = calculateDeliveryFee(distanceKm);
-
-  // Tính thời gian giao hàng (phút)
-  // const deliveryTime = estimateDeliveryTime(distanceKm);
+  // Tính phí ship -> Nếu chưa có địa chỉ thì là 0
+  const deliveryFee = hasValidAddress ? calculateDeliveryFee(distanceKm) : 0;
 
   // Cập nhật item trong state để hiển thị trên checkout
   if (state.items.length > 0) {
@@ -166,80 +167,184 @@ export default function CheckOutPage() {
     console.log('📝 Ghi chú đã xác nhận:', noteRef.current);
   };
 
-  useEffect(() => {
-    if (!user) return;
+  // useEffect(() => {
+  //   if (!user) return;
 
-    // ✅ Lấy danh sách địa chỉ cũ từ localStorage
-    const savedAddresses = JSON.parse(localStorage.getItem(`addressList_${user.id}`)) || [];
+  //   // ✅ Lấy danh sách địa chỉ cũ từ localStorage
+  //   const savedAddresses = JSON.parse(localStorage.getItem(`addressList_${user.id}`)) || [];
+  //   setAddressList(savedAddresses);
 
-    setAddressList(savedAddresses);
+  //   const savedSelected = JSON.parse(localStorage.getItem(`selectedAddress_${user.id}`));
+  //   if (savedSelected) {
+  //     console.log('📦 Dùng địa chỉ đã lưu từ LocalStorage:', savedSelected);
+  //     setSelectedAddress(savedSelected);
+  //     setFormData(savedSelected);
+  //     return; // ⛔ Dừng hàm tại đây, không chạy xuống phần GPS bên dưới
+  //   }
 
+  //   const defaultAddress = {
+  //     id: Date.now(),
+  //     full_name: user?.full_name ?? 'Người dùng',
+  //     phone: user?.phone ?? '',
+  //     address: '', // để trống nếu GPS bị từ chối
+  //     note: '',
+  //     utensils: '',
+  //   };
+
+  //   // Hàm fetch địa chỉ từ GPS
+  //   const fetchAddress = async (lat, lon) => {
+  //     try {
+  //       const res = await fetch(
+  //         `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lon}&format=json`,
+  //       );
+  //       const data = await res.json();
+  //       const gpsAddress = {
+  //         ...defaultAddress,
+  //         address: data.display_name || '',
+  //         lat,
+  //         lng: lon,
+  //       };
+  //       setFormData(gpsAddress);
+  //       setSelectedAddress(gpsAddress);
+  //     } catch (err) {
+  //       console.log('Reverse geocode error:', err);
+  //       setFormData({
+  //         ...defaultAddress,
+  //         lat,
+  //         lng: lon,
+  //       });
+  //       setSelectedAddress({
+  //         ...defaultAddress,
+  //         lat,
+  //         lng: lon,
+  //       });
+  //     }
+  //   };
+
+  //   // Lấy GPS nếu trình duyệt hỗ trợ
+  //   if ('geolocation' in navigator) {
+  //     navigator.geolocation.getCurrentPosition(
+  //       (pos) => fetchAddress(pos.coords.latitude, pos.coords.longitude),
+  //       (err) => {
+  //         console.warn('GPS bị từ chối:', err.message);
+  //         // hiển thị input trống
+  //         setIsEditing(true);
+  //         setFormData(defaultAddress);
+  //         setSelectedAddress({
+  //           defaultAddress,
+  //         });
+  //       },
+  //       { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 },
+  //     );
+  //   } else {
+  //     console.warn('Geolocation không hỗ trợ');
+  //     setIsEditing(true);
+  //     setFormData(defaultAddress);
+  //     setSelectedAddress({ defaultAddress });
+  //   }
+  // }, [user]);
+
+  // 1️⃣ Hàm xử lý lấy vị trí GPS (Dùng chung cho cả tự động và nút bấm)
+  const handleGetCurrentLocation = () => {
+    // Template địa chỉ mặc định
     const defaultAddress = {
       id: Date.now(),
       full_name: user?.full_name ?? 'Người dùng',
       phone: user?.phone ?? '',
-      address: '', // để trống nếu GPS bị từ chối
+      address: 'Đang lấy vị trí...', // Hiển thị tạm để user biết đang chạy
       note: '',
       utensils: '',
+      lat: 0,
+      lng: 0,
     };
 
-    // Hàm fetch địa chỉ từ GPS
-    const fetchAddress = async (lat, lon) => {
+    // Nếu đang ở chế độ sửa, cập nhật UI ngay để user thấy phản hồi
+    if (isEditing) {
+      setFormData((prev) => ({ ...prev, address: 'Đang tìm vị trí...' }));
+    }
+
+    // Hàm gọi API lấy tên đường
+    const fetchAddressName = async (lat, lon) => {
       try {
         const res = await fetch(
           `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lon}&format=json`,
         );
         const data = await res.json();
+
         const gpsAddress = {
           ...defaultAddress,
-          address: data.display_name || '',
+          // Giữ lại tên/sđt nếu người dùng đang nhập dở
+          full_name: formData.full_name || defaultAddress.full_name,
+          phone: formData.phone || defaultAddress.phone,
+          address: data.display_name || 'Vị trí hiện tại',
           lat,
           lng: lon,
         };
+
+        // Cập nhật State
         setFormData(gpsAddress);
         setSelectedAddress(gpsAddress);
+
+        // 🔥 Lưu ngay vào LocalStorage để F5 không mất
+        localStorage.setItem(`selectedAddress_${user?.id}`, JSON.stringify(gpsAddress));
       } catch (err) {
-        console.log('Reverse geocode error:', err);
-        setFormData({
+        console.error('Lỗi lấy tên đường:', err);
+        // Nếu lỗi API thì vẫn lưu tọa độ
+        const fallbackAddr = {
           ...defaultAddress,
           lat,
           lng: lon,
-        });
-        setSelectedAddress({
-          ...defaultAddress,
-          lat,
-          lng: lon,
-        });
+          address: `Toạ độ: ${lat}, ${lon}`,
+        };
+        setFormData(fallbackAddr);
+        setSelectedAddress(fallbackAddr);
       }
     };
 
-    // Lấy GPS nếu trình duyệt hỗ trợ
+    // Gọi trình duyệt lấy GPS
     if ('geolocation' in navigator) {
       navigator.geolocation.getCurrentPosition(
-        (pos) => fetchAddress(pos.coords.latitude, pos.coords.longitude),
+        (pos) => fetchAddressName(pos.coords.latitude, pos.coords.longitude),
         (err) => {
           console.warn('GPS bị từ chối:', err.message);
-          // hiển thị input trống
           setIsEditing(true);
-          setFormData(defaultAddress);
-          setSelectedAddress({
-            ...defaultAddress,
-            lat: 0,
-            lng: 0,
-          });
+          const emptyAddr = { ...defaultAddress, address: '' };
+          setFormData(emptyAddr);
+          setSelectedAddress(emptyAddr);
+          alert('Không thể lấy vị trí. Vui lòng kiểm tra quyền GPS hoặc nhập tay.');
         },
         { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 },
       );
     } else {
       console.warn('Geolocation không hỗ trợ');
       setIsEditing(true);
-      setFormData(defaultAddress);
-      setSelectedAddress({
-        ...defaultAddress,
-        lat: 0,
-        lng: 0,
-      });
+      const emptyAddr = { ...defaultAddress, address: '' };
+      setFormData(emptyAddr);
+      setSelectedAddress(emptyAddr);
     }
+  };
+
+  // 2️⃣ useEffect: Chỉ chạy tự động nếu CHƯA CÓ địa chỉ
+  useEffect(() => {
+    if (!user) return;
+
+    // Load danh sách cũ
+    const savedAddresses = JSON.parse(localStorage.getItem(`addressList_${user.id}`)) || [];
+    setAddressList(savedAddresses);
+
+    // Load địa chỉ đang chọn
+    const savedSelected = JSON.parse(localStorage.getItem(`selectedAddress_${user.id}`));
+
+    if (savedSelected) {
+      console.log('📦 Dùng địa chỉ đã lưu:', savedSelected);
+      setSelectedAddress(savedSelected);
+      setFormData(savedSelected);
+      return; // ⛔ Có rồi thì DỪNG, không tự chạy GPS
+    }
+
+    // ⛔ Nếu chưa có thì mới tự động chạy GPS lần đầu
+    console.log('🌍 Chưa có địa chỉ, tự động lấy GPS...');
+    handleGetCurrentLocation();
   }, [user]);
 
   const [showConfirmPopup, setShowConfirmPopup] = useState(false);
@@ -564,42 +669,97 @@ export default function CheckOutPage() {
     setIsDialogOpen(true); // 👈 mở popup
   };
 
-  // 💾 Lưu khi chỉnh sửa
-  const handleSaveEdit = () => {
-    setAddressList((prev) =>
-      prev.map((addr) => (addr.id === selectedAddress.id ? { ...formData, id: addr.id } : addr)),
-    );
+  // ============================================
+  // 📍 FIX: Hàm lấy tọa độ từ LocationIQ khi nhập tay
+  // ============================================
+  const fetchCoordinates = async (address) => {
+    if (!address) return null;
+
+    const LOCATIONIQ_TOKEN = 'pk.4e0ece0ff0632fae5010642d702d5dfa';
+    const cleanAddress = address.trim();
+
+    // Link API đúng như bạn yêu cầu
+    const url = `https://us1.locationiq.com/v1/search.php?key=${LOCATIONIQ_TOKEN}&q=${encodeURIComponent(
+      cleanAddress,
+    )}&format=json&limit=1&countrycodes=vn&addressdetails=1`;
+
+    try {
+      const res = await fetch(url);
+      const data = await res.json();
+
+      // Kiểm tra nếu có data trả về
+      if (data && data.length > 0) {
+        return {
+          lat: parseFloat(data[0].lat),
+          lng: parseFloat(data[0].lon),
+        };
+      }
+    } catch (err) {
+      console.error('Lỗi lấy tọa độ LocationIQ:', err);
+    }
+    return null;
+  };
+
+  // 💾 Lưu khi chỉnh sửa (Fix: Gọi API LocationIQ để lấy lat/lng mới)
+  const handleSaveEdit = async () => {
+    // Gọi API lấy tọa độ
+    const coords = await fetchCoordinates(formData.address);
 
     const updatedAddress = {
       ...formData,
+      // Nếu có coords mới thì dùng, không thì giữ cái cũ hoặc 0
+      lat: coords ? coords.lat : formData.lat || 0,
+      lng: coords ? coords.lng : formData.lng || 0,
       id: selectedAddress?.id ?? Date.now(),
     };
-    setSelectedAddress(updatedAddress);
 
+    setAddressList((prev) =>
+      prev.map((addr) => (addr.id === selectedAddress.id ? updatedAddress : addr)),
+    );
+
+    setSelectedAddress(updatedAddress);
     localStorage.setItem(`selectedAddress_${user?.id}`, JSON.stringify(updatedAddress));
 
     setIsEditing(false);
-    alert('✅ Đã cập nhật thông tin giao hàng!');
+    if (coords) {
+      alert('✅ Đã cập nhật địa chỉ và tính lại phí ship!');
+    } else {
+      alert('✅ Đã cập nhật thông tin giao hàng!');
+    }
   };
+  // 💾 Lưu khi thêm mới (Fix: Gọi API LocationIQ để lấy lat/lng mới)
+  const handleSaveAdd = async () => {
+    // Gọi API lấy tọa độ
+    const coords = await fetchCoordinates(formData.address);
 
-  // 💾 Lưu khi thêm mớ
-  const handleSaveAdd = () => {
-    const newAddress = { ...formData, id: Date.now() };
-    setAddressList((prev) => [...prev, newAddress]);
+    const newAddress = {
+      ...formData,
+      id: Date.now(),
+      lat: coords ? coords.lat : 0,
+      lng: coords ? coords.lng : 0,
+    };
+
+    const updatedList = [...addressList, newAddress];
+    setAddressList(updatedList);
     setSelectedAddress(newAddress);
+
+    localStorage.setItem(`addressList_${user.id}`, JSON.stringify(updatedList));
     localStorage.setItem(`selectedAddress_${user?.id}`, JSON.stringify(newAddress));
+
     setIsAdding(false);
-    alert('✅ Đã thêm địa chỉ mới!');
+    if (coords) {
+      alert('✅ Đã thêm địa chỉ mới và cập nhật phí ship!');
+    } else {
+      alert('✅ Đã thêm địa chỉ mới!');
+    }
   };
 
   useEffect(() => {
-    // 🔹 Nạp lại user từ localStorage nếu AuthContext chưa có
     if (!user) {
       const savedUser = JSON.parse(localStorage.getItem('auth_user'));
       if (savedUser) authState.user = savedUser;
     }
 
-    // 🔹 Nạp lại địa chỉ đã chọn trước đó
     if (user) {
       const savedSelected = JSON.parse(localStorage.getItem(`selectedAddress_${user.id}`));
       if (savedSelected) {
@@ -788,22 +948,34 @@ export default function CheckOutPage() {
                   <p className="flex items-start gap-2 text-sm text-gray-500">
                     <MapPin className="w-4 h-4 text-accent mt-0.5 flex-shrink-0" />
                     <span className="flex flex-wrap w-full">
-                      <span>Địa chỉ giao hàng: &nbsp;</span>{' '}
-                      {/* Nếu đang edit địa chỉ (GPS bị từ chối) thì hiện input */}
-                      {isEditing || !selectedAddress.address ? (
-                        <Input
-                          name="address"
-                          value={formData.address}
-                          onChange={handleInputChange}
-                          placeholder="Nhập địa chỉ giao hàng"
-                          className="font-semibold text-gray-900 break-words"
-                        />
-                      ) : (
-                        <span className="font-semibold text-gray-900 break-words">
-                          {' '}
-                          {selectedAddress?.address || 'Chưa có địa chỉ'}
-                        </span>
-                      )}
+                      <span className="flex flex-wrap items-center">
+                        <span>Địa chỉ giao hàng: &nbsp;</span>{' '}
+                        {/* Nếu đang edit địa chỉ (GPS bị từ chối) thì hiện input */}
+                        {isEditing || !selectedAddress.address ? (
+                          <Input
+                            name="address"
+                            value={formData.address}
+                            onChange={handleInputChange}
+                            placeholder="Nhập địa chỉ giao hàng"
+                            className="font-semibold text-gray-900 break-words"
+                          />
+                        ) : (
+                          <span className="font-semibold text-gray-900 break-words">
+                            {' '}
+                            {selectedAddress?.address || 'Chưa có địa chỉ'}
+                          </span>
+                        )}
+                      </span>
+                      {/* 🔥 NÚT LẤY VỊ TRÍ HIỆN TẠI (Thêm vào đây) */}
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="text-blue-600 hover:text-blue-800 hover:bg-blue-50 p-0 h-auto font-normal mt-2 w-fit flex items-center gap-1"
+                        onClick={handleGetCurrentLocation} // 👈 Gọi hàm khi bấm
+                      >
+                        <LocateFixed className="w-4 h-4" />
+                        Lấy vị trí hiện tại
+                      </Button>
                     </span>
                   </p>
 
@@ -831,7 +1003,7 @@ export default function CheckOutPage() {
                   </div>
 
                   {/* ✅ Checkbox utensils */}
-                  <label className="flex items-center gap-2 text-sm mt-1">
+                  {/* <label className="flex items-center gap-2 text-sm mt-1">
                     <input
                       type="checkbox"
                       checked={formData.utensils || false}
@@ -844,7 +1016,7 @@ export default function CheckOutPage() {
                       className="w-4 h-4 text-orange-600 border-gray-300 rounded"
                     />
                     Dụng cụ ăn uống
-                  </label>
+                  </label> */}
 
                   {/* <div className="mt-3 flex">
                     <Button className="" onClick={handleConfirmNote}>
@@ -959,23 +1131,60 @@ export default function CheckOutPage() {
                                 ? 'border-orange-500 bg-orange-50'
                                 : 'border-gray-200'
                             }`}
-                            onClick={() => {
-                              // 1️⃣ Cập nhật selectedAddress
-                              setSelectedAddress(addr);
+                            // onClick={() => {
+                            //   // 1️⃣ Cập nhật selectedAddress
+                            //   setSelectedAddress(addr);
 
-                              // 2️⃣ Đánh dấu cái này là mặc định
-                              setAddressList((prev) =>
-                                prev.map((a) => ({
-                                  ...a,
-                                  isDefault: a.id === addr.id, // ✅ chỉ cái được click là mặc định
-                                })),
+                            //   // 2️⃣ Đánh dấu cái này là mặc định
+                            //   setAddressList((prev) =>
+                            //     prev.map((a) => ({
+                            //       ...a,
+                            //       isDefault: a.id === addr.id, // ✅ chỉ cái được click là mặc định
+                            //     })),
+                            //   );
+
+                            //   // 3️⃣ Lưu vào localStorage
+                            //   localStorage.setItem(
+                            //     'selectedAddress',
+                            //     JSON.stringify({ ...addr, isDefault: true }),
+                            //   );
+                            // }}
+                            onClick={async () => {
+                              let finalAddr = { ...addr };
+
+                              // Nếu địa chỉ cũ chưa có tọa độ (hoặc = 0), tự động lấy lại
+                              if (!finalAddr.lat || finalAddr.lat === 0) {
+                                const coords = await fetchCoordinates(finalAddr.address);
+                                if (coords) {
+                                  finalAddr.lat = coords.lat;
+                                  finalAddr.lng = coords.lng;
+                                }
+                              }
+
+                              // Cập nhật state
+                              setSelectedAddress(finalAddr);
+                              setFormData(finalAddr); // Sync form
+
+                              // Cập nhật trạng thái "Mặc định" trong list
+                              const updatedList = addressList.map((a) =>
+                                a.id === finalAddr.id
+                                  ? { ...finalAddr, isDefault: true }
+                                  : { ...a, isDefault: false },
                               );
+                              setAddressList(updatedList);
 
-                              // 3️⃣ Lưu vào localStorage
+                              // Lưu LocalStorage
                               localStorage.setItem(
-                                'selectedAddress',
-                                JSON.stringify({ ...addr, isDefault: true }),
+                                `addressList_${user.id}`,
+                                JSON.stringify(updatedList),
                               );
+                              localStorage.setItem(
+                                `selectedAddress_${user?.id}`,
+                                JSON.stringify(finalAddr),
+                              );
+
+                              // Đóng popup
+                              setIsDialogOpen(false);
                             }}
                           >
                             <div>
@@ -998,12 +1207,12 @@ export default function CheckOutPage() {
                               <Button
                                 variant="outline"
                                 size="sm"
-                                onClick={() => {
-                                  // setFormData(addr);
-                                  setFormData(selectedAddress); // ✅ nạp dữ liệu đang chọn
+                                onClick={(e) => {
+                                  e.stopPropagation(); // Ngăn sự kiện click cha (chọn địa chỉ)
+                                  setFormData(addr); // Nạp data của địa chỉ này vào form
                                   setIsEditing(true);
                                   setIsAdding(false);
-                                  setIsDialogOpen(true); // ✅ mở popup sửa
+                                  setIsDialogOpen(true);
                                 }}
                               >
                                 <Edit className="w-4 h-4 mr-1" /> Sửa
@@ -1357,20 +1566,28 @@ export default function CheckOutPage() {
               <div className="flex justify-between">
                 <span>Phí giao hàng: </span>
                 <span>
-                  {merchant && selectedAddress
-                    ? deliveryFee.toLocaleString('vi-VN') + 'đ'
-                    : 'Đang tính...'}
+                  <span>
+                    {/* Trường hợp 1: Có phí ship hợp lệ (> 0) */}
+                    {
+                      deliveryFee > 0
+                        ? deliveryFee.toLocaleString('vi-VN') + 'đ'
+                        : selectedAddress && selectedAddress.address // Trường hợp 2: Có địa chỉ nhưng chưa ra tiền (đang tính/lỗi)
+                        ? 'Đang tính...'
+                        : 'Chưa có địa chỉ' // Trường hợp 3: Chưa có địa chỉ (null hoặc rỗng)
+                    }
+                  </span>
                 </span>
               </div>
 
-              <hr className="border-gray-200" />
-
               {/* Hiển thị giảm giá nếu có voucher */}
               {discountAmount > 0 && (
-                <div className="flex justify-between text-green-600 font-medium">
-                  <span>Giảm giá ({selectedVoucher.code})</span>
-                  <span>-{discountAmount.toLocaleString('vi-VN')}đ</span>
-                </div>
+                <>
+                  <hr className="border-gray-200" />
+                  <div className="flex justify-between text-green-600 font-medium">
+                    <span>Giảm giá ({selectedVoucher?.code})</span>
+                    <span>-{discountAmount.toLocaleString('vi-VN')}đ</span>
+                  </div>
+                </>
               )}
 
               <hr className="border-gray-200" />

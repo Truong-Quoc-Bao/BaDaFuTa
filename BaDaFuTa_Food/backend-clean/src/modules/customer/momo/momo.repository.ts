@@ -39,7 +39,7 @@ export const momoRepository = {
           delivery_fee: BigInt(data.delivery_fee || 0),
           note: data.note,
           total_amount: BigInt(data.total_amount),
-          status: order_status.DELIVERING,
+          status: order_status.PENDING,
           status_payment: PaymentStatus.PENDING,
           payment_method: "MOMO",
         },
