@@ -66,6 +66,7 @@ export async function findMany(args: MerchantFindArgs) {
       cuisine: true,
       rating: true,
       rating_count: true,
+      description: true,
 
       ...(include && {
         categories: { select: { id: true, category_name: true } },
