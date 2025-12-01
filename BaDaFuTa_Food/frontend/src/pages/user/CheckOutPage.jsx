@@ -62,20 +62,36 @@ export default function CheckOutPage() {
   console.log('TYPE:', typeof selectedVoucher);
   console.log('TYPE:', user.full_name || null);
 
-  // merchant
+  // Lấy merchant (restaurant hoặc merchant)
   const merchant =
     state.items.length > 0 ? state.items[0].restaurant || state.items[0].merchant : null;
-  // Lấy lat/lon nhà hàng và địa chỉ
-  const merchantLat = merchant?.location?.lat ?? 0;
-  const merchantLng = merchant?.location?.lng ?? 0;
 
+  // Lấy tọa độ nhà hàng chính xác
+  const merchantLat = merchant?.location?.lat ?? merchant?.raw?.coordinates?.lat ?? 0;
+  const merchantLng = merchant?.location?.lng ?? merchant?.raw?.coordinates?.lng ?? 0;
+
+  // Lấy tọa độ giao hàng
   const deliveryLat = selectedAddress?.lat ?? 0;
   const deliveryLng = selectedAddress?.lng ?? 0;
 
+  // Tính khoảng cách (km)
   const distanceKm = getDistanceKm(merchantLat, merchantLng, deliveryLat, deliveryLng);
-  const deliveryFee = distanceKm <= 3 ? 16000 : 16000 + Math.ceil(distanceKm - 3) * 4000;
 
+  // Tính phí ship
+  const deliveryFee = calculateDeliveryFee(distanceKm);
 
+  // Tính thời gian giao hàng (phút)
+  // const deliveryTime = estimateDeliveryTime(distanceKm);
+
+  // Cập nhật item trong state để hiển thị trên checkout
+  if (state.items.length > 0) {
+    state.items[0].deliveryFee = deliveryFee;
+    // state.items[0].deliveryTime = deliveryTime;
+  }
+
+  // Log thông tin
+  console.log('Merchant Lat/Lng:', merchantLat, merchantLng);
+  console.log('Delivery Lat/Lng:', deliveryLat, deliveryLng);
   console.log('Distance (km):', distanceKm);
   console.log('Delivery Fee (VND):', deliveryFee);
   // console.log('Estimated Delivery Time (min):', deliveryTime);
@@ -119,15 +135,6 @@ export default function CheckOutPage() {
     clearCart();
     navigate('/order-cancelled');
   };
-
-  // merchant
-
-  // const merchant = state.items.length > 0 ? state.items[0].restaurant : null;
-
-  // const deliveryFee =
-  //   state.items.length > 0
-  //     ? state.items[0].restaurant?.deliveryFee ?? state.items[0].restaurant?.delivery_fee ?? 0
-  //     : 0;
 
   const subtotal = state.total;
   const total = subtotal + deliveryFee;
@@ -186,13 +193,23 @@ export default function CheckOutPage() {
         const gpsAddress = {
           ...defaultAddress,
           address: data.display_name || '',
+          lat,
+          lng: lon,
         };
         setFormData(gpsAddress);
         setSelectedAddress(gpsAddress);
       } catch (err) {
         console.log('Reverse geocode error:', err);
-        setFormData(defaultAddress);
-        setSelectedAddress(defaultAddress);
+        setFormData({
+          ...defaultAddress,
+          lat,
+          lng: lon,
+        });
+        setSelectedAddress({
+          ...defaultAddress,
+          lat,
+          lng: lon,
+        });
       }
     };
 
@@ -205,7 +222,11 @@ export default function CheckOutPage() {
           // hiển thị input trống
           setIsEditing(true);
           setFormData(defaultAddress);
-          setSelectedAddress(defaultAddress);
+          setSelectedAddress({
+            ...defaultAddress,
+            lat: 0,
+            lng: 0,
+          });
         },
         { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 },
       );
@@ -213,7 +234,11 @@ export default function CheckOutPage() {
       console.warn('Geolocation không hỗ trợ');
       setIsEditing(true);
       setFormData(defaultAddress);
-      setSelectedAddress(defaultAddress);
+      setSelectedAddress({
+        ...defaultAddress,
+        lat: 0,
+        lng: 0,
+      });
     }
   }, [user]);
 

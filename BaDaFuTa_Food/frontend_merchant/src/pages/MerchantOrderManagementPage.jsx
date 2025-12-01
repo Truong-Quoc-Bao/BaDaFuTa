@@ -140,7 +140,7 @@ export function MerchantOrderManagementPage() {
 
     return () => socket.disconnect();
   }, [setOrders]);
-
+  window.speechSynthesis.speak(new SpeechSynthesisUtterance("Test"))
   console.log('Merchant Auth:', merchantAuth);
   console.log('Dashboard Data:', dashboardData);
   console.log('dashboardData hiện tại:', dashboardData);

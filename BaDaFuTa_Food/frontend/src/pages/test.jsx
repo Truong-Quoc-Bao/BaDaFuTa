@@ -503,437 +503,64 @@ app;
 //
 //Mới nhất
 
-import { Search, TrendingUp, MapPin } from 'lucide-react';
-import { Input } from '../../components/ui/input';
-import { Button } from '../../components/ui/button';
-import RestaurantCard from '../../components/RestaurantCard';
-import { FeaturedRestaurant } from '../../components/FeaturedRestaurant';
-import { PromotionBanner } from '../../components/PromotionBanner';
-import { restaurants, featuredRestaurants, promotions } from '../../../data/mockData';
-import { useLocation } from '../../contexts/LocationContext';
-//import { useState, useMemo } from "react";
-import React, { useEffect, useState, useMemo } from 'react';
-export default function HomePage() {
-  const [selectedCuisine, setSelectedCuisine] = useState('Tất cả');
-  const [selectedDistrict, setSelectedDistrict] = useState('Tất cả');
 
-  const { state: locationState, calculateDistance } = useLocation();
+{/* Drone bay realtime - CHỈ chạy khi bước 2 trở lên */}
+{currentStep >= 2 && deliveryPos && (
+  <Marker
+    icon={droneIcon}
+    position={restaurantPos}
+    ref={(marker) => {
+      if (!marker) return;
 
-  const [restaurants, setRestaurants] = useState([]);
-  const [searchQuery, setSearchQuery] = useState('');
+      // Nếu đã chạy rồi thì không chạy lại
+      if (marker._droneAnimationStarted) return;
+      marker._droneAnimationStarted = true;
 
-  const [restaurantList, setRestaurantList] = useState([]);
-  const [maxDistance, setMaxDistance] = useState(2); // km
-  // Chuẩn hóa dữ liệu
-  const normalizedRestaurants = restaurantList.map((r) => {
-    let district = 'Không xác định';
-    if (r.location?.address) {
-      const parts = r.location.address.split(',');
-      if (parts.length >= 2) district = parts[1].trim();
-    }
-    return {
-      ...r,
-      coordinates: r.location ? { lat: r.location.lat, lng: r.location.lng } : null,
-      district,
-    };
-  });
+      const path = [restaurantPos, deliveryPos];
+      const totalDistance = haversineDistance(
+        restaurantPos[0],
+        restaurantPos[1],
+        deliveryPos[0],
+        deliveryPos[1]
+      );
+      const speedKmh = 30;
+      const duration = (totalDistance / speedKmh) * 3600 * 1000; // ms
 
-  // ⭐ Tính khoảng cách
-  const restaurantsWithDistance = useMemo(() => {
-    if (!locationState.currentLocation) return normalizedRestaurants;
+      // Tính thời gian đã trôi qua từ khi bắt đầu bước 2
+      const timeElapsedInStep2And3 = Math.min(
+        Date.now() - stepStartTime, // từ lúc bước hiện tại bắt đầu
+        40000 // tối đa 40s (bước 2 + bước 3)
+      );
 
-    return normalizedRestaurants
-      .map((r) => {
-        if (!r.coordinates) return { ...r, distance: Infinity };
-        const distance = calculateDistance(
-          locationState.currentLocation.coordinates.lat,
-          locationState.currentLocation.coordinates.lng,
-          r.coordinates.lat,
-          r.coordinates.lng,
-        );
-        return { ...r, distance: Math.round(distance * 10) / 10 };
-      })
-      .filter((r) => r.distance <= maxDistance)
-      .filter(
-        (r) =>
-          selectedDistrict === 'Tất cả' ||
-          r.district.toLowerCase() === selectedDistrict.toLowerCase(),
-      )
-      .sort((a, b) => (a.distance || 0) - (b.distance || 0));
-  }, [
-    normalizedRestaurants,
-    locationState.currentLocation,
-    calculateDistance,
-    maxDistance,
-    selectedDistrict,
-  ]);
+      // Tính tiến độ hiện tại (0 → 1)
+      const progress = Math.min(timeElapsedInStep2And3 / duration, 1);
 
-  // ⭐ Lọc theo search
-  const filteredRestaurants = restaurantsWithDistance.filter((restaurant) => {
-    const name = restaurant?.name?.toLowerCase() || '';
-    const cuisine = restaurant?.cuisine?.toLowerCase() || '';
-    const query = searchQuery.toLowerCase();
+      let startTime = performance.now() - timeElapsedInStep2And3; // giả lập đã chạy trước đó
 
-    return name.includes(query) || cuisine.includes(query);
-  });
+      function animate(time) {
+        const elapsed = time - startTime;
+        const t = Math.min(elapsed / duration, 1);
 
-  const cuisineTypes = ['Tất cả', 'Việt Nam', 'Coffee', 'Philippin', 'Thái Lan', 'Hàn Quốc', 'Mỹ'];
+        const lat = restaurantPos[0] + (deliveryPos[0] - restaurantPos[0]) * t;
+        const lng = restaurantPos[1] + (deliveryPos[1] - restaurantPos[1]) * t;
 
-  const finalFilteredRestaurants =
-    selectedCuisine === 'Tất cả'
-      ? filteredRestaurants
-      : filteredRestaurants.filter((restaurant) => restaurant.cuisine === selectedCuisine);
+        marker.setLatLng([lat, lng]);
 
-  useEffect(() => {
-    const fetchRestaurants = async () => {
-      const host = 'https://badafuta-production.up.railway.app/api/restaurants';
-
-      const params = new URLSearchParams();
-
-      // Search param
-      if (searchQuery.trim() !== '') {
-        params.append('search', searchQuery);
+        // Nếu chưa tới nơi và vẫn ở bước 3 hoặc 4 → tiếp tục bay
+        if (t < 1 && currentStep >= 2 && currentStep < 4) {
+          requestAnimationFrame(animate);
+        }
+        // Đã tới nơi → bước 4
+        else if (t >= 1 && currentStep < 4) {
+          // Tự động chuyển sang bước 4 khi drone đến nơi
+          setCurrentStep(4);
+          localStorage.setItem(`order_${orderKey}_step`, '4');
+          localStorage.setItem(`order_${orderKey}_step_start`, Date.now().toString());
+        }
       }
 
-      // Cuisine param
-      if (selectedCuisine !== 'Tất cả') {
-        params.append('cuisine', selectedCuisine);
-      }
-
-      let url = host;
-
-      if (params.toString() !== '') {
-        url = `${host}?${params.toString()}`;
-      }
-
-      try {
-        const res = await fetch(url);
-        if (!res.ok) throw new Error('Fetch failed');
-
-        const data = await res.json();
-        setRestaurantList(data); // ✅ set vào list chuẩn để tính khoảng cách
-        setRestaurants(data); // ✅ set vào list để hiển thị "All Restaurants"
-        console.log('Fetch:', url);
-      } catch (err) {
-        console.error('Error:', err.message);
-      }
-    };
-
-    fetchRestaurants();
-  }, [searchQuery, selectedCuisine]);
-  console.log(normalizedRestaurants.map((r) => r.district));
-
-  //Voucher
-  const [vouchers, setVouchers] = useState([]);
-
-  useEffect(() => {
-    async function loadVouchers() {
-      try {
-        const res = await fetch('http://localhost:3000/api/voucher/getAll', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({}),
-        });
-
-        const json = await res.json();
-
-        console.log('Voucher API response:', json);
-
-        const list = [
-          ...(json.data?.appVouchers || []),
-          ...(json.data?.merchantVouchers || []),
-          ...(json.data?.userVouchers || []),
-        ];
-
-        setVouchers(list);
-      } catch (err) {
-        console.error('Lỗi load vouchers:', err);
-      }
-    }
-
-    loadVouchers();
-  }, []);
-  return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-      {/* Hero Section */}
-      <div className="text-center mb-8">
-        <h1 className="text-4xl font-bold text-gray-900 mb-4">Đặt món yêu thích của bạn</h1>
-        <p className="text-xl text-gray-600 mb-8">
-          Giao hàng nhanh chóng từ các nhà hàng tốt nhất trong khu vực
-        </p>
-
-        {/* Search Bar */}
-        <div className="max-w-md mx-auto relative">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
-          <Input
-            type="text"
-            placeholder="Tìm kiếm nhà hàng hoặc món ăn..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-10 pr-4 py-3 w-full"
-          />
-        </div>
-      </div>
-
-      {/* Promotions */}
-      <div className="mb-8">
-        <h2 className="text-2xl font-bold mb-4">Ưu đãi hôm nay</h2>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {vouchers.map((voucher) => (
-            <PromotionBanner key={voucher.id} promotion={voucher} />
-          ))}
-        </div>
-      </div>
-
-      {/* Featured Restaurants */}
-      <div className="mb-8">
-        <div className="flex items-center space-x-2 mb-6">
-          <TrendingUp className="w-6 h-6 text-orange-500" />
-          <h2 className="text-xl md:text-2xl font-bold">Nhà hàng nổi bật</h2>
-        </div>
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-          {featuredRestaurants.map((restaurant, index) => (
-            <FeaturedRestaurant
-              key={restaurant.id}
-              restaurant={restaurant}
-              promotion={
-                index === 0
-                  ? {
-                      title: promotions[0].title,
-                      description: promotions[0].description,
-                    }
-                  : undefined
-              }
-            />
-          ))}
-        </div>
-      </div>
-
-      {/* Restaurants Near You */}
-      {locationState.currentLocation && (
-        <div className="mb-8">
-          <div className="flex items-center space-x-2 mb-6">
-            <MapPin className="w-6 h-6 text-orange-500" />
-            <h2 className="text-xl md:text-2xl font-bold">
-              Nhà hàng gần bạn tại {locationState.currentLocation.name}
-            </h2>
-          </div>
-
-          {finalFilteredRestaurants.length > 0 ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {finalFilteredRestaurants.slice(0, 6).map((r) => {
-                const distance = r.distance || 0; // km
-                let deliveryFee = 0;
-
-                if (distance <= 3) {
-                  deliveryFee = 16000; // 3 km đầu
-                } else {
-                  deliveryFee = 16000 + Math.ceil(distance - 3) * 4000; // km > 3
-                }
-
-                const deliveryTime = Math.max(10, Math.round(distance * 8));
-
-                return (
-                  <RestaurantCard
-                    key={r.id}
-                    restaurant={{
-                      ...r,
-                      cover_image: { url: r.cover_image?.url },
-                      profile_image: { url: r.profile_image?.url },
-                      distance,
-                      deliveryFee,
-                      deliveryTime,
-                    }}
-                  />
-                );
-              })}
-            </div>
-          ) : (
-            <div className="text-center py-12">
-              <p className="text-gray-500 text-lg">
-                Không có nhà hàng nào ở {locationState.currentLocation.name}
-              </p>
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* {/* Cuisine Filter */}
-      <div className="mb-8">
-        <h2 className="text-xl md:text-2xl font-bold mb-4">Lọc theo loại ẩm thực</h2>
-        <div className="flex flex-wrap gap-2">
-          {cuisineTypes.map((cuisine) => (
-            <Button
-              key={cuisine}
-              variant={selectedCuisine === cuisine ? 'default' : 'outline'}
-              onClick={() => setSelectedCuisine(cuisine)}
-              className={`rounded-xl w-max px-5 py-2 text-base font-semibold border transition-all duration-200
-               ${
-                 selectedCuisine === cuisine
-                   ? 'bg-orange-500 text-white border-orange-500'
-                   : 'bg-white text-black border-gray-300 hover:bg-gray-100'
-               }`}
-            >
-              {cuisine}
-            </Button>
-          ))}
-        </div>
-      </div>
-
-      {/* All Restaurants */}
-      <div className="mb-8">
-        <h2 className="text-xl md:text-2xl font-bold mb-6">Tất cả nhà hàng</h2>
-        {restaurants.length > 0 ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {normalizedRestaurants.map((r) => {
-              const distance =
-                r.coordinates && locationState.currentLocation
-                  ? Math.round(
-                      calculateDistance(
-                        locationState.currentLocation.coordinates.lat,
-                        locationState.currentLocation.coordinates.lng,
-                        r.coordinates.lat,
-                        r.coordinates.lng,
-                      ) * 10,
-                    ) / 10
-                  : 0;
-
-              // Tính phí giao hàng: 3 km đầu 16k, km tiếp theo 4k/km
-              let deliveryFee = 0;
-              if (distance <= 3) {
-                deliveryFee = 16000;
-              } else {
-                deliveryFee = 16000 + Math.ceil(distance - 3) * 4000;
-              }
-
-              // Tính thời gian giao hàng: 10 phút cơ bản + 8 phút mỗi km
-              const deliveryTime = 10 + Math.round(distance * 8);
-
-              return (
-                <RestaurantCard
-                  key={r.id}
-                  restaurant={{
-                    ...r,
-                    cover_image: { url: r.cover_image?.url },
-                    profile_image: { url: r.profile_image?.url },
-                    distance,
-                    deliveryFee,
-                    deliveryTime,
-                  }}
-                />
-              );
-            })}
-          </div>
-        ) : (
-          <div className="text-center py-12">
-            <p className="text-gray-500 text-lg">Không tìm thấy nhà hàng nào phù hợp</p>
-          </div>
-        )}{' '}
-      </div>
-    </div>
-  );
-}
-
-{timelineSteps.map((step, index) => {
-  const StepIcon = step.icon;
-  const isCompleted = index + 1 < currentStep;
-  const isActive = index + 1 === currentStep;
-
-  const stepDuration = 20000;
-  const now = Date.now();
-  const elapsed = Math.max(0, now - stepStartTime);
-  const stepProgress = Math.min(elapsed / stepDuration, 1);
-
-  return (
-    <div
-      key={step.id}
-      className="flex md:flex-1 flex-col items-center text-center relative"
-    >
-      {/* Line between steps */}
-      {index < timelineSteps.length - 1 && (
-        <div
-          className="hidden md:block absolute top-5 left-2/2 transform -translate-x-1/2 h-1 z-0 bg-gray-300 overflow-visible"
-          style={{ width: '100%' }}
-        >
-          <motion.div
-            key={`progress-${currentStep}`}
-            className="h-full bg-orange-500 origin-left"
-            initial={{ scaleX: isCompleted ? 1 : stepProgress }}
-            animate={{ scaleX: isCompleted ? 1 : isActive ? 1 : 0 }}
-            transition={{
-              duration: isActive ? (1 - stepProgress) * 20 : 0,
-              ease: 'linear',
-            }}
-          />
-          
-          {/* Drone animation chỉ hiện từ bước 2 */}
-          {isActive && currentStep >= 2 && (
-            <motion.div
-              className="absolute top-[-40px] z-10"
-              initial={{ left: `${stepProgress * 100}%` }}
-              animate={{ left: '100%' }}
-              transition={{ duration: (1 - stepProgress) * 20, ease: 'linear' }}
-            >
-              <DeliveryDrone size={120} autoPlay={true} />
-            </motion.div>
-          )}
-        </div>
-      )}
-
-      {/* Icon */}
-      <motion.div
-        className="w-10 h-10 md:w-12 md:h-12 flex items-center justify-center rounded-full border-2 mb-2 z-10"
-        initial={{
-          backgroundColor: '#f3f3f3',
-          borderColor: '#d1d5db',
-          color: '#9ca3af',
-        }}
-        animate={{
-          backgroundColor: isCompleted
-            ? '#f97316'
-            : isActive
-            ? ['#f3f3f3', '#f97316']
-            : '#f3f3f3',
-          borderColor: isCompleted
-            ? '#f97316'
-            : isActive
-            ? ['#d1d5db', '#fb923c']
-            : '#d1d5db',
-          color: isCompleted
-            ? '#ffffff'
-            : isActive
-            ? ['#9ca3af', '#f97316']
-            : '#9ca3af',
-        }}
-        transition={{
-          duration: isActive ? 3 : 0,
-          ease: 'easeInOut',
-        }}
-      >
-        <StepIcon
-          className="w-5 h-5 md:w-6 md:h-6"
-          style={{
-            stroke: isCompleted || isActive ? '#ffffff' : '#9ca3af',
-          }}
-        />
-      </motion.div>
-
-      {/* Label */}
-      <motion.span
-        className="text-xs md:text-sm font-medium"
-        initial={{ color: '#9ca3af' }}
-        animate={{
-          color: isCompleted
-            ? '#f97316'
-            : isActive
-            ? ['#9ca3af', '#f97316']
-            : '#9ca3af',
-        }}
-        transition={{ duration: isActive ? 3 : 0, ease: 'easeInOut' }}
-      >
-        {step.label}
-      </motion.span>
-    </div>
-  );
-})}
+      // Bắt đầu animation (có delay nhẹ để tránh lỗi ref)
+      setTimeout(() => requestAnimationFrame(animate), 500);
+    }}
+  />
+)}
