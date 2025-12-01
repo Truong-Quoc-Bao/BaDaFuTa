@@ -344,7 +344,7 @@ export const OrderHistoryCard = ({ order, onRatingSubmit, onCancel }) => {
                   variant="outline"
                   size="sm"
                   onClick={() => onCancel(order)} // mở dialog ở MyOrdersPage
-                  className="flex-1 bg-green-500 hover:bg-red-600 w-full max-w-xs text-white border-red-500"
+                  className="flex-1 bg-red-500 hover:bg-red-600 w-full max-w-xs text-white border-red-500"
                 >
                   Huỷ đơn
                 </Button>

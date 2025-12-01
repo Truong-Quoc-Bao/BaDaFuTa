@@ -34,7 +34,7 @@
     "zod": "^4.1.12"
   },
   "_moduleAliases": {
-    "@": "src"
+    "@": "dist"
   },
   "devDependencies": {
     "@types/bcryptjs": "^2.4.6",
