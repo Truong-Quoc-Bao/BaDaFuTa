@@ -1,249 +1,63 @@
-// ================= WebSocket =================
-useEffect(() => {
-  if (!merchantAuth) return;
+// 🔹 Hàm tính phí giao hàng
+function calculateDeliveryFee(distance) {
+  // distance tính theo km
+  if (distance <= 3) return 16000;
+  return 16000 + Math.ceil(distance - 3) * 4000;
+}
 
-  const ws = new WebSocket('ws://localhost:3000/ws/merchant'); // endpoint WebSocket backend
+// 🔹 Hàm tính thời gian giao hàng (phút)
+function calculateDeliveryTime(distance) {
+  return Math.max(10, Math.round(distance * 8));
+}
 
-  ws.onopen = () => {
-    console.log('WebSocket connected for merchant dashboard');
-    // Có thể gửi thông tin nhận dạng nhà hàng
-    ws.send(JSON.stringify({ type: 'subscribe', restaurantId: merchantAuth.restaurantId }));
-  };
+export default function CheckOutPage() {
+  const socketRef = useRef(null);
+  const { state: authState } = useAuth();
+  const user = authState.user;
 
-  ws.onmessage = (event) => {
-    const message = JSON.parse(event.data);
-    console.log('WS message:', message);
+  const [showCancelDialog, setShowCancelDialog] = useState(false);
+  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState(null);
+  const { state, updateQuantity, removeItem, clearCart } = useCart();
 
-    if (message.type === 'newOrder') {
-      // Cập nhật recentOrders và các stats
-      setDashboardData((prev) => ({
-        ...prev,
-        data: {
-          ...prev.data,
-          todayOrders: prev.data.todayOrders + 1,
-          pendingOrders: prev.data.pendingOrders + 1,
-          totalRevenue: prev.data.totalRevenue + message.data.total_amount,
-          todayRevenue: prev.data.todayRevenue + message.data.total_amount,
-          recentOrders: [message.data, ...prev.data.recentOrders],
-        },
-      }));
-    }
+  const [addressList, setAddressList] = useState([]);
+  const [selectedAddress, setSelectedAddress] = useState(null);
+  const [isEditing, setIsEditing] = useState(false);
+  const [isAdding, setIsAdding] = useState(false);
+  const [error, setError] = useState(null);
+  const [voucherPopup, setVoucherPopup] = useState(false);
+  const [vouchers, setVouchers] = useState([]);
+  const [selectedVoucher, setSelectedVoucher] = useState(null);
 
-    if (message.type === 'orderUpdated') {
-      // Cập nhật trạng thái đơn
-      setDashboardData((prev) => ({
-        ...prev,
-        data: {
-          ...prev.data,
-          recentOrders: prev.data.recentOrders.map((o) =>
-            o.id === message.data.id ? { ...o, status: message.data.status } : o,
-          ),
-          pendingOrders:
-            message.data.status.toLowerCase() === 'completed'
-              ? prev.data.pendingOrders - 1
-              : prev.data.pendingOrders,
-        },
-      }));
-    }
-  };
+  const merchant =
+    state.items.length > 0
+      ? state.items[0].restaurant || state.items[0].merchant
+      : null;
 
-  ws.onclose = () => {
-    console.log('WebSocket disconnected');
-  };
+  let distanceKm = 0;
+  let deliveryFee = 0;
+  let deliveryTime = 0;
 
-  ws.onerror = (err) => console.error('WebSocket error:', err);
+  if (merchant && selectedAddress) {
+    distanceKm = getDistanceKm(
+      merchant.lat,
+      merchant.lng,
+      selectedAddress.lat,
+      selectedAddress.lng
+    );
+    deliveryFee = calculateDeliveryFee(distanceKm);
+    deliveryTime = calculateDeliveryTime(distanceKm);
+  }
 
-  return () => ws.close();
-}, [merchantAuth]);
-
-import { createContext, useContext, useState, useEffect, useCallback } from 'react';
-import { toast } from 'sonner';
-
-const MerchantContext = createContext(undefined);
-
-export function MerchantProvider({ children }) {
-  const [merchantSettings, setMerchantSettings] = useState({
-    restaurantId: 'rest-1',
-    autoConfirmOrders: false,
-    maxOrdersPerHour: 20,
-    operatingHours: { open: '08:00', close: '22:00' },
-  });
-
-  const [merchantAuth, setMerchantAuth] = useState(null);
-  const [orders, setOrders] = useState([]);
-  const [dashboardData, setDashboardData] = useState(null);
-
-  useEffect(() => {
-    const stored = localStorage.getItem('merchantAuth');
-    if (stored) setMerchantAuth(JSON.parse(stored));
-  }, []);
-
-  const fetchDashboard = useCallback(async () => {
-    try {
-      const response = await fetch(
-        'https://badafuta-production.up.railway.app/api/merchant/overview',
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ user_id: 'be32facc-e24e-4429-9059-a1298498584f' }),
-        }
-      );
-      const data = await response.json();
-      setDashboardData(data);
-      setOrders(data?.data?.recentOrders || []);
-    } catch (error) {
-      console.error('Error fetching dashboard:', error);
-    }
-  }, []);
-
-  useEffect(() => { fetchDashboard(); }, [fetchDashboard]);
-
-  // WebSocket để tự động cập nhật
-  useEffect(() => {
-    if (!merchantAuth) return;
-    const ws = new WebSocket('ws://localhost:3000/ws/merchant');
-
-    ws.onopen = () => {
-      console.log('WebSocket connected for merchant dashboard');
-      ws.send(JSON.stringify({ type: 'subscribe', restaurantId: merchantAuth.restaurantId }));
-    };
-
-    ws.onmessage = (event) => {
-      const message = JSON.parse(event.data);
-
-      if (message.type === 'newOrder') {
-        setOrders(prev => [message.data, ...prev]);
-        setDashboardData(prev => ({
-          ...prev,
-          data: {
-            ...prev.data,
-            todayOrders: prev.data.todayOrders + 1,
-            pendingOrders: prev.data.pendingOrders + 1,
-            totalRevenue: prev.data.totalRevenue + message.data.total_amount,
-            todayRevenue: prev.data.todayRevenue + message.data.total_amount,
-            recentOrders: [message.data, ...prev.data.recentOrders],
-          },
-        }));
-      }
-
-      if (message.type === 'orderUpdated') {
-        setOrders(prev =>
-          prev.map(o => (o.id === message.data.id ? { ...o, status: message.data.status } : o))
-        );
-      }
-    };
-
-    ws.onclose = () => console.log('WebSocket disconnected');
-    ws.onerror = err => console.error('WebSocket error:', err);
-
-    return () => ws.close();
-  }, [merchantAuth]);
-
-  // ================= API update order =================
-  const updateOrderStatus = async (orderId, status, reason) => {
-    try {
-      const order = orders.find(o => o.id === orderId);
-      if (!order) throw new Error('Order not found');
-
-      const response = await fetch(
-        'https://badafuta-production.up.railway.app/api/merchant/update-status',
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            user_id: order.userId || order.user_id,
-            order_id: orderId,
-            action: status,
-            reason: reason || '',
-          }),
-        }
-      );
-
-      if (!response.ok) throw new Error('Cập nhật thất bại');
-
-      const updatedOrder = await response.json();
-
-      setOrders(prev =>
-        prev.map(o => (o.id === orderId ? { ...o, status: status, notes: reason || o.notes } : o))
-      );
-
-      toast.success(`Đơn hàng ${status} thành công`);
-      return updatedOrder;
-    } catch (error) {
-      console.error(error);
-      toast.error('Có lỗi xảy ra khi cập nhật trạng thái đơn hàng');
-    }
-  };
-
-  const cancelOrder = (orderId, reason) => updateOrderStatus(orderId, 'CANCELED', reason);
-
-  const toggleAutoConfirm = useCallback(() => {
-    setMerchantSettings(prev => ({ ...prev, autoConfirmOrders: !prev.autoConfirmOrders }));
-  }, []);
-
-  const logout = useCallback(() => {
-    setMerchantAuth(null);
-    localStorage.removeItem('merchantAuth');
-  }, []);
+  console.log("Distance (km):", distanceKm);
+  console.log("Delivery Fee (VND):", deliveryFee);
+  console.log("Estimated Delivery Time (min):", deliveryTime);
 
   return (
-    <MerchantContext.Provider
-      value={{
-        merchantSettings,
-        updateMerchantSettings: newSettings => setMerchantSettings(prev => ({ ...prev, ...newSettings })),
-        orders,
-        updateOrderStatus,
-        cancelOrder,
-        autoConfirmEnabled: merchantSettings.autoConfirmOrders,
-        toggleAutoConfirm,
-        merchantAuth,
-        logout,
-        dashboardData,
-        fetchDashboard,
-      }}
-    >
-      {children}
-    </MerchantContext.Provider>
+    <div>
+      {/* Ví dụ hiển thị phí ship và thời gian giao */}
+      <p>Delivery Fee: {deliveryFee} VND</p>
+      <p>Estimated Delivery Time: {deliveryTime} minutes</p>
+      {/* Các phần khác của CheckOutPage */}
+    </div>
   );
 }
-
-export function useMerchant() {
-  const context = useContext(MerchantContext);
-  if (!context) throw new Error('useMerchant must be used within a MerchantProvider');
-  return context;
-}
-
-
-
-
-//
-//
-// Trong hàm updateStatus, sau khi cập nhật DB thành công
-
-// ... code cũ của bạn: findByIdAndUpdate, populate ...
-
-// THÊM ĐOẠN NÀY VÀO – CHỈ CẦN 1 LẦN DUY NHẤT!
-const statusLabel = {
-  PENDING: 'Chờ xác nhận',
-  CONFIRMED: 'Đã xác nhận',
-  PREPARING: 'Đang chuẩn bị',
-  READY: 'Sẵn sàng giao hàng',
-  'on-way': 'Đang giao',
-  COMPLETED: 'Đã hoàn thành',
-  CANCELED: 'Đã hủy',
-}[newStatus];
-
-// GỬI REALTIME CHO KHÁCH HÀNG (đây là thứ bạn đang thiếu!)
-if (updatedOrder?.user_id) {
-  global.io.to(`user_${updatedOrder.user_id}`).emit('order_status_updated', {
-    order_id: updatedOrder._id.toString(),
-    status: newStatus,
-    status_label: statusLabel,
-    merchant_name: updatedOrder.merchant?.name || 'Quán ăn',
-    estimated_prep_time: newStatus === 'PREPARING' ? 15 : null,
-    updated_at: new Date().toISOString(),
-  });
-}
-
-// (Tùy chọn) Gửi lại cho merchant khác cùng quán nếu có nhiều máy
-global.io.to(`merchant_${merchant_id}`).emit('order_updated', updatedOrder);

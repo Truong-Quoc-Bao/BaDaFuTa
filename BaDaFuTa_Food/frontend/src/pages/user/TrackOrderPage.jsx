@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
-import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
+import { MapContainer, TileLayer, Marker, Popup, Polyline } from 'react-leaflet';
 import { Button } from '../../components/ui/button';
 import L from 'leaflet';
 import {
@@ -225,6 +225,14 @@ export const TrackOrderPage = () => {
 
   if (!order) return <p className="text-center mt-10">Đang tải đơn hàng...</p>;
 
+  const restaurantPos = order?.merchant?.location
+    ? [order.merchant.location.lat, order.merchant.location.lng]
+    : [10.7755, 106.7031]; // fallback default
+
+  const deliveryPos = order.delivery_location
+    ? [order.delivery_location.lat, order.delivery_location.lng]
+    : null;
+    
   const createdAt = new Date(order.created_at);
   const estimatedDelivery = new Date(createdAt.getTime() + 40 * 60 * 1000);
   // Xác định màu theo trạng thái
@@ -409,6 +417,32 @@ export const TrackOrderPage = () => {
           );
         })}
       </div>
+      {/* Map */}
+      <div className="w-full h-96 rounded-lg overflow-hidden shadow-md">
+        <MapContainer
+          center={restaurantPos}
+          zoom={13}
+          scrollWheelZoom={false}
+          className="h-full w-full"
+        >
+          <TileLayer
+            url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+            attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+          />
+          <Marker position={restaurantPos}>
+            <Popup>
+              Nhà hàng: {order.merchant_name} <br />
+              Địa chỉ: {order.address || 'Không có'}
+            </Popup>
+          </Marker>
+          {deliveryPos && (
+            <Marker position={deliveryPos}>
+              <Popup>Địa chỉ giao hàng: {order.delivery_address}</Popup>
+            </Marker>
+          )}
+          {deliveryPos && <Polyline positions={[restaurantPos, deliveryPos]} color="orange" />}
+        </MapContainer>
+      </div>
       {/* ✅ Driver Info chỉ hiện khi currentStep ≥ 2 */}
       {currentStep >= 2 && (
         <div className="mt-4 bg-gray-50 p-4 md:p-3 rounded-xl shadow-sm flex flex-col md:flex-row md:items-center space-y-2 md:space-y-0 md:space-x-3 text-gray-700 text-sm">
@@ -445,51 +479,50 @@ export const TrackOrderPage = () => {
         </div>
       )}
       {currentStep === timelineSteps.length && !isDelivered && (
-       <div className="mt-6 flex flex-col items-center gap-2 px-4">
-       {/* Text nằm trên nút */}
-       <p className="text-gray-500 text-center text-sm max-w-xs">
-         Đơn hàng đã được giao đến, vui lòng nhấn "Đã nhận hàng"
-       </p>
-     
-       {/* Nút */}
-       <Button
-         variant="default"
-         className="bg-green-500 hover:bg-green-600 text-white px-6 py-2 rounded-lg shadow-md transition-all duration-300 w-full sm:w-auto flex items-center justify-center"
-         onClick={async () => {
-           try {
-             const apiId = order.id || order._id || order.order_id || id;
-             if (!apiId) return;
-     
-             const res = await fetch(
-               `https://badafuta-production.up.railway.app/api/order/${apiId}/updateBody`,
-               {
-                 method: 'PUT',
-                 headers: { 'Content-Type': 'application/json' },
-                 body: JSON.stringify({
-                   status: 'COMPLETED',
-                   status_payment: 'SUCCESS',
-                   delivered_at: new Date().toISOString(),
-                 }),
-               },
-             );
-     
-             if (!res.ok) throw new Error('Update failed');
-             const data = await res.json();
-     
-             setIsDelivered(true);
-             navigate('/my-orders', {
-               state: { activeTab: 'COMPLETED', updatedOrder: data },
-             });
-           } catch (err) {
-             console.error('❌ Lỗi khi xác nhận đã nhận hàng:', err);
-           }
-         }}
-       >
-         <Check className="w-5 h-5 mr-2" />
-         Đã nhận hàng
-       </Button>
-     </div>
-     
+        <div className="mt-6 flex flex-col items-center gap-2 px-4">
+          {/* Text nằm trên nút */}
+          <p className="text-gray-500 text-center text-sm max-w-xs">
+            Đơn hàng đã được giao đến, vui lòng nhấn "Đã nhận hàng"
+          </p>
+
+          {/* Nút */}
+          <Button
+            variant="default"
+            className="bg-green-500 hover:bg-green-600 text-white px-6 py-2 rounded-lg shadow-md transition-all duration-300 w-full sm:w-auto flex items-center justify-center"
+            onClick={async () => {
+              try {
+                const apiId = order.id || order._id || order.order_id || id;
+                if (!apiId) return;
+
+                const res = await fetch(
+                  `https://badafuta-production.up.railway.app/api/order/${apiId}/updateBody`,
+                  {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                      status: 'COMPLETED',
+                      status_payment: 'SUCCESS',
+                      delivered_at: new Date().toISOString(),
+                    }),
+                  },
+                );
+
+                if (!res.ok) throw new Error('Update failed');
+                const data = await res.json();
+
+                setIsDelivered(true);
+                navigate('/my-orders', {
+                  state: { activeTab: 'COMPLETED', updatedOrder: data },
+                });
+              } catch (err) {
+                console.error('❌ Lỗi khi xác nhận đã nhận hàng:', err);
+              }
+            }}
+          >
+            <Check className="w-5 h-5 mr-2" />
+            Đã nhận hàng
+          </Button>
+        </div>
       )}
 
       {/* Order info responsive */}
