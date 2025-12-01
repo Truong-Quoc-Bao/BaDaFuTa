@@ -1055,8 +1055,8 @@ export default function CheckOutPage() {
                       >
                         <ArrowLeft className="w-4 h-4 mr-2" />
                       </Button>
-                      <div>
-                        <Label>Họ tên</Label>
+                      <div className="space-y-2">
+                        <Label>Họ tên:* </Label>
                         <Input
                           name="full_name"
                           value={formData.full_name}
@@ -1065,8 +1065,8 @@ export default function CheckOutPage() {
                         />
                       </div>
 
-                      <div>
-                        <Label>Số điện thoại</Label>
+                      <div className="space-y-2">
+                        <Label>Số điện thoại:* </Label>
                         <Input
                           name="phone"
                           value={formData.phone}
@@ -1075,8 +1075,8 @@ export default function CheckOutPage() {
                         />
                       </div>
 
-                      <div>
-                        <Label>Địa chỉ</Label>
+                      <div className="space-y-2">
+                        <Label>Địa chỉ:* </Label>
                         <Input
                           name="address"
                           value={formData.address}
@@ -1085,7 +1085,7 @@ export default function CheckOutPage() {
                         />
                       </div>
 
-                      <div>
+                      <div className="space-y-2">
                         <Label>Ghi chú</Label>
                         <Textarea
                           name="note"
@@ -1133,24 +1133,7 @@ export default function CheckOutPage() {
                                 ? 'border-orange-500 bg-orange-50'
                                 : 'border-gray-200'
                             }`}
-                            // onClick={() => {
-                            //   // 1️⃣ Cập nhật selectedAddress
-                            //   setSelectedAddress(addr);
-
-                            //   // 2️⃣ Đánh dấu cái này là mặc định
-                            //   setAddressList((prev) =>
-                            //     prev.map((a) => ({
-                            //       ...a,
-                            //       isDefault: a.id === addr.id, // ✅ chỉ cái được click là mặc định
-                            //     })),
-                            //   );
-
-                            //   // 3️⃣ Lưu vào localStorage
-                            //   localStorage.setItem(
-                            //     'selectedAddress',
-                            //     JSON.stringify({ ...addr, isDefault: true }),
-                            //   );
-                            // }}
+   
                             onClick={async () => {
                               let finalAddr = { ...addr };
 

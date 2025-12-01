@@ -1,40 +1,78 @@
-{/* Địa chỉ giao hàng */}
-<div className="flex items-start gap-2 text-sm text-gray-500">
-  {/* Icon MapPin */}
-  <MapPin className="w-4 h-4 text-accent mt-2 flex-shrink-0" />
+{/* 🧩 Nếu đang chỉnh sửa hoặc thêm mới thì chỉ hiển thị form */}
+{isEditing || isAdding ? (
+  <div className="space-y-4">
 
-  <div className="flex flex-col w-full">
-    {/* Dòng Input hoặc Text Địa chỉ */}
-    <div className="flex flex-wrap w-full items-center min-h-[40px]">
-      <span className="mr-1">Địa chỉ giao hàng:</span>
-      
-      {isEditing || !selectedAddress.address ? (
-        <Input
-          name="address"
-          value={formData.address}
-          onChange={handleInputChange}
-          placeholder="Nhập địa chỉ giao hàng"
-          className="font-semibold text-gray-900 break-words flex-1 h-9"
-        />
-      ) : (
-        <span className="font-semibold text-gray-900 break-words flex-1">
-          {selectedAddress?.address || 'Chưa có địa chỉ'}
-        </span>
-      )}
+    {/* Nút quay lại */}
+    <Button
+      variant="outline"
+      onClick={() => {
+        setIsEditing(false);
+        setIsAdding(false);
+      }}
+      className="w-10 h-10 flex items-center justify-center rounded-full"
+    >
+      <ArrowLeft className="w-5 h-5" />
+    </Button>
+
+    <div className="space-y-2">
+      <Label>Họ tên:* </Label>
+      <Input
+        name="full_name"
+        value={formData.full_name}
+        onChange={handleInputChange}
+        placeholder="Nhập họ tên người nhận"
+      />
     </div>
 
-    {/* 🔥 NÚT LẤY VỊ TRÍ - Nằm dưới cùng, thẳng hàng với text */}
-    <div className="mt-2">
+    <div className="space-y-2">
+      <Label>Số điện thoại:* </Label>
+      <Input
+        name="phone"
+        value={formData.phone}
+        onChange={handleInputChange}
+        placeholder="Nhập số điện thoại"
+      />
+    </div>
+
+    <div className="space-y-2">
+      <Label>Địa chỉ:* </Label>
+      <Input
+        name="address"
+        value={formData.address}
+        onChange={handleInputChange}
+        placeholder="Nhập địa chỉ giao hàng"
+      />
+    </div>
+
+    <div className="space-y-2">
+      <Label>Ghi chú</Label>
+      <Textarea
+        name="note"
+        value={formData.note}
+        onChange={handleInputChange}
+        placeholder="Ghi chú (nếu có)"
+      />
+    </div>
+
+    {/* Footer căn giữa */}
+    <DialogFooter className="flex justify-center gap-4 mt-4">
       <Button
         variant="outline"
-        size="sm"
-        className="text-blue-600 border-blue-200 hover:bg-blue-50 hover:text-blue-700 h-8 px-3 text-xs font-medium flex items-center gap-2 transition-colors"
-        onClick={handleGetCurrentLocation}
-        type="button" // Để không bị submit form nếu nằm trong form
+        onClick={() => {
+          setIsEditing(false);
+          setIsAdding(false);
+        }}
       >
-        <LocateFixed className="w-3.5 h-3.5" />
-        Lấy vị trí hiện tại
+        Hủy
       </Button>
-    </div>
+
+      <Button
+        variant="outline"
+        className="bg-orange-600 hover:bg-orange-700 text-white"
+        onClick={isEditing ? handleSaveEdit : handleSaveAdd}
+      >
+        {isEditing ? 'Lưu thay đổi' : 'Thêm địa chỉ'}
+      </Button>
+    </DialogFooter>
   </div>
-</div>
+)}
