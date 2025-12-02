@@ -184,7 +184,7 @@ export default function HomePage() {
       </div>
 
       {/* Featured Restaurants */}
-      <div className="mb-8">
+      {/* <div className="mb-8">
         <div className="flex items-center space-x-2 mb-6">
           <TrendingUp className="w-6 h-6 text-orange-500" />
           <h2 className="text-xl md:text-2xl font-bold">Nhà hàng nổi bật</h2>
@@ -205,7 +205,7 @@ export default function HomePage() {
             />
           ))}
         </div>
-      </div>
+      </div> */}
 
       {/* Restaurants Near You */}
       {locationState.currentLocation && (
