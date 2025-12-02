@@ -166,6 +166,9 @@ export default function LoginPage() {
         localStorage.setItem('token', data.token);
         localStorage.setItem('user', JSON.stringify(data.user));
         dispatch({ type: 'LOGIN_SUCCESS', payload: data.user }); // cập nhật context
+
+        const redirectPath = localStorage.getItem('redirectAfterLogin') || '/';
+        localStorage.removeItem('redirectAfterLogin');
         navigate(redirectPath, { replace: true }); // chuyển sang theo yêu cầu
       }
     } catch (err) {
@@ -273,14 +276,15 @@ export default function LoginPage() {
                         type={showPassword ? 'text' : 'password'}
                         placeholder="Nhập mật khẩu"
                         className={`pl-10 pr-10 ${
-                          error === 'Vui lòng nhập mật khẩu!'
-                            ? 'border-red-500 focus:ring-red-500'
+                          error.toLowerCase().includes('mật khẩu') ||
+                          error.toLowerCase().includes('password')
+                            ? 'border-red-500 focus-visible:ring-red-500'
                             : ''
                         }`}
                         value={password}
                         onChange={(e) => setPassword(e.target.value)}
                         disabled={isLoading}
-                        autoFocus={error === 'Vui lòng nhập mật khẩu!'}
+                        autoFocus={error.toLowerCase().includes('mật khẩu')}
                         //
                       />
                       <button
@@ -295,7 +299,7 @@ export default function LoginPage() {
                         )}
                       </button>
                     </div>
-                    {error.includes('Mật khẩu') || error === 'Vui lòng nhập mật khẩu!' ? (
+                    {error.toLowerCase().includes('mật khẩu') || error.toLowerCase().includes('password') ? (
                       <p className="text-red-500 text-sm">{error}</p>
                     ) : null}
                   </div>

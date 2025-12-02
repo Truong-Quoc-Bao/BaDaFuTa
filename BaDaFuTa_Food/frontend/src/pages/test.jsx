@@ -1,78 +1,41 @@
-{/* 🧩 Nếu đang chỉnh sửa hoặc thêm mới thì chỉ hiển thị form */}
-{isEditing || isAdding ? (
-  <div className="space-y-4">
+<div className="space-y-2">
+                    <Label htmlFor="password">Mật khẩu </Label>
+                    <div className="relative">
+                      <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+                      <Input
+                        id="password"
+                        type={showPassword ? 'text' : 'password'}
+                        placeholder="Nhập mật khẩu"
+                        
+                        // 🔥 SỬA: .toLowerCase() để bắt cả "mật khẩu" thường và "Mật khẩu" hoa
+                        className={`pl-10 pr-10 ${
+                          error.toLowerCase().includes('mật khẩu') || error.toLowerCase().includes('password')
+                            ? 'border-red-500 focus-visible:ring-red-500'
+                            : ''
+                        }`}
+                        
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                        disabled={isLoading}
+                        
+                        // 🔥 SỬA: Auto focus cũng dùng logic tương tự
+                        autoFocus={error.toLowerCase().includes('mật khẩu')}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowPassword(!showPassword)}
+                        className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                      >
+                        {showPassword ? (
+                          <EyeOff className="w-4 h-4" />
+                        ) : (
+                          <Eye className="w-4 h-4" />
+                        )}
+                      </button>
+                    </div>
 
-    {/* Nút quay lại */}
-    <Button
-      variant="outline"
-      onClick={() => {
-        setIsEditing(false);
-        setIsAdding(false);
-      }}
-      className="w-10 h-10 flex items-center justify-center rounded-full"
-    >
-      <ArrowLeft className="w-5 h-5" />
-    </Button>
-
-    <div className="space-y-2">
-      <Label>Họ tên:* </Label>
-      <Input
-        name="full_name"
-        value={formData.full_name}
-        onChange={handleInputChange}
-        placeholder="Nhập họ tên người nhận"
-      />
-    </div>
-
-    <div className="space-y-2">
-      <Label>Số điện thoại:* </Label>
-      <Input
-        name="phone"
-        value={formData.phone}
-        onChange={handleInputChange}
-        placeholder="Nhập số điện thoại"
-      />
-    </div>
-
-    <div className="space-y-2">
-      <Label>Địa chỉ:* </Label>
-      <Input
-        name="address"
-        value={formData.address}
-        onChange={handleInputChange}
-        placeholder="Nhập địa chỉ giao hàng"
-      />
-    </div>
-
-    <div className="space-y-2">
-      <Label>Ghi chú</Label>
-      <Textarea
-        name="note"
-        value={formData.note}
-        onChange={handleInputChange}
-        placeholder="Ghi chú (nếu có)"
-      />
-    </div>
-
-    {/* Footer căn giữa */}
-    <DialogFooter className="flex justify-center gap-4 mt-4">
-      <Button
-        variant="outline"
-        onClick={() => {
-          setIsEditing(false);
-          setIsAdding(false);
-        }}
-      >
-        Hủy
-      </Button>
-
-      <Button
-        variant="outline"
-        className="bg-orange-600 hover:bg-orange-700 text-white"
-        onClick={isEditing ? handleSaveEdit : handleSaveAdd}
-      >
-        {isEditing ? 'Lưu thay đổi' : 'Thêm địa chỉ'}
-      </Button>
-    </DialogFooter>
-  </div>
-)}
+                    {/* 🔥 SỬA: Hiển thị thông báo lỗi */}
+                    {error.toLowerCase().includes('mật khẩu') || error.toLowerCase().includes('password') ? (
+                      <p className="text-red-500 text-sm">{error}</p>
+                    ) : null}
+                  </div>
