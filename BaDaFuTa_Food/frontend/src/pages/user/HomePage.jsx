@@ -1,34 +1,41 @@
-import { Search, TrendingUp, MapPin } from 'lucide-react';
-import { Input } from '../../components/ui/input';
-import { Button } from '../../components/ui/button';
-import RestaurantCard from '../../components/RestaurantCard';
-import { FeaturedRestaurant } from '../../components/FeaturedRestaurant';
-import { PromotionBanner } from '../../components/PromotionBanner';
-import { restaurants, featuredRestaurants, promotions } from '../../../data/mockData';
-import { useLocation } from '../../contexts/LocationContext';
+import { Search, TrendingUp, MapPin } from "lucide-react";
+import { Input } from "../../components/ui/input";
+import { Button } from "../../components/ui/button";
+import RestaurantCard from "../../components/RestaurantCard";
+import { FeaturedRestaurant } from "../../components/FeaturedRestaurant";
+import { PromotionBanner } from "../../components/PromotionBanner";
+import {
+  restaurants,
+  featuredRestaurants,
+  promotions,
+} from "../../../data/mockData";
+import { useLocation } from "../../contexts/LocationContext";
 //import { useState, useMemo } from "react";
-import React, { useEffect, useState, useMemo } from 'react';
+import React, { useEffect, useState, useMemo } from "react";
 export default function HomePage() {
-  const [selectedCuisine, setSelectedCuisine] = useState('Tất cả');
-  const [selectedDistrict, setSelectedDistrict] = useState('Tất cả');
+  const [selectedCuisine, setSelectedCuisine] = useState("Tất cả");
+  const [selectedDistrict, setSelectedDistrict] = useState("Tất cả");
 
   const { state: locationState, calculateDistance } = useLocation();
 
   const [restaurants, setRestaurants] = useState([]);
-  const [searchQuery, setSearchQuery] = useState('');
+  const [searchQuery, setSearchQuery] = useState("");
 
   const [restaurantList, setRestaurantList] = useState([]);
   const [maxDistance, setMaxDistance] = useState(2); // km
+
   // Chuẩn hóa dữ liệu
   const normalizedRestaurants = restaurantList.map((r) => {
-    let district = 'Không xác định';
+    let district = "Không xác định";
     if (r.location?.address) {
-      const parts = r.location.address.split(',');
+      const parts = r.location.address.split(",");
       if (parts.length >= 2) district = parts[1].trim();
     }
     return {
       ...r,
-      coordinates: r.location ? { lat: r.location.lat, lng: r.location.lng } : null,
+      coordinates: r.location
+        ? { lat: r.location.lat, lng: r.location.lng }
+        : null,
       district,
     };
   });
@@ -44,15 +51,15 @@ export default function HomePage() {
           locationState.currentLocation.coordinates.lat,
           locationState.currentLocation.coordinates.lng,
           r.coordinates.lat,
-          r.coordinates.lng,
+          r.coordinates.lng
         );
         return { ...r, distance: Math.round(distance * 10) / 10 };
       })
       .filter((r) => r.distance <= maxDistance)
       .filter(
         (r) =>
-          selectedDistrict === 'Tất cả' ||
-          r.district.toLowerCase() === selectedDistrict.toLowerCase(),
+          selectedDistrict === "Tất cả" ||
+          r.district.toLowerCase() === selectedDistrict.toLowerCase()
       )
       .sort((a, b) => (a.distance || 0) - (b.distance || 0));
   }, [
@@ -65,52 +72,62 @@ export default function HomePage() {
 
   // ⭐ Lọc theo search
   const filteredRestaurants = restaurantsWithDistance.filter((restaurant) => {
-    const name = restaurant?.name?.toLowerCase() || '';
-    const cuisine = restaurant?.cuisine?.toLowerCase() || '';
+    const name = restaurant?.name?.toLowerCase() || "";
+    const cuisine = restaurant?.cuisine?.toLowerCase() || "";
     const query = searchQuery.toLowerCase();
 
     return name.includes(query) || cuisine.includes(query);
   });
 
-  const cuisineTypes = ['Tất cả', 'Việt Nam', 'Coffee', 'Philippin', 'Thái Lan', 'Hàn Quốc', 'Mỹ'];
+  const cuisineTypes = [
+    "Tất cả",
+    "Việt Nam",
+    "Coffee",
+    "Philippin",
+    "Thái Lan",
+    "Hàn Quốc",
+    "Mỹ",
+  ];
 
   const finalFilteredRestaurants =
-    selectedCuisine === 'Tất cả'
+    selectedCuisine === "Tất cả"
       ? filteredRestaurants
-      : filteredRestaurants.filter((restaurant) => restaurant.cuisine === selectedCuisine);
+      : filteredRestaurants.filter(
+          (restaurant) => restaurant.cuisine === selectedCuisine
+        );
 
   useEffect(() => {
     const fetchRestaurants = async () => {
-      const host = 'https://badafuta-production.up.railway.app/api/restaurants';
+      const host = "https://badafuta-production.up.railway.app/api/restaurants";
 
       const params = new URLSearchParams();
 
       // Search param
-      if (searchQuery.trim() !== '') {
-        params.append('search', searchQuery);
+      if (searchQuery.trim() !== "") {
+        params.append("search", searchQuery);
       }
 
       // Cuisine param
-      if (selectedCuisine !== 'Tất cả') {
-        params.append('cuisine', selectedCuisine);
+      if (selectedCuisine !== "Tất cả") {
+        params.append("cuisine", selectedCuisine);
       }
 
       let url = host;
 
-      if (params.toString() !== '') {
+      if (params.toString() !== "") {
         url = `${host}?${params.toString()}`;
       }
 
       try {
         const res = await fetch(url);
-        if (!res.ok) throw new Error('Fetch failed');
+        if (!res.ok) throw new Error("Fetch failed");
 
         const data = await res.json();
         setRestaurantList(data); // ✅ set vào list chuẩn để tính khoảng cách
         setRestaurants(data); // ✅ set vào list để hiển thị "All Restaurants"
-        console.log('Fetch:', url);
+        console.log("Fetch:", url);
       } catch (err) {
-        console.error('Error:', err.message);
+        console.error("Error:", err.message);
       }
     };
 
@@ -124,15 +141,18 @@ export default function HomePage() {
   useEffect(() => {
     async function loadVouchers() {
       try {
-        const res = await fetch('https://badafuta-production.up.railway.app/api/voucher/getAll', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({}),
-        });
+        const res = await fetch(
+          "https://badafuta-production.up.railway.app/api/voucher/getAll",
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({}),
+          }
+        );
 
         const json = await res.json();
 
-        console.log('Voucher API response:', json);
+        console.log("Voucher API response:", json);
 
         const list = [
           ...(json.data?.appVouchers || []),
@@ -142,17 +162,77 @@ export default function HomePage() {
 
         setVouchers(list);
       } catch (err) {
-        console.error('Lỗi load vouchers:', err);
+        console.error("Lỗi load vouchers:", err);
       }
     }
 
     loadVouchers();
   }, []);
+  const [featuredRestaurants, setFeaturedRestaurants] = useState([]);
+
+  useEffect(() => {
+    async function fetchFeaturedRestaurants() {
+      try {
+        const res = await fetch(
+          "https://badafuta-production.up.railway.app/api/restaurants/future"
+        );
+        // const res = await fetch(
+        //   " http://localhost:3000/api/restaurants/future"
+        // );
+
+        if (!res.ok) throw new Error("Lỗi khi gọi API");
+
+        const data = await res.json();
+
+        // Map dữ liệu giống Restaurants list
+        const mapped = data.map((m) => {
+          const distance =
+            m.location && locationState.currentLocation
+              ? Math.round(
+                  calculateDistance(
+                    locationState.currentLocation.coordinates.lat,
+                    locationState.currentLocation.coordinates.lng,
+                    m.location.lat,
+                    m.location.lng
+                  ) * 10
+                ) / 10
+              : 0;
+
+          let deliveryFee = 0;
+          if (distance <= 3) deliveryFee = 16000;
+          else deliveryFee = 16000 + Math.ceil(distance - 3) * 4000; // <-- FIXED
+
+          const deliveryTime = 10 + Math.round(distance * 8);
+
+          return {
+            id: m.id,
+            name: m.merchant_name,
+            image: m.cover_image?.url || m.profile_image?.url,
+            cuisine: m.cuisine,
+            rating: m.rating,
+            description: m.description,
+            distance,
+            deliveryFee,
+            deliveryTime,
+          };
+        });
+
+        setFeaturedRestaurants(mapped);
+      } catch (error) {
+        console.error("Lỗi load nhà hàng nổi bật:", error);
+      }
+    }
+
+    fetchFeaturedRestaurants();
+  }, [locationState.currentLocation]);
+
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       {/* Hero Section */}
       <div className="text-center mb-8">
-        <h1 className="text-4xl font-bold text-gray-900 mb-4">Đặt món yêu thích của bạn</h1>
+        <h1 className="text-4xl font-bold text-gray-900 mb-4">
+          Đặt món yêu thích của bạn
+        </h1>
         <p className="text-xl text-gray-600 mb-8">
           Giao hàng nhanh chóng từ các nhà hàng tốt nhất trong khu vực
         </p>
@@ -176,7 +256,9 @@ export default function HomePage() {
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {vouchers?.length > 0 ? (
-            vouchers.map((voucher) => <PromotionBanner key={voucher.id} promotion={voucher} />)
+            vouchers.map((voucher) => (
+              <PromotionBanner key={voucher.id} promotion={voucher} />
+            ))
           ) : (
             <p>Không có Vouchers</p>
           )}
@@ -184,11 +266,12 @@ export default function HomePage() {
       </div>
 
       {/* Featured Restaurants */}
-      {/* <div className="mb-8">
+      <div className="mb-8">
         <div className="flex items-center space-x-2 mb-6">
           <TrendingUp className="w-6 h-6 text-orange-500" />
           <h2 className="text-xl md:text-2xl font-bold">Nhà hàng nổi bật</h2>
         </div>
+
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
           {featuredRestaurants.map((restaurant, index) => (
             <FeaturedRestaurant
@@ -205,7 +288,7 @@ export default function HomePage() {
             />
           ))}
         </div>
-      </div> */}
+      </div>
 
       {/* Restaurants Near You */}
       {locationState.currentLocation && (
@@ -258,18 +341,20 @@ export default function HomePage() {
 
       {/* {/* Cuisine Filter */}
       <div className="mb-8">
-        <h2 className="text-xl md:text-2xl font-bold mb-4">Lọc theo loại ẩm thực</h2>
+        <h2 className="text-xl md:text-2xl font-bold mb-4">
+          Lọc theo loại ẩm thực
+        </h2>
         <div className="flex flex-wrap gap-2">
           {cuisineTypes.map((cuisine) => (
             <Button
               key={cuisine}
-              variant={selectedCuisine === cuisine ? 'default' : 'outline'}
+              variant={selectedCuisine === cuisine ? "default" : "outline"}
               onClick={() => setSelectedCuisine(cuisine)}
               className={`rounded-xl w-max px-5 py-2 text-base font-semibold border transition-all duration-200
                ${
                  selectedCuisine === cuisine
-                   ? 'bg-orange-500 text-white border-orange-500'
-                   : 'bg-white text-black border-gray-300 hover:bg-gray-100'
+                   ? "bg-orange-500 text-white border-orange-500"
+                   : "bg-white text-black border-gray-300 hover:bg-gray-100"
                }`}
             >
               {cuisine}
@@ -291,8 +376,8 @@ export default function HomePage() {
                         locationState.currentLocation.coordinates.lat,
                         locationState.currentLocation.coordinates.lng,
                         r.coordinates.lat,
-                        r.coordinates.lng,
-                      ) * 10,
+                        r.coordinates.lng
+                      ) * 10
                     ) / 10
                   : 0;
 
@@ -324,9 +409,11 @@ export default function HomePage() {
           </div>
         ) : (
           <div className="text-center py-12">
-            <p className="text-gray-500 text-lg">Không tìm thấy nhà hàng nào phù hợp</p>
+            <p className="text-gray-500 text-lg">
+              Không tìm thấy nhà hàng nào phù hợp
+            </p>
           </div>
-        )}{' '}
+        )}{" "}
       </div>
     </div>
   );
