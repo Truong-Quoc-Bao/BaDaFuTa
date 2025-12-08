@@ -84,7 +84,7 @@ export const TrackOrderPage = () => {
       const res = await fetch(url);
       const data = await res.json();
 
-      console.log('LocationIQ response:', data); 
+      console.log('LocationIQ response:', data);
 
       if (data && data.length > 0 && !data.error) {
         return {
@@ -886,3 +886,74 @@ export const TrackOrderPage = () => {
     </div>
   );
 };
+
+{
+  /* Restaurant Header Section - FIX HOÀN HẢO CHO MOBILE */
+}
+<div className="relative grid grid-cols-1 lg:grid-cols-10 gap-0 rounded-2xl overflow-hidden bg-gray-900 my-8 shadow-lg max-w-7xl mx-auto">
+  {/* LEFT: Ảnh bìa */}
+  <div className="relative lg:col-span-4 h-[28vh] lg:h-[300px] overflow-hidden">
+    <ImageWithFallback
+      src={restaurant?.cover_image?.url}
+      alt={restaurant?.merchant_name || 'Restaurant cover'}
+      className="w-full h-full object-cover"
+    />
+    <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent" />
+  </div>
+
+  {/* RIGHT: Thông tin nhà hàng + Nút Yêu thích KHÔNG che tên */}
+  <div className="relative lg:col-span-6 bg-gray-800 px-6 md:px-8 lg:px-10 py-6 md:py-8">
+    {/* NÚT YÊU THÍCH - ĐẶT Ở ĐÂY ĐỂ KHÔNG CHE TÊN NHÀ HÀNG */}
+    <div className="absolute top-5 right-5 z-30">
+      <motion.button
+        whileTap={{ scale: 0.92 }}
+        onClick={handleToggleFavorite}
+        className={`
+          flex items-center justify-center gap-2 px-5 py-3 rounded-full border shadow-2xl backdrop-blur-md transition-all duration-300
+          ${
+            isFavorite
+              ? 'bg-white text-orange-500 shadow-orange-500/30'
+              : 'bg-black/40 border-white/30 text-white hover:bg-black/50'
+          }
+        `}
+      >
+        <motion.div
+          animate={isAnimating ? { scale: [1, 1.6, 1], rotate: [0, 20, -20, 0] } : {}}
+          transition={{ duration: 0.5 }}
+        >
+          <Star
+            className={`w-5 h-5 ${isFavorite ? 'fill-orange-500 text-orange-500' : 'text-white'}`}
+          />
+        </motion.div>
+        <span className="text-sm font-bold hidden sm:inline">
+          {isFavorite ? 'Đã thích' : 'Yêu thích'}
+        </span>
+      </motion.button>
+    </div>
+
+    {/* Nội dung tên + badge - được đẩy xuống một chút trên mobile để KHÔNG bị che */}
+    <div className="pt-12 sm:pt-0">
+      {' '}
+      {/* Quan trọng: pt-12 trên mobile để chừa chỗ cho nút */}
+      <div className="flex items-center gap-3 mb-3">
+        <h1 className="text-3xl md:text-4xl font-bold text-white leading-tight">
+          {restaurant?.merchant_name || 'Đang tải...'}
+        </h1>
+        <Award className="w-6 h-6 text-yellow-400 flex-shrink-0" />
+      </div>
+      <div className="flex flex-wrap items-center gap-3">
+        <Badge className="bg-orange-500 text-white border-0 px-3 py-1">
+          {restaurant?.cuisine || 'Ẩm thực'}
+        </Badge>
+        <Badge variant="outline" className="bg-gray-600 border-gray-500 text-white px-3 py-1">
+          Cao cấp
+        </Badge>
+      </div>
+    </div>
+
+    {/* Phần stats giữ nguyên */}
+    <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mt-6">
+      {/* ... các ô rating, thời gian, phí ship ... */}
+    </div>
+  </div>
+</div>;
