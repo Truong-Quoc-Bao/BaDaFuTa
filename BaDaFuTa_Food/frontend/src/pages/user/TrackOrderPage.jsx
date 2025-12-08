@@ -47,14 +47,13 @@ export const TrackOrderPage = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const { id } = useParams();
-  const [isUpdating, setIsUpdating] = useState(false);
 
   const orderFromState = location.state?.order || null;
-  const cameFrom = location.state?.from || null;
-
   const [order, setOrder] = useState(orderFromState || null);
   const [isDelivered, setIsDelivered] = useState(false);
+  const [isUpdating, setIsUpdating] = useState(false);
 
+  // --- 1. CÁC HÀM TIỆN ÍCH ---
   function formatDateTime(date) {
     if (!date) return 'Không có';
     return new Date(date).toLocaleString('vi-VN', {
@@ -66,29 +65,46 @@ export const TrackOrderPage = () => {
     });
   }
 
+  // Tính khoảng cách (km)
+  function haversineDistance(lat1, lng1, lat2, lng2) {
+    const toRad = (x) => (x * Math.PI) / 180;
+    const R = 6371;
+    const dLat = toRad(lat2 - lat1);
+    const dLng = toRad(lng2 - lng1);
+    const a =
+      Math.sin(dLat / 2) ** 2 +
+      Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLng / 2) ** 2;
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    return R * c;
+  }
+
+  // --- 2. STATE CHO ANIMATION ---
+  const [currentStep, setCurrentStep] = useState(1);
+  const droneMarkerRef = useRef(null); // Ref để điều khiển marker trực tiếp (mượt hơn state)
+
+  // Thời gian giả lập cho demo (ms)
+  const PREP_TIME = 5000; // 5 giây chuẩn bị
+  const TAKEOFF_TIME = 5000; // 5 giây cất cánh
+  const MIN_FLIGHT_TIME = 20000; // Bay tối thiểu 20 giây (để kịp nhìn)
+
+  // Fetch Order & LocationIQ (Giữ nguyên logic cũ của bạn)
   async function getLatLngFromAddress(address) {
+    /* ... (Giữ nguyên code getLatLngFromAddress cũ của bạn) ... */
     if (!address) return null;
     const LOCATIONIQ_TOKEN = 'pk.4e0ece0ff0632fae5010642d702d5dfa';
     const cleanAddress = address
       .replace(/TP\.? ?HCM/g, 'Thành phố Hồ Chí Minh')
       .replace(/Q\.?/g, 'Quận')
       .trim();
-
     const url = `https://us1.locationiq.com/v1/search.php?key=${LOCATIONIQ_TOKEN}&q=${encodeURIComponent(
       cleanAddress,
     )}&format=json&limit=1&countrycodes=vn&addressdetails=1`;
-
     try {
       const res = await fetch(url);
       const data = await res.json();
-      if (data && data.length > 0 && !data.error) {
-        return {
-          lat: parseFloat(data[0].lat),
-          lng: parseFloat(data[0].lon),
-        };
-      } else {
-        return null;
-      }
+      if (data && data.length > 0 && !data.error)
+        return { lat: parseFloat(data[0].lat), lng: parseFloat(data[0].lon) };
+      return null;
     } catch (err) {
       return null;
     }
@@ -102,195 +118,132 @@ export const TrackOrderPage = () => {
     }
   }, [order]);
 
-  function haversineDistance(lat1, lng1, lat2, lng2) {
-    const toRad = (x) => (x * Math.PI) / 180;
-    const R = 6371;
-    const dLat = toRad(lat2 - lat1);
-    const dLng = toRad(lng2 - lng1);
-    const a =
-      Math.sin(dLat / 2) ** 2 +
-      Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLng / 2) ** 2;
-    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-    return R * c;
-  }
-
-  const distanceKm =
-    order?.merchant_location && order?.delivery_location
-      ? haversineDistance(
-          order.merchant_location.lat,
-          order.merchant_location.lng,
-          order.delivery_location.lat,
-          order.delivery_location.lng,
-        )
-      : 0;
-
-  const droneSpeed = 200;
-  const droneTravelTime = (distanceKm / droneSpeed) * 60 * 60 * 1000;
-
-  const orderKey = useMemo(() => {
-    return (
-      (order && (order.id || order._id || order.order_id)) ||
-      (orderFromState && (orderFromState.id || orderFromState._id || orderFromState.order_id)) ||
-      id ||
-      null
-    );
-  }, [order, orderFromState, id]);
-
-  const [currentStep, setCurrentStep] = useState(() => {
-    try {
-      const key = id ? `order_${id}_step` : null;
-      const saved = key ? localStorage.getItem(key) : null;
-      return saved ? Number(saved) : orderFromState?.currentStep || 1;
-    } catch (e) {
-      return orderFromState?.currentStep || 1;
-    }
-  });
-
-  const [stepStartTime, setStepStartTime] = useState(() => {
-    try {
-      const key = id ? `order_${id}_step_start` : null;
-      const saved = key ? localStorage.getItem(key) : null;
-      return saved ? Number(saved) : Date.now();
-    } catch (e) {
-      return Date.now();
-    }
-  });
-
-  const timerRef = useRef(null);
-
+  // Fetch order by ID nếu không có state (Giữ nguyên)
   useEffect(() => {
-    if (orderFromState) {
-      setOrder(orderFromState);
-      const keyBase =
-        orderFromState.id || orderFromState._id || orderFromState.order_id || id || null;
-      if (keyBase) {
-        const savedStep = localStorage.getItem(`order_${keyBase}_step`);
-        const savedStart = localStorage.getItem(`order_${keyBase}_step_start`);
-        if (savedStep) setCurrentStep(Number(savedStep));
-        if (savedStart) setStepStartTime(Number(savedStart));
-      }
-      return;
-    }
-
-    if (id) {
+    if (!orderFromState && id) {
       fetch(`https://badafuta-production.up.railway.app/api/order/getOrder/${id}`)
-        .then((res) => {
-          if (!res.ok) throw new Error('Fetch order failed');
-          return res.json();
-        })
-        .then((data) => {
-          setOrder(data);
-          const keyBase = data.id || data._id || data.order_id || id;
-          const savedStep = localStorage.getItem(`order_${keyBase}_step`);
-          const savedStart = localStorage.getItem(`order_${keyBase}_step_start`);
-          if (savedStep) setCurrentStep(Number(savedStep));
-          if (savedStart) setStepStartTime(Number(savedStart));
-        })
-        .catch((err) => {
-          console.error('❌ Fetch order error:', err);
-        });
+        .then((res) => (res.ok ? res.json() : Promise.reject('Failed')))
+        .then((data) => setOrder(data))
+        .catch((err) => console.error(err));
     }
   }, [id, orderFromState]);
 
-  const stepDuration = 30000;
-
+  // --- 3. LOGIC REALTIME ANIMATION (QUAN TRỌNG) ---
   useEffect(() => {
-    if (!orderKey) return;
+    if (!order || !order.merchant_location || !order.delivery_location) return;
 
-    const savedStep = Number(localStorage.getItem(`order_${orderKey}_step`)) || 1;
-    const savedStart = Number(localStorage.getItem(`order_${orderKey}_step_start`)) || Date.now();
+    // 1. Tính toán thông số bay
+    const startPos = [order.merchant_location.lat, order.merchant_location.lng];
+    const endPos = [order.delivery_location.lat, order.delivery_location.lng];
+    const distance = haversineDistance(startPos[0], startPos[1], endPos[0], endPos[1]);
 
-    const now = Date.now();
-    const stepsPassed = Math.floor((now - savedStart) / stepDuration);
-    const updatedStep = Math.min(savedStep + stepsPassed, timelineSteps.length);
+    // Tốc độ giả lập: đảm bảo bay ít nhất MIN_FLIGHT_TIME
+    const droneSpeed = 200; // km/h
+    let flightTime = (distance / droneSpeed) * 3600 * 1000;
+    if (flightTime < MIN_FLIGHT_TIME) flightTime = MIN_FLIGHT_TIME;
 
-    setCurrentStep(updatedStep);
-    setStepStartTime(now - ((now - savedStart) % stepDuration));
+    // Tổng thời gian quy trình
+    const totalDuration = PREP_TIME + TAKEOFF_TIME + flightTime;
 
-    localStorage.setItem(`order_${orderKey}_step`, updatedStep);
-    localStorage.setItem(`order_${orderKey}_step_start`, now - ((now - savedStart) % stepDuration));
-  }, [orderKey]);
+    // 2. Xác định thời điểm bắt đầu (Lưu vào localStorage để F5 không bị reset từ đầu)
+    const orderKey = order.id || order._id || id;
+    const storageKey = `order_${orderKey}_start_simulation`;
+    let startTime = localStorage.getItem(storageKey);
 
-  useEffect(() => {
-    return () => {
-      if (timerRef.current) {
-        clearTimeout(timerRef.current);
-        timerRef.current = null;
+    if (!startTime) {
+      startTime = Date.now();
+      localStorage.setItem(storageKey, startTime);
+    } else {
+      startTime = parseInt(startTime, 10);
+    }
+
+    // 3. Vòng lặp Animation Frame
+    let animationFrameId;
+
+    const animate = () => {
+      const now = Date.now();
+      const elapsed = now - startTime;
+
+      // --- CẬP NHẬT STEP ---
+      let nextStep = 1;
+      if (elapsed > totalDuration) {
+        nextStep = 4; // Đã giao
+      } else if (elapsed > PREP_TIME + TAKEOFF_TIME) {
+        nextStep = 3; // Đang bay
+      } else if (elapsed > PREP_TIME) {
+        nextStep = 2; // Cất cánh
+      } else {
+        nextStep = 1; // Chuẩn bị
+      }
+
+      setCurrentStep((prev) => (prev !== nextStep ? nextStep : prev));
+
+      // --- CẬP NHẬT VỊ TRÍ DRONE (Chỉ khi ở Step 3) ---
+      if (nextStep === 3 && droneMarkerRef.current) {
+        // Tính % quãng đường đã bay
+        // flightElapsed chạy từ 0 -> flightTime
+        const flightElapsed = elapsed - PREP_TIME - TAKEOFF_TIME;
+        const progress = Math.min(flightElapsed / flightTime, 1);
+
+        // Nội suy tọa độ (Interpolation)
+        const lat = startPos[0] + (endPos[0] - startPos[0]) * progress;
+        const lng = startPos[1] + (endPos[1] - startPos[1]) * progress;
+
+        droneMarkerRef.current.setLatLng([lat, lng]);
+      } else if (nextStep === 4 && droneMarkerRef.current) {
+        // Nếu đã giao xong, set cứng vị trí tại nhà khách
+        droneMarkerRef.current.setLatLng(endPos);
+      }
+
+      // Tiếp tục lặp nếu chưa xong hẳn
+      if (elapsed <= totalDuration + 1000) {
+        animationFrameId = requestAnimationFrame(animate);
       }
     };
-  }, []);
 
+    // Bắt đầu chạy
+    animationFrameId = requestAnimationFrame(animate);
+
+    return () => cancelAnimationFrame(animationFrameId);
+  }, [order]); // Chạy lại khi order load xong
+
+  // --- 4. CÁC BIẾN HIỂN THỊ ---
   if (!order)
     return (
-      <div className="flex items-center justify-center min-h-screen bg-gray-50">
-        <div className="flex flex-col items-center gap-3">
-          <div className="w-8 h-8 border-4 border-orange-500 border-t-transparent rounded-full animate-spin"></div>
-          <p className="text-gray-500 font-medium">Đang tải đơn hàng...</p>
-        </div>
+      <div className="flex items-center justify-center min-h-screen">
+        <Loader2 className="animate-spin text-orange-500 w-8 h-8" />
       </div>
     );
 
   const restaurantPos = order.merchant_location
     ? [order.merchant_location.lat, order.merchant_location.lng]
     : [0, 0];
-
   const deliveryPos = order.delivery_location
     ? [order.delivery_location.lat, order.delivery_location.lng]
     : null;
+  const estimatedDelivery = new Date(new Date(order.created_at).getTime() + 15 * 60 * 1000); // Giả lập +15p
 
-  const createdAt = new Date(order.created_at);
-  const estimatedDelivery = new Date(createdAt.getTime() + 10 * 60 * 1000);
+  const handleBack = () => navigate('/my-orders');
 
-  const truckColor = () => {
-    switch (currentStep) {
-      case 1:
-        return 'text-gray-400';
-      case 2:
-        return 'text-orange-500';
-      case 3:
-        return 'text-blue-500';
-      case 4:
-        return 'text-green-500';
-      default:
-        return 'text-gray-400';
-    }
-  };
-
-  const handleBack = () => {
-    navigate('/my-orders');
-  };
-
+  // Icon Drone
   const droneIcon = new L.DivIcon({
     html: `
       <svg width="48" height="48" viewBox="0 0 200 200" fill="none" xmlns="http://www.w3.org/2000/svg">
         <ellipse cx="100" cy="90" rx="44" ry="22" fill="#1e293b"/>
-        <ellipse cx="100" cy="86" rx="30" ry="12" fill="#334155"/>
-        <g class="drone-propellers">
-          <circle cx="68" cy="68" r="20" fill="#fb923c" opacity="0.4"/>
-          <circle cx="132" cy="68" r="20" fill="#fb923c" opacity="0.4"/>
-          <circle cx="68" cy="112" r="20" fill="#fb923c" opacity="0.4"/>
-          <circle cx="132" cy="112" r="20" fill="#fb923c" opacity="0.4"/>
-        </g>
-        <rect x="63" y="60" width="10" height="36" rx="5" fill="#fb923c"/>
-        <rect x="127" y="60" width="10" height="36" rx="5" fill="#fb923c"/>
-        <rect x="63" y="104" width="10" height="36" rx="5" fill="#fb923c"/>
-        <rect x="127" y="104" width="10" height="36" rx="5" fill="#fb923c"/>
-        <rect x="82" y="125" width="36" height="42" rx="8" fill="#ea580c"/>
-        <rect x="82" y="125" width="36" height="10" fill="#f97316"/>
-        <text x="100" y="148" text-anchor="middle" fill="white" font-size="18" font-weight="bold" font-family="Arial, sans-serif">BĐPT</text>
-        <line x1="90" y1="112" x2="88" y2="125" stroke="#94a3b8" stroke-width="4"/>
-        <line x1="110" y1="112" x2="112" y2="125" stroke="#94a3b8" stroke-width="4"/>
-        <circle cx="100" cy="80" r="10" fill="#fb923c">
-          <animate attributeName="opacity" values="0.4;1;0.4" dur="1.5s" repeatCount="indefinite"/>
-        </circle>
-        <circle cx="100" cy="80" r="16" fill="#fb923c" opacity="0.3"/>
-      </svg>
-    `,
+        <g class="drone-propellers"><circle cx="68" cy="68" r="20" fill="#fb923c" opacity="0.4"/><circle cx="132" cy="68" r="20" fill="#fb923c" opacity="0.4"/><circle cx="68" cy="112" r="20" fill="#fb923c" opacity="0.4"/><circle cx="132" cy="112" r="20" fill="#fb923c" opacity="0.4"/></g>
+        <rect x="63" y="60" width="10" height="36" rx="5" fill="#fb923c"/><rect x="127" y="60" width="10" height="36" rx="5" fill="#fb923c"/><rect x="63" y="104" width="10" height="36" rx="5" fill="#fb923c"/><rect x="127" y="104" width="10" height="36" rx="5" fill="#fb923c"/>
+        <rect x="82" y="125" width="36" height="42" rx="8" fill="#ea580c"/><rect x="82" y="125" width="36" height="10" fill="#f97316"/>
+        <text x="100" y="148" text-anchor="middle" fill="white" font-size="18" font-weight="bold" font-family="Arial">BĐPT</text>
+        <line x1="90" y1="112" x2="88" y2="125" stroke="#94a3b8" stroke-width="4"/><line x1="110" y1="112" x2="112" y2="125" stroke="#94a3b8" stroke-width="4"/>
+        <circle cx="100" cy="80" r="10" fill="#fb923c"><animate attributeName="opacity" values="0.4;1;0.4" dur="1.5s" repeatCount="indefinite"/></circle>
+      </svg>`,
     className: 'custom-drone-icon',
     iconSize: [48, 68],
     iconAnchor: [24, 54],
     popupAnchor: [0, -50],
   });
+
+  /* ... (PHẦN RETURN Ở DƯỚI) ... */
 
   const droneAnimationStarted = useRef(false);
   const droneAnimationStartTime = useRef(null);
@@ -411,6 +364,7 @@ export const TrackOrderPage = () => {
             </div>
 
             {/* Map Section */}
+            {/* Map Section */}
             <div className="bg-white p-2 rounded-3xl shadow-xl shadow-gray-200/50 border border-white relative overflow-hidden group">
               <div className="h-80 md:h-[450px] w-full rounded-2xl overflow-hidden relative z-0">
                 <MapContainer
@@ -423,111 +377,39 @@ export const TrackOrderPage = () => {
                     url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
                     attribution="&copy; OpenStreetMap"
                   />
+                  {/* Nhà hàng */}
                   <Marker position={restaurantPos}>
                     <Popup className="font-sans">
                       <span className="font-bold">Nhà hàng:</span> {order.merchant_name}
                     </Popup>
                   </Marker>
+
+                  {/* Nhà khách */}
                   {deliveryPos && (
-                    <Marker position={deliveryPos}>
-                      <Popup className="font-sans">
-                        <span className="font-bold">Nhà bạn</span>
-                      </Popup>
-                    </Marker>
-                  )}
-                  {deliveryPos && (
-                    <Polyline
-                      positions={[restaurantPos, deliveryPos]}
-                      color="#f97316"
-                      weight={4}
-                      dashArray="10, 10"
-                      opacity={0.6}
-                    />
+                    <>
+                      <Marker position={deliveryPos}>
+                        <Popup className="font-sans">
+                          <span className="font-bold">Nhà bạn</span>
+                        </Popup>
+                      </Marker>
+                      <Polyline
+                        positions={[restaurantPos, deliveryPos]}
+                        color="#f97316"
+                        weight={4}
+                        dashArray="10, 10"
+                        opacity={0.6}
+                      />
+                    </>
                   )}
 
-                  {/* Drone Logic Wrapper */}
+                  {/* --- DRONE MARKER (Đã đơn giản hóa) --- */}
+                  {/* Chỉ hiển thị Drone khi bắt đầu cất cánh (Step >= 2) */}
                   {currentStep >= 2 && deliveryPos && (
                     <Marker
+                      ref={droneMarkerRef} // Gán ref để logic trên kia điều khiển
                       icon={droneIcon}
-                      position={restaurantPos}
-                      ref={(marker) => {
-                        if (!marker || !deliveryPos) return;
-                        const storageKey = `order_${orderKey}_drone_anim`;
-                        const saved = localStorage.getItem(storageKey);
-                        let shouldStartNew = !saved;
-
-                        if (!droneAnimationStarted.current) {
-                          if (saved) {
-                            const parsed = JSON.parse(saved);
-                            droneAnimationStartTime.current = parsed.startTime;
-                            droneAnimationStarted.current = true;
-                          } else {
-                            droneAnimationStartTime.current = Date.now();
-                            droneAnimationStarted.current = true;
-                            localStorage.setItem(
-                              storageKey,
-                              JSON.stringify({ startTime: droneAnimationStartTime.current }),
-                            );
-                          }
-                        }
-
-                        if (currentStep >= 4) {
-                          marker.setLatLng(deliveryPos);
-                          return;
-                        }
-
-                        const startPos = restaurantPos;
-                        const endPos = deliveryPos;
-                        const totalDistance = haversineDistance(
-                          startPos[0],
-                          startPos[1],
-                          endPos[0],
-                          endPos[1],
-                        );
-
-                        const speedKmh = 200;
-                        const duration = (totalDistance / speedKmh) * 3600 * 1000;
-                        const timeElapsed = Date.now() - droneAnimationStartTime.current;
-
-                        if (timeElapsed >= duration) {
-                          marker.setLatLng(endPos);
-                          if (currentStep < 4) {
-                            setCurrentStep(4);
-                            localStorage.setItem(`order_${orderKey}_step`, '4');
-                            localStorage.setItem(
-                              `order_${orderKey}_step_start`,
-                              Date.now().toString(),
-                            );
-                          }
-                          return;
-                        }
-
-                        function animate(time) {
-                          if (!marker?.setLatLng) return;
-                          const elapsed = Date.now() - droneAnimationStartTime.current;
-                          const t = Math.min(elapsed / duration, 1);
-                          const lat = startPos[0] + (endPos[0] - startPos[0]) * t;
-                          const lng = startPos[1] + (endPos[1] - startPos[1]) * t;
-                          marker.setLatLng([lat, lng]);
-
-                          if (t < 1) {
-                            requestAnimationFrame(animate);
-                          } else {
-                            if (currentStep < 4) {
-                              setCurrentStep(4);
-                              localStorage.setItem(`order_${orderKey}_step`, '4');
-                              localStorage.setItem(
-                                `order_${orderKey}_step_start`,
-                                Date.now().toString(),
-                              );
-                            }
-                          }
-                        }
-                        if (shouldStartNew || !marker._animationRunning) {
-                          marker._animationRunning = true;
-                          setTimeout(() => requestAnimationFrame(animate), 300);
-                        }
-                      }}
+                      position={restaurantPos} // Vị trí khởi đầu
+                      zIndexOffset={1000} // Luôn nổi lên trên
                     />
                   )}
                 </MapContainer>
