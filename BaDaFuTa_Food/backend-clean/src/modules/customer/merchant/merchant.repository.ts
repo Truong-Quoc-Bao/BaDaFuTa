@@ -131,7 +131,7 @@ export async function OutStandingMerchant() {
     orderBy: {
       rating: "desc",
     },
-    take: 3,
+    take: 4,
   });
 
   return merchants;
