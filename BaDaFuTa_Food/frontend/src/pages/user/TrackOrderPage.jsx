@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
-import { MapContainer, TileLayer, Marker, Popup, Polyline } from 'react-leaflet';
+import { MapContainer, TileLayer, Marker, Popup, Polyline, useMap } from 'react-leaflet';
 import { Button } from '../../components/ui/button';
 import L from 'leaflet';
 import {
@@ -53,6 +53,9 @@ export const TrackOrderPage = () => {
   const [isDelivered, setIsDelivered] = useState(false);
   const [isUpdating, setIsUpdating] = useState(false);
 
+  const droneMarkerRef = useRef(null);
+  const mapRef = useRef(null);
+
   // --- 1. CÁC HÀM TIỆN ÍCH ---
   function formatDateTime(date) {
     if (!date) return 'Không có';
@@ -65,7 +68,6 @@ export const TrackOrderPage = () => {
     });
   }
 
-  // Tính khoảng cách (km)
   function haversineDistance(lat1, lng1, lat2, lng2) {
     const toRad = (x) => (x * Math.PI) / 180;
     const R = 6371;
@@ -78,18 +80,8 @@ export const TrackOrderPage = () => {
     return R * c;
   }
 
-  // --- 2. STATE CHO ANIMATION ---
-  const [currentStep, setCurrentStep] = useState(1);
-  const droneMarkerRef = useRef(null); // Ref để điều khiển marker trực tiếp (mượt hơn state)
-
-  // Thời gian giả lập cho demo (ms)
-  const PREP_TIME = 5000; // 5 giây chuẩn bị
-  const TAKEOFF_TIME = 5000; // 5 giây cất cánh
-  const MIN_FLIGHT_TIME = 20000; // Bay tối thiểu 20 giây (để kịp nhìn)
-
-  // Fetch Order & LocationIQ (Giữ nguyên logic cũ của bạn)
+  // Fetch Order & LocationIQ
   async function getLatLngFromAddress(address) {
-    /* ... (Giữ nguyên code getLatLngFromAddress cũ của bạn) ... */
     if (!address) return null;
     const LOCATIONIQ_TOKEN = 'pk.4e0ece0ff0632fae5010642d702d5dfa';
     const cleanAddress = address
@@ -118,7 +110,6 @@ export const TrackOrderPage = () => {
     }
   }, [order]);
 
-  // Fetch order by ID nếu không có state (Giữ nguyên)
   useEffect(() => {
     if (!orderFromState && id) {
       fetch(`https://badafuta-production.up.railway.app/api/order/getOrder/${id}`)
@@ -128,86 +119,117 @@ export const TrackOrderPage = () => {
     }
   }, [id, orderFromState]);
 
-  // --- 3. LOGIC REALTIME ANIMATION (QUAN TRỌNG) ---
-  useEffect(() => {
-    if (!order || !order.merchant_location || !order.delivery_location) return;
+  // --- 2. LOGIC ANIMATION ĐÃ ĐƯỢC TỐI ƯU ---
 
-    // 1. Tính toán thông số bay
+  // a. Tính toán thông số bay (Chỉ tính lại khi order thay đổi)
+  const flightData = useMemo(() => {
+    if (!order || !order.merchant_location || !order.delivery_location) return null;
+
     const startPos = [order.merchant_location.lat, order.merchant_location.lng];
     const endPos = [order.delivery_location.lat, order.delivery_location.lng];
     const distance = haversineDistance(startPos[0], startPos[1], endPos[0], endPos[1]);
 
-    // Tốc độ giả lập: đảm bảo bay ít nhất MIN_FLIGHT_TIME
+    const PREP_TIME = 5000;
+    const TAKEOFF_TIME = 5000;
+    const MIN_FLIGHT_TIME = 20000;
+
     const droneSpeed = 200; // km/h
     let flightTime = (distance / droneSpeed) * 3600 * 1000;
     if (flightTime < MIN_FLIGHT_TIME) flightTime = MIN_FLIGHT_TIME;
 
-    // Tổng thời gian quy trình
-    const totalDuration = PREP_TIME + TAKEOFF_TIME + flightTime;
+    return {
+      startPos,
+      endPos,
+      flightTime,
+      prepTime: PREP_TIME,
+      takeoffTime: TAKEOFF_TIME,
+      totalDuration: PREP_TIME + TAKEOFF_TIME + flightTime,
+    };
+  }, [order]);
 
-    // 2. Xác định thời điểm bắt đầu (Lưu vào localStorage để F5 không bị reset từ đầu)
+  // b. Hàm helper tính toán trạng thái hiện tại dựa trên thời gian trôi qua
+  const calculateState = (elapsed, config) => {
+    if (!config) return { step: 1, progress: 0 };
+
+    if (elapsed > config.totalDuration) return { step: 4, progress: 1 };
+
+    if (elapsed > config.prepTime + config.takeoffTime) {
+      // Step 3: Đang bay
+      const flightElapsed = elapsed - config.prepTime - config.takeoffTime;
+      return { step: 3, progress: Math.min(flightElapsed / config.flightTime, 1) };
+    }
+
+    if (elapsed > config.prepTime) return { step: 2, progress: 0 }; // Cất cánh
+    return { step: 1, progress: 0 }; // Chuẩn bị
+  };
+
+  // c. State Lazy Initialization: Tính ngay step khi component mount (Fix lỗi F5)
+  const [currentStep, setCurrentStep] = useState(() => {
+    if (!order || !flightData) return 1;
+
     const orderKey = order.id || order._id || id;
     const storageKey = `order_${orderKey}_start_simulation`;
-    let startTime = localStorage.getItem(storageKey);
+    const storedStart = localStorage.getItem(storageKey);
 
-    if (!startTime) {
-      startTime = Date.now();
+    if (storedStart) {
+      const elapsed = Date.now() - parseInt(storedStart, 10);
+      // Nếu đã xong quá 5 phút -> Reset về 1 để demo lại
+      if (elapsed > flightData.totalDuration + 5 * 60 * 1000) return 1;
+
+      return calculateState(elapsed, flightData).step;
+    }
+    return 1;
+  });
+
+  // d. Effect chạy Animation Loop
+  useEffect(() => {
+    if (!flightData) return;
+
+    const orderKey = order.id || order._id || id;
+    const storageKey = `order_${orderKey}_start_simulation`;
+
+    let startTime = localStorage.getItem(storageKey);
+    let now = Date.now();
+
+    // Logic Reset: Nếu chưa có hoặc đã quá cũ -> Reset StartTime
+    if (!startTime || now - parseInt(startTime) > flightData.totalDuration + 300000) {
+      startTime = now;
       localStorage.setItem(storageKey, startTime);
     } else {
       startTime = parseInt(startTime, 10);
     }
 
-    // 3. Vòng lặp Animation Frame
     let animationFrameId;
 
     const animate = () => {
-      const now = Date.now();
-      const elapsed = now - startTime;
+      const currentTime = Date.now();
+      const elapsed = currentTime - startTime;
+      const { step, progress } = calculateState(elapsed, flightData);
 
-      // --- CẬP NHẬT STEP ---
-      let nextStep = 1;
-      if (elapsed > totalDuration) {
-        nextStep = 4; // Đã giao
-      } else if (elapsed > PREP_TIME + TAKEOFF_TIME) {
-        nextStep = 3; // Đang bay
-      } else if (elapsed > PREP_TIME) {
-        nextStep = 2; // Cất cánh
-      } else {
-        nextStep = 1; // Chuẩn bị
-      }
+      setCurrentStep(step);
 
-      setCurrentStep((prev) => (prev !== nextStep ? nextStep : prev));
-
-      // --- CẬP NHẬT VỊ TRÍ DRONE (Chỉ khi ở Step 3) ---
-      if (nextStep === 3 && droneMarkerRef.current) {
-        // Tính % quãng đường đã bay
-        // flightElapsed chạy từ 0 -> flightTime
-        const flightElapsed = elapsed - PREP_TIME - TAKEOFF_TIME;
-        const progress = Math.min(flightElapsed / flightTime, 1);
-
-        // Nội suy tọa độ (Interpolation)
+      // Cập nhật vị trí Drone trực tiếp vào Ref (Siêu mượt)
+      if (step === 3 && droneMarkerRef.current) {
+        const { startPos, endPos } = flightData;
         const lat = startPos[0] + (endPos[0] - startPos[0]) * progress;
         const lng = startPos[1] + (endPos[1] - startPos[1]) * progress;
 
         droneMarkerRef.current.setLatLng([lat, lng]);
-      } else if (nextStep === 4 && droneMarkerRef.current) {
-        // Nếu đã giao xong, set cứng vị trí tại nhà khách
-        droneMarkerRef.current.setLatLng(endPos);
+      } else if (step === 4 && droneMarkerRef.current) {
+        droneMarkerRef.current.setLatLng(flightData.endPos);
       }
 
-      // Tiếp tục lặp nếu chưa xong hẳn
-      if (elapsed <= totalDuration + 1000) {
+      if (elapsed <= flightData.totalDuration + 1000) {
         animationFrameId = requestAnimationFrame(animate);
       }
     };
 
-    // Bắt đầu chạy
     animationFrameId = requestAnimationFrame(animate);
 
     return () => cancelAnimationFrame(animationFrameId);
-  }, [order]); // Chạy lại khi order load xong
+  }, [flightData, order]); // Dependency an toàn
 
-  // --- 4. CÁC BIẾN HIỂN THỊ ---
+  // --- 3. RENDER ---
   if (!order)
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -221,11 +243,10 @@ export const TrackOrderPage = () => {
   const deliveryPos = order.delivery_location
     ? [order.delivery_location.lat, order.delivery_location.lng]
     : null;
-  const estimatedDelivery = new Date(new Date(order.created_at).getTime() + 15 * 60 * 1000); // Giả lập +15p
+  const estimatedDelivery = new Date(new Date(order.created_at).getTime() + 15 * 60 * 1000);
 
   const handleBack = () => navigate('/my-orders');
 
-  // Icon Drone
   const droneIcon = new L.DivIcon({
     html: `
       <svg width="48" height="48" viewBox="0 0 200 200" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -242,11 +263,63 @@ export const TrackOrderPage = () => {
     iconAnchor: [24, 54],
     popupAnchor: [0, -50],
   });
+  
+  // --- COMPONENT PHỤ: Giúp lấy map instance ra ngoài ---
+  const MapHandler = () => {
+    const map = useMap();
+    useEffect(() => {
+      // Gán map instance vào ref của cha để dùng trong vòng lặp
+      mapRef.current = map;
+    }, [map]);
+    return null;
+  };
 
-  /* ... (PHẦN RETURN Ở DƯỚI) ... */
+  // --- COMPONENT CON: TỰ ĐỘNG FOCUS KHI LOAD ---
+  const FocusOnLoad = ({ flightData }) => {
+    const map = useMap();
+    const hasFocused = useRef(false); // Dùng cờ này để chỉ focus 1 lần đầu tiên
 
-  const droneAnimationStarted = useRef(false);
-  const droneAnimationStartTime = useRef(null);
+    useEffect(() => {
+      // Nếu chưa có data hoặc đã focus rồi thì thôi
+      if (!flightData || hasFocused.current) return;
+
+      const orderKey = order.id || order._id || id;
+      const storageKey = `order_${orderKey}_start_simulation`;
+      const storedStart = localStorage.getItem(storageKey);
+
+      if (storedStart) {
+        const elapsed = Date.now() - parseInt(storedStart, 10);
+        let targetPos = flightData.startPos;
+        let zoomLevel = 15; // Zoom gần hơn chút để thấy drone rõ
+
+        // 1. Nếu đã giao xong -> Focus điểm đến
+        if (elapsed > flightData.totalDuration) {
+          targetPos = flightData.endPos;
+        }
+        // 2. Nếu đang bay (Step 3) -> Tính tọa độ hiện tại
+        else if (elapsed > flightData.prepTime + flightData.takeoffTime) {
+          const flightElapsed = elapsed - flightData.prepTime - flightData.takeoffTime;
+          const progress = flightElapsed / flightData.flightTime;
+
+          const lat =
+            flightData.startPos[0] + (flightData.endPos[0] - flightData.startPos[0]) * progress;
+          const lng =
+            flightData.startPos[1] + (flightData.endPos[1] - flightData.startPos[1]) * progress;
+          targetPos = [lat, lng];
+        }
+        // 3. Nếu đang chuẩn bị/cất cánh -> Focus điểm đi
+        else {
+          targetPos = flightData.startPos;
+        }
+
+        // Thực hiện Focus
+        map.setView(targetPos, zoomLevel, { animate: true, duration: 1 });
+        hasFocused.current = true; // Đánh dấu là đã focus xong, để người dùng tự do kéo map sau đó
+      }
+    }, [flightData, map]);
+
+    return null;
+  };
 
   return (
     <div className="min-h-screen bg-gray-50/50 pb-12 font-sans">
@@ -267,9 +340,9 @@ export const TrackOrderPage = () => {
             Theo dõi đơn hàng
           </h2>
         </div>
-        <div className="w-10 md:w-32"></div> {/* Spacer for alignment */}
+        <div className="w-10 md:w-32"></div>
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* Cột trái: Map & Status (Chiếm 2 phần) */}
+          {/* Cột trái: Map & Status */}
           <div className="lg:col-span-2 space-y-6">
             {/* Status Card */}
             <div className="bg-white p-6 rounded-3xl shadow-lg shadow-orange-100/50 border border-orange-50">
@@ -348,9 +421,7 @@ export const TrackOrderPage = () => {
                     );
                   })}
                 </div>
-                {/* Progress Bar Background */}
                 <div className="absolute top-5 md:top-6 left-10 right-10 h-1 bg-gray-100 rounded-full -z-0">
-                  {/* Active Progress Bar */}
                   <motion.div
                     className="h-full bg-orange-500 rounded-full"
                     initial={{ width: '0%' }}
@@ -364,7 +435,6 @@ export const TrackOrderPage = () => {
             </div>
 
             {/* Map Section */}
-            {/* Map Section */}
             <div className="bg-white p-2 rounded-3xl shadow-xl shadow-gray-200/50 border border-white relative overflow-hidden group">
               <div className="h-80 md:h-[450px] w-full rounded-2xl overflow-hidden relative z-0">
                 <MapContainer
@@ -373,18 +443,17 @@ export const TrackOrderPage = () => {
                   scrollWheelZoom={false}
                   className="h-full w-full outline-none"
                 >
+                  <FocusOnLoad flightData={flightData} />
                   <TileLayer
                     url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
                     attribution="&copy; OpenStreetMap"
                   />
-                  {/* Nhà hàng */}
                   <Marker position={restaurantPos}>
                     <Popup className="font-sans">
                       <span className="font-bold">Nhà hàng:</span> {order.merchant_name}
                     </Popup>
                   </Marker>
 
-                  {/* Nhà khách */}
                   {deliveryPos && (
                     <>
                       <Marker position={deliveryPos}>
@@ -399,18 +468,17 @@ export const TrackOrderPage = () => {
                         dashArray="10, 10"
                         opacity={0.6}
                       />
-                    </>
-                  )}
 
-                  {/* --- DRONE MARKER (Đã đơn giản hóa) --- */}
-                  {/* Chỉ hiển thị Drone khi bắt đầu cất cánh (Step >= 2) */}
-                  {currentStep >= 2 && deliveryPos && (
-                    <Marker
-                      ref={droneMarkerRef} // Gán ref để logic trên kia điều khiển
-                      icon={droneIcon}
-                      position={restaurantPos} // Vị trí khởi đầu
-                      zIndexOffset={1000} // Luôn nổi lên trên
-                    />
+                      {/* FIX: Luôn mount Marker nhưng dùng Opacity để ẩn hiện */}
+                      {/* Giữ Ref luôn sống để không bị null khi F5 */}
+                      <Marker
+                        ref={droneMarkerRef}
+                        icon={droneIcon}
+                        position={restaurantPos}
+                        opacity={currentStep >= 2 ? 1 : 0}
+                        zIndexOffset={1000}
+                      />
+                    </>
                   )}
                 </MapContainer>
               </div>
@@ -462,10 +530,10 @@ export const TrackOrderPage = () => {
                   Cảm ơn bạn đã sử dụng dịch vụ. Chúc bạn ngon miệng!
                 </p>
                 <Button
-                  disabled={isUpdating} // 1. Vô hiệu hóa khi đang load
+                  disabled={isUpdating}
                   className="bg-green-600 hover:bg-green-700 text-white px-8 py-6 rounded-xl shadow-lg shadow-green-600/30 text-lg font-semibold w-full md:w-auto transition-all transform hover:scale-105 disabled:opacity-70 disabled:cursor-not-allowed disabled:hover:scale-100"
                   onClick={async () => {
-                    setIsUpdating(true); // 2. Bắt đầu quay
+                    setIsUpdating(true);
                     try {
                       const apiId = order.id || order._id || order.order_id || id;
                       if (!apiId) return;
@@ -492,15 +560,13 @@ export const TrackOrderPage = () => {
                       });
                     } catch (err) {
                       console.error('❌ Lỗi khi xác nhận:', err);
-                      setIsUpdating(false); // 3. Tắt quay nếu gặp lỗi để bấm lại
+                      setIsUpdating(false);
                     }
                   }}
                 >
                   {isUpdating ? (
-                    // Icon quay quay
                     <Loader2 className="w-6 h-6 mr-2 animate-spin" />
                   ) : (
-                    // Icon check cũ
                     <Check className="w-6 h-6 mr-2" />
                   )}
                   {isUpdating ? 'Đang xử lý...' : 'Xác nhận đã nhận hàng'}
@@ -509,7 +575,7 @@ export const TrackOrderPage = () => {
             )}
           </div>
 
-          {/* Cột phải: Thông tin đơn hàng (Chiếm 1 phần) */}
+          {/* Cột phải: Thông tin đơn hàng */}
           <div className="space-y-6">
             {/* Locations Info */}
             <div className="bg-white p-6 rounded-3xl shadow-sm border border-gray-100">
@@ -519,17 +585,12 @@ export const TrackOrderPage = () => {
               </h3>
 
               <div className="flex flex-col">
-                {/* --- KHỐI 1: TỪ (Bao gồm cả đường kẻ nối xuống) --- */}
+                {/* TỪ */}
                 <div className="flex gap-3">
-                  {/* Cột Icon: Chấm cam + Line */}
                   <div className="flex flex-col items-center">
-                    {/* Chấm cam */}
                     <div className="mt-1 w-4 h-4 rounded-full bg-orange-500 ring-4 ring-white shadow-md z-10 shrink-0"></div>
-                    {/* Đường kẻ: flex-1 để tự giãn hết chiều cao khối này + translate-y để nối vào chấm dưới */}
                     <div className="w-0.5 bg-gray-300 flex-1 translate-y-1"></div>
                   </div>
-
-                  {/* Cột Nội dung: Thêm pb-6 để đẩy khối dưới ra xa */}
                   <div className="flex flex-col gap-1 pb-8 w-full">
                     <p className="text-xs text-gray-400 font-medium">Điểm lấy hàng</p>
                     <p className="font-semibold text-gray-800 text-sm md:text-base">
@@ -540,15 +601,11 @@ export const TrackOrderPage = () => {
                   </div>
                 </div>
 
-                {/* --- KHỐI 2: ĐẾN (Chấm xanh nằm ngay dòng tiêu đề) --- */}
+                {/* ĐẾN */}
                 <div className="flex gap-3">
-                  {/* Cột Icon: Chỉ chứa chấm xanh */}
                   <div className="flex flex-col items-center">
-                    {/* Chấm xanh: mt-1 để căn thẳng với dòng text đầu tiên */}
                     <div className="mt-1 w-4 h-4 rounded-full bg-green-500 ring-4 ring-white shadow-md z-10 shrink-0"></div>
                   </div>
-
-                  {/* Cột Nội dung */}
                   <div className="flex flex-col gap-1 w-full">
                     <p className="text-xs text-gray-400 font-medium">Điểm giao hàng</p>
                     <p className="font-semibold text-gray-800 text-sm md:text-base">
@@ -560,11 +617,10 @@ export const TrackOrderPage = () => {
                 </div>
               </div>
             </div>
-            {/* Order Summary Items */}
+
+            {/* Order Summary */}
             <div className="space-y-4">
-              {/* --- KHỐI 1: DANH SÁCH MÓN & TỔNG TIỀN --- */}
               <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-                {/* Header */}
                 <div className="bg-gray-50/50 px-4 py-3 border-b border-gray-100 flex items-center gap-2">
                   <ShoppingBag className="w-4 h-4 text-blue-500" />
                   <h3 className="font-bold text-gray-800 text-sm uppercase tracking-wide">
@@ -572,14 +628,12 @@ export const TrackOrderPage = () => {
                   </h3>
                 </div>
 
-                {/* List món ăn (Dùng divide-y để kẻ dòng tự động) */}
                 <div className="px-4 py-2">
                   {order?.items?.map((item, index) => (
                     <div
                       key={index}
                       className="flex gap-3 py-3 border-b border-gray-50 last:border-0"
                     >
-                      {/* Hình ảnh (Nhỏ gọn w-16) */}
                       <div className="shrink-0">
                         {item?.image_item?.url ? (
                           <img
@@ -594,9 +648,7 @@ export const TrackOrderPage = () => {
                         )}
                       </div>
 
-                      {/* Thông tin */}
                       <div className="flex-1 min-w-0 flex flex-col justify-between">
-                        {/* Dòng 1: Tên + Giá */}
                         <div className="flex justify-between items-start gap-2">
                           <p className="font-semibold text-gray-800 text-sm line-clamp-2 leading-tight">
                             {item.name_item}
@@ -605,16 +657,10 @@ export const TrackOrderPage = () => {
                             {Number(item.price).toLocaleString('vi-VN')}đ
                           </span>
                         </div>
-
-                        {/* Dòng 2: Số lượng */}
                         <p className="text-xs text-gray-500 mt-1">
                           Số lượng:{' '}
                           <span className="font-medium text-gray-900">x{item.quantity}</span>
                         </p>
-
-                        {/* Dòng 3: Topping (Nếu có) */}
-
-                        {/* Dòng 3: Topping (Logic y hệt của bạn) */}
                         <div className="mt-1.5 bg-gray-50 px-2 py-1.5 rounded-lg border border-gray-100 text-xs text-gray-600 leading-snug">
                           Topping:{' '}
                           {item.options && item.options.length > 0
@@ -628,9 +674,7 @@ export const TrackOrderPage = () => {
                   ))}
                 </div>
 
-                {/* Tổng tiền & Phí */}
                 <div className="bg-gray-50/30 px-4 py-3 border-t border-gray-100 space-y-2">
-                  {/* Phí vận chuyển */}
                   <div className="flex justify-between items-center text-xs">
                     <div className="flex items-center gap-2 text-gray-500">
                       <Truck className="w-3.5 h-3.5" />
@@ -640,8 +684,6 @@ export const TrackOrderPage = () => {
                       {Number(order.delivery_fee).toLocaleString('vi-VN')}đ
                     </span>
                   </div>
-
-                  {/* Phí áp dụng */}
                   <div className="flex justify-between items-center text-xs">
                     <div className="flex items-center gap-2 text-gray-500">
                       <Tag className="w-3.5 h-3.5 text-blue-500" />
@@ -649,8 +691,6 @@ export const TrackOrderPage = () => {
                     </div>
                     <span className="font-medium text-gray-700">{order.feesapply || '0đ'}</span>
                   </div>
-
-                  {/* Giảm giá */}
                   <div className="flex justify-between items-center text-xs">
                     <div className="flex items-center gap-2 text-gray-500">
                       <Percent className="w-3.5 h-3.5 text-green-500" />
@@ -660,11 +700,7 @@ export const TrackOrderPage = () => {
                       -{Number(order.discount || 0).toLocaleString('vi-VN')}đ
                     </span>
                   </div>
-
-                  {/* Đường kẻ đứt */}
                   <div className="border-t border-dashed border-gray-300 my-2"></div>
-
-                  {/* TỔNG TIỀN */}
                   <div className="flex justify-between items-center">
                     <span className="text-sm font-bold text-gray-800">Tổng thanh toán</span>
                     <span className="text-lg font-bold text-orange-600">
@@ -674,14 +710,12 @@ export const TrackOrderPage = () => {
                 </div>
               </div>
 
-              {/* --- KHỐI 2: CHI TIẾT KHÁC (Ultra Compact) --- */}
+              {/* Info Extra */}
               <div className="bg-white px-4 py-3 rounded-2xl shadow-sm border border-gray-100">
                 <h3 className="text-gray-700 font-bold mb-2 text-xs uppercase tracking-wide">
                   Thông tin thêm
                 </h3>
-
                 <div className="flex flex-col divide-y divide-gray-50 text-xs">
-                  {/* Dụng cụ */}
                   <div className="flex justify-between py-2">
                     <div className="flex items-center gap-2 text-gray-500">
                       <ForkKnife className="w-3.5 h-3.5 text-orange-500" />
@@ -689,8 +723,6 @@ export const TrackOrderPage = () => {
                     </div>
                     <span className="font-medium text-gray-800">{order.utensils || 'Không'}</span>
                   </div>
-
-                  {/* Ghi chú */}
                   <div className="flex justify-between py-2">
                     <div className="flex items-center gap-2 text-gray-500">
                       <FileText className="w-3.5 h-3.5 text-blue-500" />
@@ -700,8 +732,6 @@ export const TrackOrderPage = () => {
                       {order.note || 'Không'}
                     </span>
                   </div>
-
-                  {/* Mã đơn */}
                   <div className="flex justify-between py-2">
                     <div className="flex items-center gap-2 text-gray-500">
                       <Tag className="w-3.5 h-3.5 text-gray-600" />
@@ -711,8 +741,6 @@ export const TrackOrderPage = () => {
                       {order.order_id || 'N/A'}
                     </span>
                   </div>
-
-                  {/* Thời gian đặt */}
                   <div className="flex justify-between py-2">
                     <div className="flex items-center gap-2 text-gray-500">
                       <Calendar className="w-3.5 h-3.5 text-green-500" />
@@ -722,23 +750,17 @@ export const TrackOrderPage = () => {
                       {formatDateTime(order.created_at)}
                     </span>
                   </div>
-
-                  {/* Giao lúc */}
                   <div className="flex justify-between py-2">
                     <div className="flex items-center gap-2 text-gray-500">
                       <Clock className="w-3.5 h-3.5 text-purple-500" />
-                      {/* Nếu có delivered_at thì là "Giao lúc", chưa có thì là "Dự kiến" */}
                       <span>{order.delivered_at ? 'Giao lúc' : 'Dự kiến giao'}</span>
                     </div>
                     <span className="font-medium text-gray-800">
-                      {/* Nếu có delivered_at thì lấy nó, không thì lấy estimatedDelivery (biến đã tính ở đầu file) */}
                       {order.delivered_at
                         ? formatDateTime(order.delivered_at)
                         : formatDateTime(estimatedDelivery)}
                     </span>
                   </div>
-
-                  {/* Thanh toán */}
                   <div className="flex justify-between items-center pt-2">
                     <div className="flex items-center gap-2 text-gray-500">
                       <CreditCard className="w-3.5 h-3.5 text-indigo-500" />

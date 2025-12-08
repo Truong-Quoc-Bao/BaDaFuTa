@@ -4,19 +4,45 @@ import { Badge } from './ui/badge';
 import { Button } from './ui/button';
 import { ImageWithFallback } from './figma/ImageWithFallback';
 import { useNavigate } from 'react-router-dom';
+import OpeningStatus, { useOpenState } from './OpeningStatus';
+import toast from 'react-hot-toast'; // THÊM DÒNG NÀY LÀ XONG!
 
 export const FeaturedRestaurant = ({ restaurant, promotion }) => {
   const navigate = useNavigate();
-
+  const { isOpen } = useOpenState(restaurant?.time_open);
   const handleClick = () => {
+    if (!isOpen) {
+      const hour = new Date().getHours();
+      let msg = 'Nhà hàng đã nghỉ 😅';
+
+      if (hour < 11) msg = 'Sáng nay nhà hàng chưa mở nè 🌞🍳';
+      else if (hour < 14) msg = 'Ôi không! Nhà hàng đang nghỉ trưa 🍕😴';
+      else if (hour < 18) msg = 'Chiều nay nhà hàng chưa mở lại 😎';
+      else msg = 'Tối rồi, nhà hàng đã đóng cửa 🌙🍽️';
+
+      toast.error(msg); // ✅ toast sẽ hiển thị
+      return;
+    }
+
+    localStorage.setItem(
+      'selectedRestaurant',
+      JSON.stringify({
+        ...restaurant, // restaurant đã có deliveryFee thực
+      }),
+    );
+
+    // ✅ truyền restaurant đầy đủ sang trang chi tiết
     navigate(`/restaurant/${restaurant.id}`, {
       state: { restaurant },
     });
   };
+  console.log('Restaurant fee:', restaurant.deliveryFee);
 
   return (
     <Card
-      className="overflow-hidden cursor-pointer hover:shadow-xl transition-all duration-300 transform hover:scale-[1.02]"
+      className={`overflow-hidden cursor-pointer hover:shadow-lg transition-all duration-300 ${
+        !isOpen ? 'opacity-70' : ''
+      }`} // mờ khi đóng cửa
       onClick={handleClick}
     >
       <div className="relative">
@@ -68,6 +94,14 @@ export const FeaturedRestaurant = ({ restaurant, promotion }) => {
                 <Truck className="w-4 h-4" />
                 <span>{restaurant.deliveryFee.toLocaleString('vi-VN')}đ</span>
               </div>
+            </div>
+            <div className="absolute bottom-2 right-2 bg-white/80 backdrop-blur-sm px-2 py-1 rounded-lg flex items-center space-x-1 text-sm">
+              <OpeningStatus time_open={restaurant?.time_open}>
+                <div className="flex items-center space-x-2">
+                  <OpeningStatus.Clock />
+                  <OpeningStatus.Text />
+                </div>
+              </OpeningStatus>
             </div>
           </div>
         </div>

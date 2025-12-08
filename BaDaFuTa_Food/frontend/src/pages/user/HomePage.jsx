@@ -1,4 +1,4 @@
-import { Search, TrendingUp, MapPin } from 'lucide-react';
+import { Search, TrendingUp, MapPin, Tag } from 'lucide-react';
 import { Input } from '../../components/ui/input';
 import { Button } from '../../components/ui/button';
 import RestaurantCard from '../../components/RestaurantCard';
@@ -195,8 +195,10 @@ export default function HomePage() {
             distance,
             deliveryFee,
             deliveryTime,
-            cover_image: m.cover_image, 
+            cover_image: m.cover_image,
             location: m.location,
+            time_open: m.time_open || '10:00-22:00', // backend có trả thì dùng, không thì mặc định
+            isOpen: true,
           };
         });
 
@@ -239,7 +241,18 @@ export default function HomePage() {
           {vouchers?.length > 0 ? (
             vouchers.map((voucher) => <PromotionBanner key={voucher.id} promotion={voucher} />)
           ) : (
-            <p>Không có Vouchers</p>
+            <div className="col-span-full py-16">
+              <div className="max-w-md mx-auto text-center">
+                <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-orange-100 mb-6">
+                  <Tag className="w-10 h-10 text-orange-500" />
+                </div>
+                <h3 className="text-2xl font-bold text-gray-800 mb-3">Chưa có ưu đãi nào</h3>
+                <p className="text-gray-600 leading-relaxed">
+                  Đừng buồn! Ưu đãi siêu hot sẽ được cập nhật hàng ngày. Bạn quay lại sau vài tiếng
+                  nữa nhé
+                </p>
+              </div>
+            </div>
           )}
         </div>
       </div>
