@@ -25,20 +25,6 @@ export const merchantOrderRepository = {
       select: { merchant_id: true, status: true },
     });
   },
-
-  /** Xác nhận 1 order */
-  async confirmedOrder(orderId: string) {
-    return prisma.order.update({
-      where: { id: orderId },
-      data: { status: "CONFIRMED" },
-    });
-  },
-  async preparingOrder(orderId: string) {
-    return prisma.order.update({
-      where: { id: orderId },
-      data: { status: "PREPARING" },
-    });
-  },
   async deliveringOrder(orderId: string) {
     return prisma.order.update({
       where: { id: orderId },
