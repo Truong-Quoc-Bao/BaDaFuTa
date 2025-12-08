@@ -1,12 +1,14 @@
-import React, { useState, useEffect, useRef, useMemo } from 'react';
+import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { MapContainer, TileLayer, Marker, Popup, Polyline, useMap } from 'react-leaflet';
 import { Button } from '../../components/ui/button';
 import L from 'leaflet';
 import {
   MapPin,
+  Map as MapIcon,
   MessageCircle,
   Phone,
+  Target,
   Package,
   Truck,
   Bike,
@@ -24,9 +26,16 @@ import {
   Clock,
   ShoppingBag,
   Loader2,
+  Battery,
+  Wifi,
+  Zap,
+  Navigation,
+  AlertTriangle,
+  Wind,
+  ShieldAlert,
 } from 'lucide-react';
 import 'leaflet/dist/leaflet.css';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 
 // Fix icon mặc định Leaflet
 delete L.Icon.Default.prototype._getIconUrl;
@@ -43,6 +52,62 @@ const timelineSteps = [
   { id: 4, label: 'Đã giao', icon: Home },
 ];
 
+// Component giúp lấy map instance ra ngoài
+// --- SỬA LẠI COMPONENT NÀY ---
+const MapHandler = React.memo(({ onMapReady, onZoomStart, onZoomEnd }) => {
+  const map = useMap();
+  useEffect(() => {
+    onMapReady(map);
+
+    // Lắng nghe sự kiện Zoom
+    map.on('zoomstart', onZoomStart);
+    map.on('zoomend', onZoomEnd);
+
+    // Dọn dẹp khi unmount
+    return () => {
+      map.off('zoomstart', onZoomStart);
+      map.off('zoomend', onZoomEnd);
+    };
+  }, [map, onMapReady, onZoomStart, onZoomEnd]);
+  return null;
+});
+// Component tự động focus khi mới vào
+const FocusOnLoad = ({ flightData, orderId }) => {
+  const map = useMap();
+  const hasFocused = useRef(false);
+
+  useEffect(() => {
+    if (!flightData || hasFocused.current) return;
+
+    const storageKey = `order_${orderId}_start_simulation`;
+    const storedStart = localStorage.getItem(storageKey);
+
+    if (storedStart) {
+      const elapsed = Date.now() - parseInt(storedStart, 10);
+      let targetPos = flightData.startPos;
+
+      if (elapsed > flightData.totalDuration) {
+        targetPos = flightData.endPos;
+      } else if (elapsed > flightData.prepTime + flightData.takeoffTime) {
+        const progress =
+          (elapsed - flightData.prepTime - flightData.takeoffTime) / flightData.flightTime;
+        const lat =
+          flightData.startPos[0] + (flightData.endPos[0] - flightData.startPos[0]) * progress;
+        const lng =
+          flightData.startPos[1] + (flightData.endPos[1] - flightData.startPos[1]) * progress;
+        targetPos = [lat, lng];
+      } else {
+        targetPos = flightData.startPos;
+      }
+
+      map.setView(targetPos, 15, { animate: true, duration: 1 });
+      hasFocused.current = true;
+    }
+  }, [flightData, map, orderId]);
+
+  return null;
+};
+
 export const TrackOrderPage = () => {
   const location = useLocation();
   const navigate = useNavigate();
@@ -52,9 +117,46 @@ export const TrackOrderPage = () => {
   const [order, setOrder] = useState(orderFromState || null);
   const [isDelivered, setIsDelivered] = useState(false);
   const [isUpdating, setIsUpdating] = useState(false);
+  const [etaMinutes, setEtaMinutes] = useState(0);
 
+  // --- THÊM VÀO TRONG TrackOrderPage (Chỗ khai báo Ref) ---
+  const isZoomingRef = useRef(false); // Biến cờ: Đang zoom hay không?
+
+  // Dùng useCallback để truyền xuống MapHandler không bị render lại
+  const handleZoomStart = useCallback(() => {
+    isZoomingRef.current = true;
+  }, []);
+
+  const handleZoomEnd = useCallback(() => {
+    isZoomingRef.current = false;
+  }, []);
+
+  const [droneStats, setDroneStats] = useState({
+    battery: 100,
+    altitude: 0,
+    speed: 0,
+    signal: 100,
+    status: 'NORMAL', // NORMAL, WARNING, REROUTING
+    alertMessage: '',
+    latLng: '0, 0', // Tọa độ hiện tại
+    distanceRemaining: 0, // Km còn lại
+    currentAddress: 'Đang định vị...',
+  });
+
+  // Ref để đảm bảo sự kiện chỉ nổ ra 1 lần
+  const eventTriggeredRef = useRef(false);
   const droneMarkerRef = useRef(null);
   const mapRef = useRef(null);
+
+  const [isAutoFollow, setIsAutoFollow] = useState(true); // State để đổi màu nút
+  const isAutoFollowRef = useRef(true); // Ref để dùng trong vòng lặp animate (quan trọng)
+
+  // Hàm bật tắt
+  const toggleAutoFollow = () => {
+    const nextState = !isAutoFollow;
+    setIsAutoFollow(nextState);
+    isAutoFollowRef.current = nextState; // Cập nhật Ref ngay lập tức
+  };
 
   // --- 1. CÁC HÀM TIỆN ÍCH ---
   function formatDateTime(date) {
@@ -79,6 +181,31 @@ export const TrackOrderPage = () => {
     const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
     return R * c;
   }
+
+  // Hàm lấy địa chỉ từ tọa độ (Dùng LocationIQ token cũ của bạn)
+  const fetchAddressName = async (lat, lng) => {
+    try {
+      const LOCATIONIQ_TOKEN = 'pk.4e0ece0ff0632fae5010642d702d5dfa';
+      const url = `https://us1.locationiq.com/v1/reverse.php?key=${LOCATIONIQ_TOKEN}&lat=${lat}&lon=${lng}&format=json&accept-language=vi`;
+
+      const res = await fetch(url);
+      const data = await res.json();
+
+      if (data.address) {
+        // Lọc lấy Xã, Huyện, Tỉnh cho gọn
+        const ward = data.address.suburb || data.address.quarter || data.address.village || '';
+        const district = data.address.city_district || data.address.district || '';
+        const city = data.address.city || data.address.state || '';
+
+        // Ghép chuỗi: "P. Bến Nghé, Q.1, TP.HCM"
+        const parts = [ward, district, city].filter((p) => p);
+        return parts.length > 0 ? parts.join(', ') : 'Vùng không xác định';
+      }
+      return 'Đang bay qua vùng biển/rừng...';
+    } catch (err) {
+      return 'Mất tín hiệu vệ tinh...';
+    }
+  };
 
   // Fetch Order & LocationIQ
   async function getLatLngFromAddress(address) {
@@ -125,8 +252,8 @@ export const TrackOrderPage = () => {
   const flightData = useMemo(() => {
     if (!order || !order.merchant_location || !order.delivery_location) return null;
 
-    const startPos = [order.merchant_location.lat, order.merchant_location.lng];
-    const endPos = [order.delivery_location.lat, order.delivery_location.lng];
+    const startPos = [Number(order.merchant_location.lat), Number(order.merchant_location.lng)];
+    const endPos = [Number(order.delivery_location.lat), Number(order.delivery_location.lng)];
     const distance = haversineDistance(startPos[0], startPos[1], endPos[0], endPos[1]);
 
     const PREP_TIME = 5000;
@@ -137,9 +264,19 @@ export const TrackOrderPage = () => {
     let flightTime = (distance / droneSpeed) * 3600 * 1000;
     if (flightTime < MIN_FLIGHT_TIME) flightTime = MIN_FLIGHT_TIME;
 
+    console.log('Thời gian bay drone (ms):', flightTime);
+    console.log(
+      `Drone tốc độ ${droneSpeed} km/h → bay ${distance.toFixed(2)}km chỉ mất ${(
+        flightTime / 1000
+      ).toFixed(1)} giây`,
+    );
+
+    console.log('Distance (km):', distance);
+
     return {
       startPos,
       endPos,
+      distance: distance || 0, // Fallback nếu NaN
       flightTime,
       prepTime: PREP_TIME,
       takeoffTime: TAKEOFF_TIME,
@@ -184,14 +321,11 @@ export const TrackOrderPage = () => {
   // d. Effect chạy Animation Loop
   useEffect(() => {
     if (!flightData) return;
-
     const orderKey = order.id || order._id || id;
     const storageKey = `order_${orderKey}_start_simulation`;
-
     let startTime = localStorage.getItem(storageKey);
     let now = Date.now();
 
-    // Logic Reset: Nếu chưa có hoặc đã quá cũ -> Reset StartTime
     if (!startTime || now - parseInt(startTime) > flightData.totalDuration + 300000) {
       startTime = now;
       localStorage.setItem(storageKey, startTime);
@@ -200,34 +334,118 @@ export const TrackOrderPage = () => {
     }
 
     let animationFrameId;
+    let lastUiUpdate = 0;
+    let lastGeoCheck = 0;
 
     const animate = () => {
       const currentTime = Date.now();
       const elapsed = currentTime - startTime;
       const { step, progress } = calculateState(elapsed, flightData);
 
-      setCurrentStep(step);
-
-      // Cập nhật vị trí Drone trực tiếp vào Ref (Siêu mượt)
-      if (step === 3 && droneMarkerRef.current) {
-        const { startPos, endPos } = flightData;
-        const lat = startPos[0] + (endPos[0] - startPos[0]) * progress;
-        const lng = startPos[1] + (endPos[1] - startPos[1]) * progress;
+      // 1. UPDATE DOM (60FPS - Mượt)
+      if (step === 3 && droneMarkerRef.current && !isZoomingRef.current) {
+        const lat =
+          flightData.startPos[0] + (flightData.endPos[0] - flightData.startPos[0]) * progress;
+        const lng =
+          flightData.startPos[1] + (flightData.endPos[1] - flightData.startPos[1]) * progress;
 
         droneMarkerRef.current.setLatLng([lat, lng]);
+
+        if (mapRef.current && isAutoFollowRef.current) {
+          mapRef.current.setView([lat, lng], 15, { animate: false });
+        }
       } else if (step === 4 && droneMarkerRef.current) {
         droneMarkerRef.current.setLatLng(flightData.endPos);
+        if (mapRef.current && isAutoFollowRef.current) {
+          mapRef.current.setView(flightData.endPos, 15, { animate: true });
+        }
       }
 
-      if (elapsed <= flightData.totalDuration + 1000) {
-        animationFrameId = requestAnimationFrame(animate);
+      // 2. UPDATE REACT STATE (10FPS - Không lag)
+      if (currentTime - lastUiUpdate > 100 || step !== currentStep) {
+        lastUiUpdate = currentTime;
+        setCurrentStep(step);
+
+        // Tính ETA
+        if (step < 4) {
+          const remainingMs = flightData.totalDuration - elapsed;
+          const mins = Math.ceil(remainingMs / 60000);
+          setEtaMinutes((prev) => (prev !== mins && mins > 0 ? mins : prev));
+        } else setEtaMinutes(0);
+
+        // Tính Stats
+        let stats = {};
+        if (step === 2)
+          stats = {
+            altitude: Math.min(50, ((elapsed - flightData.prepTime) / 100) * 2),
+            speed: 15,
+            status: 'NORMAL',
+          };
+
+        if (step === 3 && currentTime - lastGeoCheck > 3000) {
+          lastGeoCheck = currentTime;
+
+          // Tính tọa độ hiện tại
+          const curLat =
+            flightData.startPos[0] + (flightData.endPos[0] - flightData.startPos[0]) * progress;
+          const curLng =
+            flightData.startPos[1] + (flightData.endPos[1] - flightData.startPos[1]) * progress;
+
+          // Gọi hàm lấy địa chỉ (Async nhưng không cần await để tránh chặn animation)
+          fetchAddressName(curLat, curLng).then((addr) => {
+            setDroneStats((prev) => ({ ...prev, currentAddress: addr }));
+          });
+        } else if (step === 3) {
+          // --- TÍNH TOÁN VỊ TRÍ HIỆN TẠI ---
+          const currentLat =
+            flightData.startPos[0] + (flightData.endPos[0] - flightData.startPos[0]) * progress;
+          const currentLng =
+            flightData.startPos[1] + (flightData.endPos[1] - flightData.startPos[1]) * progress;
+
+          // Tính khoảng cách còn lại (Tổng quãng đường * % chưa đi)
+          let distRemain = flightData.distance * (1 - progress);
+          if (isNaN(distRemain)) distRemain = 0; // Nếu NaN thì về 0
+
+          stats = {
+            battery: Math.max(20, 100 - progress * 80),
+            altitude: 120 + Math.sin(currentTime / 500) * 5,
+            speed: 200 + Math.cos(currentTime / 1000) * 10,
+            signal: Math.max(70, 100 - progress * 20 + Math.random() * 5),
+            latLng: `${currentLat.toFixed(4)}, ${currentLng.toFixed(4)}`, // Làm tròn 4 số lẻ
+            distanceRemaining: distRemain.toFixed(2), // Làm tròn 2 số lẻ (VD: 3.52 km)
+          };
+          // Sự kiện ngẫu nhiên
+          if (progress > 0.4 && progress < 0.7 && !eventTriggeredRef.current) {
+            eventTriggeredRef.current = true;
+            const events = [
+              { msg: '⚠️ CẢNH BÁO: Phát hiện dây điện cao thế!', type: 'REROUTING' },
+              { msg: '🚫 VÙNG CẤM BAY: Đang đổi hướng...', type: 'REROUTING' },
+              { msg: '⛈️ THỜI TIẾT XẤU: Gió giật cấp 7', type: 'WARNING' },
+            ];
+            const evt = events[Math.floor(Math.random() * events.length)];
+            setDroneStats((prev) => ({ ...prev, status: evt.type, alertMessage: evt.msg }));
+            setTimeout(
+              () => setDroneStats((prev) => ({ ...prev, status: 'NORMAL', alertMessage: '' })),
+              5000,
+            );
+          }
+        } else if (step === 4)
+          stats = { altitude: 0, speed: 0, status: 'NORMAL', distanceRemaining: 0 };
+
+        setDroneStats((prev) =>
+          prev.status !== 'NORMAL' && step === 3
+            ? { ...prev, ...stats, status: prev.status }
+            : { ...prev, ...stats },
+        );
       }
+
+      if (elapsed <= flightData.totalDuration + 1000)
+        animationFrameId = requestAnimationFrame(animate);
     };
 
     animationFrameId = requestAnimationFrame(animate);
-
     return () => cancelAnimationFrame(animationFrameId);
-  }, [flightData, order]); // Dependency an toàn
+  }, [flightData, order]);
 
   // --- 3. RENDER ---
   if (!order)
@@ -243,7 +461,16 @@ export const TrackOrderPage = () => {
   const deliveryPos = order.delivery_location
     ? [order.delivery_location.lat, order.delivery_location.lng]
     : null;
-  const estimatedDelivery = new Date(new Date(order.created_at).getTime() + 15 * 60 * 1000);
+  // const estimatedDelivery = new Date(new Date(order.created_at).getTime() + 15 * 60 * 1000);
+
+  let estimatedDelivery;
+  if (flightData) {
+    const storageKey = `order_${order.id || order._id || id}_start_simulation`;
+    const storedStart = localStorage.getItem(storageKey);
+    estimatedDelivery = storedStart
+      ? new Date(parseInt(storedStart) + flightData.totalDuration)
+      : new Date(Date.now() + flightData.totalDuration);
+  } else estimatedDelivery = new Date(Date.now() + 15 * 60 * 1000);
 
   const handleBack = () => navigate('/my-orders');
 
@@ -263,63 +490,15 @@ export const TrackOrderPage = () => {
     iconAnchor: [24, 54],
     popupAnchor: [0, -50],
   });
-  
-  // --- COMPONENT PHỤ: Giúp lấy map instance ra ngoài ---
-  const MapHandler = () => {
-    const map = useMap();
-    useEffect(() => {
-      // Gán map instance vào ref của cha để dùng trong vòng lặp
-      mapRef.current = map;
-    }, [map]);
-    return null;
-  };
 
-  // --- COMPONENT CON: TỰ ĐỘNG FOCUS KHI LOAD ---
-  const FocusOnLoad = ({ flightData }) => {
-    const map = useMap();
-    const hasFocused = useRef(false); // Dùng cờ này để chỉ focus 1 lần đầu tiên
+  console.log('Order object received:', order);
+  console.log('Order ID:', order?.order_id);
 
-    useEffect(() => {
-      // Nếu chưa có data hoặc đã focus rồi thì thôi
-      if (!flightData || hasFocused.current) return;
+  console.log('lat:', order?.merchant_location.lat);
+  console.log('lng:', order?.merchant_location.lng);
 
-      const orderKey = order.id || order._id || id;
-      const storageKey = `order_${orderKey}_start_simulation`;
-      const storedStart = localStorage.getItem(storageKey);
-
-      if (storedStart) {
-        const elapsed = Date.now() - parseInt(storedStart, 10);
-        let targetPos = flightData.startPos;
-        let zoomLevel = 15; // Zoom gần hơn chút để thấy drone rõ
-
-        // 1. Nếu đã giao xong -> Focus điểm đến
-        if (elapsed > flightData.totalDuration) {
-          targetPos = flightData.endPos;
-        }
-        // 2. Nếu đang bay (Step 3) -> Tính tọa độ hiện tại
-        else if (elapsed > flightData.prepTime + flightData.takeoffTime) {
-          const flightElapsed = elapsed - flightData.prepTime - flightData.takeoffTime;
-          const progress = flightElapsed / flightData.flightTime;
-
-          const lat =
-            flightData.startPos[0] + (flightData.endPos[0] - flightData.startPos[0]) * progress;
-          const lng =
-            flightData.startPos[1] + (flightData.endPos[1] - flightData.startPos[1]) * progress;
-          targetPos = [lat, lng];
-        }
-        // 3. Nếu đang chuẩn bị/cất cánh -> Focus điểm đi
-        else {
-          targetPos = flightData.startPos;
-        }
-
-        // Thực hiện Focus
-        map.setView(targetPos, zoomLevel, { animate: true, duration: 1 });
-        hasFocused.current = true; // Đánh dấu là đã focus xong, để người dùng tự do kéo map sau đó
-      }
-    }, [flightData, map]);
-
-    return null;
-  };
+  console.log('👉 order.driver:', order.driver);
+  console.log('👉 currentStep:', currentStep);
 
   return (
     <div className="min-h-screen bg-gray-50/50 pb-12 font-sans">
@@ -336,7 +515,7 @@ export const TrackOrderPage = () => {
           </Button>
         </div>
         <div className="flex justify-center mb-8">
-          <h2 className="text-2xl md:text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-orange-600 to-red-600">
+          <h2 className="text-2xl md:text-3xl font-bold bg-clip-text text-gray-600">
             Theo dõi đơn hàng
           </h2>
         </div>
@@ -349,6 +528,25 @@ export const TrackOrderPage = () => {
               <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
                 <div>
                   <p className="text-gray-500 text-sm mb-1">Trạng thái hiện tại</p>
+                  {/* THÊM: BẢNG CẢNH BÁO NGUY HIỂM */}
+                  <AnimatePresence>
+                    {droneStats.alertMessage && (
+                      <motion.div
+                        initial={{ height: 0, opacity: 0 }}
+                        animate={{ height: 'auto', opacity: 1 }}
+                        exit={{ height: 0, opacity: 0 }}
+                        className="bg-red-50 border-l-4 border-red-500 p-3 mb-6 rounded-r-lg overflow-hidden relative z-10 mt-4"
+                      >
+                        <div className="flex items-center gap-3">
+                          <ShieldAlert className="w-6 h-6 text-red-600 animate-bounce" />
+                          <div>
+                            <p className="font-bold text-red-700 text-sm">CẢNH BÁO AN TOÀN</p>
+                            <p className="text-red-600 text-xs">{droneStats.alertMessage}</p>
+                          </div>
+                        </div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
                   <div className="flex items-center gap-2">
                     {currentStep === 1 && (
                       <span className="inline-flex px-3 py-1 rounded-full bg-gray-100 text-gray-600 font-medium text-sm">
@@ -372,16 +570,63 @@ export const TrackOrderPage = () => {
                     )}
                   </div>
                 </div>
-                <div className="flex items-center gap-3 bg-orange-50 px-4 py-2 rounded-2xl">
-                  <Clock className="w-5 h-5 text-orange-500" />
+                {/* --- KHỐI THỜI GIAN THÔNG MINH --- */}
+                <div
+                  className={`flex items-center gap-3 px-4 py-2 rounded-2xl transition-colors duration-500 ${
+                    // Nếu đang bay và còn dưới 5 phút -> Chuyển màu đỏ cảnh báo
+                    currentStep === 3 && etaMinutes <= 5
+                      ? 'bg-red-50 border border-red-100'
+                      : 'bg-orange-50'
+                  }`}
+                >
+                  {currentStep === 3 && etaMinutes <= 5 ? (
+                    // Icon Chuông rung khi sắp đến
+                    <div className="relative">
+                      <span className="absolute -top-1 -right-1 flex h-3 w-3">
+                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                        <span className="relative inline-flex rounded-full h-3 w-3 bg-red-500"></span>
+                      </span>
+                      <Clock className="w-5 h-5 text-red-500 animate-pulse" />
+                    </div>
+                  ) : (
+                    // Icon Đồng hồ bình thường
+                    <Clock className="w-5 h-5 text-orange-500" />
+                  )}
+
                   <div>
-                    <p className="text-xs text-gray-500">Dự kiến giao</p>
-                    <p className="font-bold text-gray-800">
-                      {estimatedDelivery.toLocaleTimeString('vi-VN', {
-                        hour: '2-digit',
-                        minute: '2-digit',
-                      })}
-                    </p>
+                    {/* LOGIC HIỂN THỊ TEXT */}
+                    {currentStep === 4 ? (
+                      // Case 1: Đã giao
+                      <>
+                        <p className="text-xs text-green-600 font-bold">Đã hoàn tất</p>
+                        <p className="font-bold text-gray-800 text-sm">Thành công</p>
+                      </>
+                    ) : currentStep === 3 && etaMinutes <= 5 ? (
+                      // Case 2: Sắp đến (< 5 phút) -> HIỆN CẢNH BÁO
+                      <div className="flex flex-col">
+                        <p className="text-[10px] font-bold text-red-500 uppercase tracking-wider animate-pulse">
+                          Sắp đến nơi!
+                        </p>
+                        <p className="font-bold text-red-600 text-xs md:text-sm leading-tight">
+                          Còn {etaMinutes} phút nữa
+                          <br />
+                          <span className="font-normal text-gray-600 text-[10px]">
+                            Vui lòng chuẩn bị nhận hàng
+                          </span>
+                        </p>
+                      </div>
+                    ) : (
+                      // Case 3: Còn xa -> Hiện giờ dự kiến
+                      <>
+                        <p className="text-xs text-gray-500">Dự kiến giao</p>
+                        <p className="font-bold text-gray-800">
+                          {estimatedDelivery.toLocaleTimeString('vi-VN', {
+                            hour: '2-digit',
+                            minute: '2-digit',
+                          })}
+                        </p>
+                      </>
+                    )}
                   </div>
                 </div>
               </div>
@@ -443,7 +688,40 @@ export const TrackOrderPage = () => {
                   scrollWheelZoom={false}
                   className="h-full w-full outline-none"
                 >
-                  <FocusOnLoad flightData={flightData} />
+                  <FocusOnLoad flightData={flightData} orderId={order.id || order._id || id} />
+                  <MapHandler
+                    onMapReady={(map) => {
+                      mapRef.current = map;
+                    }}
+                    onZoomStart={handleZoomStart}
+                    onZoomEnd={handleZoomEnd}
+                  />
+                  <div className="absolute bottom-4 left-4 z-[500] flex flex-col gap-2">
+                    <Button
+                      className={`rounded-full shadow-lg transition-all px-4 py-2 flex items-center gap-2 ${
+                        isAutoFollow
+                          ? 'bg-blue-600 hover:bg-blue-700 text-white'
+                          : 'bg-white hover:bg-gray-100 text-gray-700 border border-gray-200'
+                      }`}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        e.preventDefault();
+                        toggleAutoFollow();
+                      }}
+                      onDoubleClick={(e) => e.stopPropagation()}
+                      onMouseDown={(e) => e.stopPropagation()}
+                      onTouchStart={(e) => e.stopPropagation()}
+                    >
+                      {isAutoFollow ? (
+                        <Check className="w-4 h-4" />
+                      ) : (
+                        <MapPin className="w-4 h-4" />
+                      )}
+                      <span className="text-xs font-semibold">
+                        {isAutoFollow ? 'Tắt theo dõi' : 'Bật theo dõi'}
+                      </span>
+                    </Button>
+                  </div>
                   <TileLayer
                     url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
                     attribution="&copy; OpenStreetMap"
@@ -463,7 +741,7 @@ export const TrackOrderPage = () => {
                       </Marker>
                       <Polyline
                         positions={[restaurantPos, deliveryPos]}
-                        color="#f97316"
+                        color={droneStats.status !== 'NORMAL' ? '#ef4444' : '#f97316'} // Đỏ nếu lỗi, Cam nếu thường
                         weight={4}
                         dashArray="10, 10"
                         opacity={0.6}
@@ -482,6 +760,101 @@ export const TrackOrderPage = () => {
                   )}
                 </MapContainer>
               </div>
+              {/* --- HUD MỚI (CHẾ ĐỘ 1 CỘT DỌC CHO MOBILE) --- */}
+              {currentStep >= 2 && currentStep < 4 && (
+                <div
+                  className="
+                  z-[400] font-mono text-xs rounded-xl border shadow-xl backdrop-blur-md transition-all
+      
+                  /* Cấu hình chung (Mobile + Desktop): */
+                  /* Nằm dưới map (mt-3), Chiều rộng Full (w-full) */
+                  mt-3 w-full 
+                  
+                  /* Màu sắc: Nền tối (Slate 900), Chữ trắng */
+                  bg-slate-900 text-white border-slate-700 
+                  
+                  /* Bố cục: Xếp dọc (flex-col), khoảng cách 3, padding 4 */
+                  flex flex-col gap-3 p-4
+                "
+                >
+                  {/* Header */}
+                  <div className="flex justify-between items-center mb-1 md:mb-3 pb-2 border-b border-white/20">
+                    <span className="font-bold text-orange-400 flex items-center gap-1">
+                      <Target className="w-3 h-3" /> DRONE-01
+                    </span>
+                    <span className="flex items-center gap-1 text-gray-400">
+                      <Wifi className="w-3 h-3" /> {Math.round(droneStats.signal)}%
+                    </span>
+                  </div>
+
+                  {/* Nhóm 1: Thông tin vị trí */}
+                  <div className="space-y-3 md:space-y-2">
+                    <div className="flex justify-between items-center">
+                      <div className="flex items-center gap-1.5 text-gray-400">
+                        <MapIcon className="w-3.5 h-3.5" />
+                        <span className="text-xs font-medium">GPS</span>
+                      </div>
+                      <div className="text-white text-xs font-medium leading-tight truncate">
+                        {droneStats.latLng}
+                      </div>
+                    </div>
+
+                    <div className="flex justify-between items-center">
+                      <div className="flex items-center gap-1.5 text-gray-400 text-[10px] uppercase tracking-wider mb-0.5">
+                        <MapPin className="w-3 h-3" />
+                        Đang bay qua:
+                      </div>
+                      <div className="text-white text-xs font-medium leading-tight truncate">
+                        {droneStats.currentAddress}
+                      </div>
+                    </div>
+
+                    <div className="flex justify-between items-center">
+                      <div className="flex items-center gap-1.5 text-gray-400">
+                        <Navigation className="w-3.5 h-3.5" /> DIST
+                      </div>
+                      <div className="font-bold text-orange-400">
+                        {droneStats.distanceRemaining} km
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Đường kẻ phân cách (Giờ hiện cả trên Mobile cho dễ nhìn) */}
+                  <div className="w-full h-[1px] bg-white/10 my-1"></div>
+
+                  {/* Nhóm 2: Thông số kỹ thuật */}
+                  <div className="space-y-3 md:space-y-2">
+                    <div className="flex justify-between items-center">
+                      <div className="flex items-center gap-1.5 text-gray-400">
+                        <Battery className="w-3.5 h-3.5" /> PIN
+                      </div>
+                      <div
+                        className={`font-bold ${
+                          droneStats.battery < 20 ? 'text-red-500 animate-pulse' : 'text-green-400'
+                        }`}
+                      >
+                        {Math.round(droneStats.battery)}%
+                      </div>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <div className="flex items-center gap-1.5 text-gray-400">
+                        <Zap className="w-3.5 h-3.5" /> SPD
+                      </div>
+                      <div className="font-bold text-blue-400">
+                        {Math.round(droneStats.speed)} km/h
+                      </div>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <div className="flex items-center gap-1.5 text-gray-400">
+                        <Wind className="w-3.5 h-3.5" /> ALT
+                      </div>
+                      <div className="font-bold text-yellow-400">
+                        {Math.round(droneStats.altitude)} m
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
 
               {/* Driver / Drone Info Overlay */}
               {currentStep >= 2 && (
@@ -531,7 +904,7 @@ export const TrackOrderPage = () => {
                 </p>
                 <Button
                   disabled={isUpdating}
-                  className="bg-green-600 hover:bg-green-700 text-white px-8 py-6 rounded-xl shadow-lg shadow-green-600/30 text-lg font-semibold w-full md:w-auto transition-all transform hover:scale-105 disabled:opacity-70 disabled:cursor-not-allowed disabled:hover:scale-100"
+                  className="bg-green-600 hover:bg-green-700 text-white px-8 py-6 rounded-xl shadow-lg shadow-green-600/30 text-sm font-semibold w-full md:w-auto transition-all transform hover:scale-105 disabled:opacity-70 disabled:cursor-not-allowed disabled:hover:scale-100"
                   onClick={async () => {
                     setIsUpdating(true);
                     try {
@@ -753,12 +1126,12 @@ export const TrackOrderPage = () => {
                   <div className="flex justify-between py-2">
                     <div className="flex items-center gap-2 text-gray-500">
                       <Clock className="w-3.5 h-3.5 text-purple-500" />
-                      <span>{order.delivered_at ? 'Giao lúc' : 'Dự kiến giao'}</span>
+                      {/* SỬA Ở ĐÂY: Dựa vào currentStep để đổi chữ */}
+                      <span>{currentStep === 4 ? 'Giao lúc' : 'Dự kiến giao'}</span>
                     </div>
                     <span className="font-medium text-gray-800">
-                      {order.delivered_at
-                        ? formatDateTime(order.delivered_at)
-                        : formatDateTime(estimatedDelivery)}
+                      {/* estimatedDelivery chính là thời điểm Drone chạm đích */}
+                      {formatDateTime(estimatedDelivery)}
                     </span>
                   </div>
                   <div className="flex justify-between items-center pt-2">
