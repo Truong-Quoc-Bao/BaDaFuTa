@@ -1,4 +1,3 @@
-
 import type { MerchantFindArgs } from "./merchant.types";
 import * as Repo from "./merchant.repository";
 
@@ -11,4 +10,8 @@ export async function listMerchants(args: MerchantFindArgs) {
     return { items, meta: { total } };
   }
   return Repo.findMany(args);
+}
+
+export async function OutStandingMerchant() {
+  return Repo.OutStandingMerchant();
 }

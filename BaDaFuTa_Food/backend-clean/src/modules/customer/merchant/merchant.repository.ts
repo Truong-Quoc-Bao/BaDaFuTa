@@ -125,3 +125,14 @@ export async function count(args: MerchantFindArgs) {
     },
   });
 }
+
+export async function OutStandingMerchant() {
+  const merchants = await prisma.merchant.findMany({
+    orderBy: {
+      rating: "desc",
+    },
+    take: 3,
+  });
+
+  return merchants;
+}
