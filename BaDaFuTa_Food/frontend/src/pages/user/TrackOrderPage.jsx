@@ -12,6 +12,7 @@ import {
   Package,
   Truck,
   Bike,
+  ArrowUpDown,
   Check,
   Home,
   Star,
@@ -141,6 +142,7 @@ export const TrackOrderPage = () => {
     latLng: '0, 0', // Tọa độ hiện tại
     distanceRemaining: 0, // Km còn lại
     currentAddress: 'Đang định vị...',
+    windSpeed: 0,
   });
 
   // Ref để đảm bảo sự kiện chỉ nổ ra 1 lần
@@ -413,6 +415,7 @@ export const TrackOrderPage = () => {
             signal: Math.max(70, 100 - progress * 20 + Math.random() * 5),
             latLng: `${currentLat.toFixed(4)}, ${currentLng.toFixed(4)}`, // Làm tròn 4 số lẻ
             distanceRemaining: distRemain.toFixed(2), // Làm tròn 2 số lẻ (VD: 3.52 km)
+            windSpeed: (2 + Math.random() * 6).toFixed(1),
           };
           // Sự kiện ngẫu nhiên
           if (progress > 0.4 && progress < 0.7 && !eventTriggeredRef.current) {
@@ -430,7 +433,7 @@ export const TrackOrderPage = () => {
             );
           }
         } else if (step === 4)
-          stats = { altitude: 0, speed: 0, status: 'NORMAL', distanceRemaining: 0 };
+          stats = { altitude: 0, speed: 0, status: 'NORMAL', distanceRemaining: 0, windSpeed: 0 };
 
         setDroneStats((prev) =>
           prev.status !== 'NORMAL' && step === 3
@@ -783,15 +786,15 @@ export const TrackOrderPage = () => {
                       <Target className="w-3 h-3" /> DRONE-01
                     </span>
                     <span className="flex items-center gap-1 text-gray-400">
-                      <Wifi className="w-3 h-3" /> {Math.round(droneStats.signal)}%
+                      <Wifi className="w-3 h-3 text-green-400" /> {Math.round(droneStats.signal)}%
                     </span>
                   </div>
 
                   {/* Nhóm 1: Thông tin vị trí */}
                   <div className="space-y-3 md:space-y-2">
                     <div className="flex justify-between items-center">
-                      <div className="flex items-center gap-1.5 text-gray-400">
-                        <MapIcon className="w-3.5 h-3.5" />
+                      <div className="flex items-center gap-1.5 text-cyan-400">
+                        <MapIcon className="w-3.5 h-3.5 " />
                         <span className="text-xs font-medium">GPS</span>
                       </div>
                       <div className="text-white text-xs font-medium leading-tight truncate">
@@ -800,7 +803,7 @@ export const TrackOrderPage = () => {
                     </div>
 
                     <div className="flex justify-between items-center">
-                      <div className="flex items-center gap-1.5 text-gray-400 text-[10px] uppercase tracking-wider mb-0.5">
+                      <div className="flex items-center gap-1.5 text-gray-400">
                         <MapPin className="w-3 h-3" />
                         Đang bay qua:
                       </div>
@@ -810,7 +813,7 @@ export const TrackOrderPage = () => {
                     </div>
 
                     <div className="flex justify-between items-center">
-                      <div className="flex items-center gap-1.5 text-gray-400">
+                      <div className="flex items-center gap-1.5 text-orange-400">
                         <Navigation className="w-3.5 h-3.5" /> DIST
                       </div>
                       <div className="font-bold text-orange-400">
@@ -825,7 +828,7 @@ export const TrackOrderPage = () => {
                   {/* Nhóm 2: Thông số kỹ thuật */}
                   <div className="space-y-3 md:space-y-2">
                     <div className="flex justify-between items-center">
-                      <div className="flex items-center gap-1.5 text-gray-400">
+                      <div className="flex items-center gap-1.5 text-emerald-400">
                         <Battery className="w-3.5 h-3.5" /> PIN
                       </div>
                       <div
@@ -837,7 +840,7 @@ export const TrackOrderPage = () => {
                       </div>
                     </div>
                     <div className="flex justify-between items-center">
-                      <div className="flex items-center gap-1.5 text-gray-400">
+                      <div className="flex items-center gap-1.5 text-blue-400">
                         <Zap className="w-3.5 h-3.5" /> SPD
                       </div>
                       <div className="font-bold text-blue-400">
@@ -846,12 +849,25 @@ export const TrackOrderPage = () => {
                     </div>
                     <div className="flex justify-between items-center">
                       <div className="flex items-center gap-1.5 text-gray-400">
-                        <Wind className="w-3.5 h-3.5" /> ALT
+                        <ArrowUpDown className="w-3.5 h-3.5 text-yellow-400" /> ALT
                       </div>
                       <div className="font-bold text-yellow-400">
                         {Math.round(droneStats.altitude)} m
                       </div>
                     </div>
+                    {/* ... (Các dòng Battery, SPD cũ ...) */}
+
+                    <div className="flex justify-between items-center">
+                      <div className="flex items-center gap-1.5 text-gray-400">
+                        {/* Icon Gió màu Cyan */}
+                        <Wind className="w-3.5 h-3.5 text-cyan-400" />
+                        <span className="text-xs">WIND</span>
+                      </div>
+                      <div className="font-bold text-cyan-400">{droneStats.windSpeed} m/s</div>
+                    </div>
+
+                    {/* Dòng Altitude (Độ cao) cũ của bạn ở dưới đây */}
+                    <div className="flex justify-between items-center">{/* ... */}</div>
                   </div>
                 </div>
               )}

@@ -1,94 +1,104 @@
-{/* --- HUD: LUÔN NẰM DƯỚI MAP (CHO CẢ MOBILE & PC) --- */}
 {currentStep >= 2 && currentStep < 4 && (
-  <div
-    className="
-      z-[400] font-mono text-xs rounded-xl border shadow-xl backdrop-blur-md transition-all
-      
-      /* Cấu hình chung (Mobile + Desktop): */
-      /* Nằm dưới map (mt-3), Chiều rộng Full (w-full) */
-      mt-3 w-full 
-      
-      /* Màu sắc: Nền tối (Slate 900), Chữ trắng */
-      bg-slate-900 text-white border-slate-700 
-      
-      /* Bố cục: Xếp dọc (flex-col), khoảng cách 3, padding 4 */
-      flex flex-col gap-3 p-4
-    "
-  >
+  <div className="
+    z-[400] font-mono text-xs rounded-xl border shadow-2xl backdrop-blur-md transition-all
+    mt-3 w-full bg-slate-900/95 text-white border-slate-700
+    flex flex-col p-4 gap-4
+  ">
     {/* Header */}
-    <div className="flex justify-between items-center mb-1 pb-2 border-b border-white/20">
-      <span className="font-bold text-orange-400 flex items-center gap-1">
-        <Target className="w-3 h-3" /> DRONE-01
+    <div className="flex justify-between items-center pb-2 border-b border-white/10">
+      <span className="font-bold text-orange-400 flex items-center gap-1.5">
+        <Target className="w-4 h-4" />
+        DRONE-01
       </span>
-      <span className="flex items-center gap-1 text-gray-400">
-        <Wifi className="w-3 h-3" /> {Math.round(droneStats.signal)}%
+      <span className="flex items-center gap-1 text-green-400">
+        <Wifi className="w-3.5 h-3.5" />
+        {Math.round(droneStats.signal)}%
       </span>
     </div>
 
-    {/* Nhóm 1: Thông tin vị trí */}
-    <div className="space-y-3">
+    {/* Nhóm 1: Vị trí */}
+    <div className="space-y-2.5">
+      {/* GPS */}
       <div className="flex justify-between items-center">
-        <div className="flex items-center gap-1.5 text-gray-400">
-          <MapIcon className="w-3.5 h-3.5" />
-          <span className="text-xs font-medium">GPS</span>
+        <div className="flex items-center gap-2 text-cyan-400">
+          <MapIcon className="w-4 h-4" />
+          <span className="text-xs font-semibold">GPS</span>
         </div>
-        <div className="text-white font-mono text-[11px] tracking-tighter tabular-nums">
+        <div className="font-mono text-[11px] tracking-tight text-right">
           {droneStats.latLng}
         </div>
       </div>
-      
-      <div className="flex flex-col mt-2">
-        <div className="flex items-center gap-1.5 text-gray-400 text-[10px] uppercase tracking-wider mb-0.5">
-          <MapPin className="w-3 h-3" />
-          Đang bay qua:
+
+      {/* Địa chỉ */}
+      <div className="flex justify-between items-center">
+        <div className="flex items-center gap-2 text-gray-400">
+          <MapPin className="w-3.5 h-3.5" />
+          <span className="text-[10px] uppercase tracking-wider">Đang bay qua</span>
         </div>
-        <div className="text-white text-xs font-medium leading-tight truncate">
+        <div className="text-xs text-right truncate max-w-[65%]">
           {droneStats.currentAddress}
         </div>
       </div>
 
+      {/* Khoảng cách */}
       <div className="flex justify-between items-center">
-        <div className="flex items-center gap-1.5 text-gray-400">
-          <Navigation className="w-3.5 h-3.5" /> DIST
+        <div className="flex items-center gap-2 text-orange-400">
+          <Navigation className="w-4 h-4" />
+          <span className="text-xs font-semibold">DIST</span>
         </div>
-        <div className="font-bold text-orange-400">
+        <span className="font-bold text-orange-400">
           {droneStats.distanceRemaining} km
-        </div>
+        </span>
       </div>
     </div>
 
-    {/* Đường kẻ phân cách */}
-    <div className="w-full h-[1px] bg-white/10 my-1"></div>
+    {/* Đường kẻ mỏng */}
+    <div className="h-px bg-gradient-to-r from-transparent via-white/20 to-transparent" />
 
-    {/* Nhóm 2: Thông số kỹ thuật */}
-    <div className="space-y-3">
+    {/* Nhóm 2: Thông số bay – màu icon siêu đẹp & hợp lý */}
+    <div className="space-y-2.5">
+      {/* Pin */}
       <div className="flex justify-between items-center">
-        <div className="flex items-center gap-1.5 text-gray-400">
-          <Battery className="w-3.5 h-3.5" /> PIN
+        <div className="flex items-center gap-2 text-emerald-400">
+          <Battery className="w-4 h-4" />
+          <span className="text-xs font-semibold">PIN</span>
         </div>
-        <div
-          className={`font-bold ${
-            droneStats.battery < 20 ? 'text-red-500 animate-pulse' : 'text-green-400'
-          }`}
-        >
+        <span className={`font-bold text-lg ${droneStats.battery < 20 ? 'text-red-500 animate-pulse' : 'text-emerald-400'}`}>
           {Math.round(droneStats.battery)}%
-        </div>
+        </span>
       </div>
+
+      {/* Tốc độ */}
       <div className="flex justify-between items-center">
-        <div className="flex items-center gap-1.5 text-gray-400">
-          <Zap className="w-3.5 h-3.5" /> SPD
+        <div className="flex items-center gap-2 text-blue-400">
+          <Zap className="w-4 h-4" />
+          <span className="text-xs font-semibold">SPD</span>
         </div>
-        <div className="font-bold text-blue-400">
+        <span className="font-bold text-blue-400">
           {Math.round(droneStats.speed)} km/h
-        </div>
+        </span>
       </div>
+
+      {/* Độ cao */}
       <div className="flex justify-between items-center">
-        <div className="flex items-center gap-1.5 text-gray-400">
-          <Wind className="w-3.5 h-3.5" /> ALT
+        <div className="flex items-center gap-2 text-yellow-400">
+          <ArrowUpDown className="w-4 h-4" />
+          <span className="text-xs font-semibold">ALT</span>
         </div>
-        <div className="font-bold text-yellow-400">
+        <span className="font-bold text-yellow-400">
           {Math.round(droneStats.altitude)} m
+        </span>
+      </div>
+
+      {/* Tốc độ gió */}
+      <div className="flex justify-between items-center">
+        <div className="flex items-center gap-2 text-cyan-300">
+          <Wind className="w-4 h-4" />
+          <span className="text-xs font-semibold">WIND</span>
         </div>
+        <span className="font-bold text-cyan-300">
+          {droneStats.windSpeed} m/s
+        </span>
       </div>
     </div>
   </div>
