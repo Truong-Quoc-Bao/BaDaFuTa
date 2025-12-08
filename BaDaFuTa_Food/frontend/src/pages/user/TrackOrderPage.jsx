@@ -23,6 +23,7 @@ import {
   DollarSign,
   Clock,
   ShoppingBag,
+  Loader2,
 } from 'lucide-react';
 import 'leaflet/dist/leaflet.css';
 import { motion } from 'framer-motion';
@@ -46,6 +47,7 @@ export const TrackOrderPage = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const { id } = useParams();
+  const [isUpdating, setIsUpdating] = useState(false);
 
   const orderFromState = location.state?.order || null;
   const cameFrom = location.state?.from || null;
@@ -578,8 +580,10 @@ export const TrackOrderPage = () => {
                   Cảm ơn bạn đã sử dụng dịch vụ. Chúc bạn ngon miệng!
                 </p>
                 <Button
-                  className="bg-green-600 hover:bg-green-700 text-white px-8 py-6 rounded-xl shadow-lg shadow-green-600/30 text-lg font-semibold w-full md:w-auto transition-all transform hover:scale-105"
+                  disabled={isUpdating} // 1. Vô hiệu hóa khi đang load
+                  className="bg-green-600 hover:bg-green-700 text-white px-8 py-6 rounded-xl shadow-lg shadow-green-600/30 text-lg font-semibold w-full md:w-auto transition-all transform hover:scale-105 disabled:opacity-70 disabled:cursor-not-allowed disabled:hover:scale-100"
                   onClick={async () => {
+                    setIsUpdating(true); // 2. Bắt đầu quay
                     try {
                       const apiId = order.id || order._id || order.order_id || id;
                       if (!apiId) return;
@@ -606,11 +610,18 @@ export const TrackOrderPage = () => {
                       });
                     } catch (err) {
                       console.error('❌ Lỗi khi xác nhận:', err);
+                      setIsUpdating(false); // 3. Tắt quay nếu gặp lỗi để bấm lại
                     }
                   }}
                 >
-                  <Check className="w-6 h-6 mr-2" />
-                  Xác nhận đã nhận hàng
+                  {isUpdating ? (
+                    // Icon quay quay
+                    <Loader2 className="w-6 h-6 mr-2 animate-spin" />
+                  ) : (
+                    // Icon check cũ
+                    <Check className="w-6 h-6 mr-2" />
+                  )}
+                  {isUpdating ? 'Đang xử lý...' : 'Xác nhận đã nhận hàng'}
                 </Button>
               </motion.div>
             )}
