@@ -1,14 +1,17 @@
-import { useNavigate, useParams, Link } from 'react-router-dom';
-import { useEffect, useState, useMemo } from 'react'; // ✅ Đảm bảo có useMemo
+import { useNavigate, useParams, Link } from 'react-router-dom'; // ✅
+import { useEffect, useState } from 'react';
 import OpeningStatus from '../../components/OpeningStatus';
 import { useCart } from '../../contexts/CartContext';
+// import { toast, Toaster } from "sonner"; // ✅ nếu muốn hiện thông báo đẹp
 import toast, { Toaster } from 'react-hot-toast';
-import { ArrowLeft, Star, Clock, Truck, MapPin, Award, Users, Filter, X } from 'lucide-react'; // ✅ Thêm icon Filter, X
+import { useMemo } from 'react';
+import { ArrowLeft, Star, Clock, Truck, MapPin, Award, Users, Filter, X } from 'lucide-react';
 import { Button } from '../../components/ui/button';
 import { Badge } from '../../components/ui/badge';
 import { MenuItemCard } from '../../components/MenuItemCard';
 import { ImageWithFallback } from '../../components/figma/ImageWithFallback';
-import { motion } from 'framer-motion';
+import { motion } from 'framer-motion'; // Để làm hiệu ứng nảy nút
+// import { toast } from 'sonner'; // (Tuỳ chọn) Nếu bạn có dùng thư viện thông báo
 
 // --- 1. CẤU HÌNH CÁC MỐC GIÁ ---
 const PRICE_RANGES = [
@@ -28,81 +31,107 @@ export const RestaurantPage = () => {
   const [menu, setMenu] = useState([]);
   const [loading, setLoading] = useState(true);
   const [errMsg, setErrMsg] = useState('');
-  
-  // --- 2. STATE CHO BỘ LỌC ---
-  const [priceFilter, setPriceFilter] = useState('ALL');
 
+  const [priceFilter, setPriceFilter] = useState('ALL');
+  // Key để lưu danh sách yêu thích trong localStorage
+  const FAVORITE_KEY = 'favoriteRestaurants';
+  // Giả lập trạng thái ban đầu (thường sẽ lấy từ props hoặc API)
   const [isFavorite, setIsFavorite] = useState(false);
   const [isAnimating, setIsAnimating] = useState(false);
-  const FAVORITE_KEY = 'favoriteRestaurants';
 
-  // ... (Giữ nguyên các useEffect load data và handleToggleFavorite cũ của bạn) ...
-  // Để code gọn, mình ẩn phần logic fetch API và Favorite cũ đi vì nó không đổi
-  
   useEffect(() => {
     if (!id) return;
     const favorites = JSON.parse(localStorage.getItem(FAVORITE_KEY) || '{}');
-    setIsFavorite(!!favorites[id]);
+    setIsFavorite(!!favorites[id]); // true nếu đã thích trước đó
   }, [id]);
 
   const handleToggleFavorite = (e) => {
-     // ... (Logic cũ giữ nguyên)
-     e.stopPropagation();
-     e.preventDefault();
-     const newState = !isFavorite;
-     setIsFavorite(newState);
-     setIsAnimating(true);
-     const favorites = JSON.parse(localStorage.getItem(FAVORITE_KEY) || '{}');
-     if (newState) {
-       favorites[id] = {
-         restaurantId: id,
-         name: restaurant?.merchant_name || 'Nhà hàng',
-         coverImage: restaurant?.cover_image?.url,
-         savedAt: new Date().toISOString(),
-       };
-       toast.success('Đã thêm vào yêu thích ❤️');
-     } else {
-       delete favorites[id];
-       toast.success('Đã huỷ yêu thích 💔');
-     }
-     localStorage.setItem(FAVORITE_KEY, JSON.stringify(favorites));
-     setTimeout(() => setIsAnimating(false), 300);
+    // Ngăn sự kiện nổi bọt (nếu nút này nằm trên thẻ Card có thể click được)
+    e.stopPropagation();
+    e.preventDefault();
+    const newState = !isFavorite;
+    setIsFavorite(newState);
+    setIsAnimating(true);
+    // Cập nhật localStorage
+    const favorites = JSON.parse(localStorage.getItem(FAVORITE_KEY) || '{}');
+
+    if (newState) {
+      // Thêm vào danh sách yêu thích
+      favorites[id] = {
+        restaurantId: id,
+        name: restaurant?.merchant_name || 'Nhà hàng',
+        coverImage: restaurant?.cover_image?.url,
+        savedAt: new Date().toISOString(),
+      };
+      toast.success('Đã thêm vào yêu thích ❤️');
+    } else {
+      // Xóa khỏi danh sách
+      delete favorites[id];
+      toast.success('Đã huỷ yêu thích 💔');
+    }
+
+    localStorage.setItem(FAVORITE_KEY, JSON.stringify(favorites));
+    // Reset animation sau khi chạy xong
+    setTimeout(() => setIsAnimating(false), 300);
+
+    // TODO: Gọi API cập nhật server tại đây
+    // console.log("Đã cập nhật yêu thích:", newState);
+    // toast.success(newState ? 'Đã thêm vào yêu thích ❤️' : 'Đã huỷ yêu thích 💔');
   };
 
   useEffect(() => {
-    // ... (Logic fetch menu cũ giữ nguyên)
     if (!id) return;
+
     const ac = new AbortController();
+
     async function fetchMenu() {
-      const hosts = [`https://badafuta-production.up.railway.app/api/restaurants/${encodeURIComponent(id)}/menu`];
+      const hosts = [
+        // `/api192/restaurants/${encodeURIComponent(id)}/menu`,
+        // `/apiLocal/restaurants/${encodeURIComponent(id)}/menu`,
+        `https://badafuta-production.up.railway.app/api/restaurants/${encodeURIComponent(id)}/menu`,
+
+        // `/api172/restaurants/${encodeURIComponent(id)}/menu`,
+      ];
       setLoading(true);
       setErrMsg('');
+
       for (const url of hosts) {
         try {
           const res = await fetch(url, { signal: ac.signal });
-          if (!res.ok) throw new Error();
+          if (!res.ok) {
+            const t = await res.text().catch(() => '');
+            throw new Error(t || `Không tìm thấy nhà hàng tại ${url}`);
+          }
+
           const data = await res.json();
           setRestaurant(data.merchant ?? null);
           setMenu(Array.isArray(data.menu) ? data.menu : []);
-          return;
-        } catch (e) {}
+          console.log('Lấy dữ liệu menu từ:', url);
+          return; // thành công thì thoát loop
+        } catch (e) {
+          if (e.name !== 'AbortError') {
+            console.warn(e.message);
+            // tiếp tục thử host tiếp theo
+          }
+        }
       }
-      setErrMsg('Lỗi tải dữ liệu');
+
+      setErrMsg('Không tải được dữ liệu nhà hàng từ bất kỳ host nào. Vui lòng thử lại.');
       setRestaurant(null);
       setMenu([]);
     }
+
     fetchMenu();
     return () => ac.abort();
   }, [id]);
 
-  const handleAddToCart = (item) => {
-    // Lưu ý: addItem cần đúng tham số, ở đây mình giả định bạn xử lý logic option bên trong MenuItemCard
-    // hoặc bạn truyền item trực tiếp nếu MenuItemCard đã xử lý việc chọn option.
-    // Nếu MenuItemCard trả về item đã chọn option, thì code này ok.
-    toast.success(`Đã thêm món vào giỏ hàng`); 
+  //Thêm vào giỏ hàng
+  const handleAddToCart = () => {
+    addItem(menuItem, restaurant, selectedToppings, specialInstructions);
+    toast.success(`Đã thêm ${menuItem.name} vào giỏ hàng`);
+    onClose(); // đóng dialog
   };
 
-  // --- 3. LOGIC LỌC MENU (QUAN TRỌNG) ---
   const filteredMenu = useMemo(() => {
     // Nếu chọn "Tất cả" thì trả về menu gốc
     if (priceFilter === 'ALL') return menu;
@@ -124,6 +153,9 @@ export const RestaurantPage = () => {
       })
       .filter((category) => category.items.length > 0); // Loại bỏ category trống (không có món nào khớp giá)
   }, [menu, priceFilter]);
+
+  console.log(menu);
+  console.log(menu[0]?.items[0]?.options);
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -376,17 +408,15 @@ export const RestaurantPage = () => {
           </div>
         </div>
       </div>
-      {/* ... (Kết thúc phần Header) ... */}
 
-
-      {/* --- 4. GIAO DIỆN BỘ LỌC (THAY THẾ div "Bộ lọc") --- */}
+      {/* Lọc */}
       <div className="sticky top-0 z-20 bg-gray-50/95 backdrop-blur-sm py-4 -mx-4 px-4 sm:mx-0 sm:px-0 mb-6 border-b border-gray-200">
         <div className="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-hide">
           <div className="flex items-center gap-2 pr-4 border-r border-gray-300 mr-2 shrink-0 text-gray-500">
             <Filter className="w-4 h-4" />
             <span className="text-sm font-semibold">Lọc giá:</span>
           </div>
-          
+
           {PRICE_RANGES.map((range) => (
             <button
               key={range.id}
@@ -417,16 +447,16 @@ export const RestaurantPage = () => {
         </div>
       </div>
 
-      {/* --- 5. HIỂN THỊ MENU ĐÃ LỌC (Dùng filteredMenu thay vì menu) --- */}
+      {/* Menu */}
       {Array.isArray(filteredMenu) && filteredMenu.length > 0 ? (
         filteredMenu.map((category) => (
           <section key={category.category_id ?? category.id} className="mb-8">
             <div className="flex items-center gap-3 mb-4">
-               <h2 className="text-2xl font-bold text-gray-800">{category.category_name}</h2>
-               <div className="h-1 flex-1 bg-gray-100 rounded-full"></div>
-               <span className="text-sm text-gray-400 font-medium">{category.items.length} món</span>
+              <h2 className="text-2xl font-bold text-gray-800">{category.category_name}</h2>
+              <div className="h-1 flex-1 bg-gray-100 rounded-full"></div>
+              <span className="text-sm text-gray-400 font-medium">{category.items.length} món</span>
             </div>
-
+            {/* 1 cột (mobile) → 2 (sm) → 3 (md) → 4 (lg) */}
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
               {Array.isArray(category.items) && category.items.length > 0 ? (
                 category.items.map((rawItem) => {
@@ -436,9 +466,11 @@ export const RestaurantPage = () => {
                     description: rawItem.description ?? '',
                     price: Number(rawItem.price) || 0,
                     image: rawItem.image ?? rawItem.image_item?.url ?? null,
+                    // toppings: rawItem.toppings ?? [],
                     options: rawItem.options ?? [],
                     isAvailable: rawItem.isAvailable !== false,
                     originalPrice: rawItem.originalPrice ?? rawItem.price,
+                    // Thêm
                     categoryId: category.id ?? category.category_id,
                     categoryName: category.category_name,
                     restaurantId: restaurant?.id,
@@ -455,30 +487,46 @@ export const RestaurantPage = () => {
                         restaurant={restaurant}
                         layout="vertical"
                         className="h-full"
-                        onAddToCart={() => handleAddToCart(item)}
+                        onAddToCart={() => handleAddToCart(item)} // ✅ thêm dòng này
                       />
                     </div>
                   );
                 })
               ) : (
-                <p className="text-gray-500 italic col-span-full">Không tìm thấy món nào trong khoảng giá này.</p>
+                <p className="text-gray-500 italic">Chưa có món nào trong mục này.</p>
               )}
             </div>
+            <Toaster
+              position="top-right"
+              toastOptions={{
+                duration: 1000, // 1 giây tự tắt
+                style: { pointerEvents: 'none' }, // tránh bị touch giữ
+                pauseOnFocusLoss: false,
+                pauseOnHover: false,
+              }}
+            />
+            {/* <Toaster position="top-right" /> */}
           </section>
         ))
       ) : (
         <div className="text-center py-12">
-            <div className="inline-flex bg-gray-100 p-4 rounded-full mb-4">
-                <Filter className="w-8 h-8 text-gray-400" />
-            </div>
-            <p className="text-gray-500 text-lg">Không có món ăn nào trong khoảng giá <strong>{PRICE_RANGES.find(r => r.id === priceFilter)?.label}</strong>.</p>
-            <Button variant="link" onClick={() => setPriceFilter('ALL')} className="text-orange-500 mt-2">
-                Xem tất cả món
-            </Button>
+          <div className="inline-flex bg-gray-100 p-4 rounded-full mb-4">
+            <Filter className="w-8 h-8 text-gray-400" />
+          </div>
+          <p className="text-gray-500 text-lg">
+            Không có món ăn nào trong khoảng giá{' '}
+            <strong>{PRICE_RANGES.find((r) => r.id === priceFilter)?.label}</strong>.
+          </p>
+          <Button
+            variant="link"
+            onClick={() => setPriceFilter('ALL')}
+            className="text-orange-500 mt-2"
+          >
+            Xem tất cả món
+          </Button>
         </div>
       )}
-
-      <Toaster position="top-right" toastOptions={{ duration: 1000 }} />
+      {/* <Toaster position="top-right" toastOptions={{ duration: 1000 }} /> */}
     </div>
   );
 };
