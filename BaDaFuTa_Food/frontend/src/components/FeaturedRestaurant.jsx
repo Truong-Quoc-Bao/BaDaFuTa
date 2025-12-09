@@ -1,4 +1,4 @@
-import { Star, Clock, Truck, Tag } from 'lucide-react';
+import { Star, Clock, Truck, Tag, MapPin } from 'lucide-react';
 import { Card, CardContent } from './ui/card';
 import { Badge } from './ui/badge';
 import { Button } from './ui/button';
@@ -78,24 +78,9 @@ export const FeaturedRestaurant = ({ restaurant, promotion }) => {
           </Badge>
         </div>
 
-        <div className="absolute bottom-4 left-4 right-4 text-white">
-          <h3 className="text-xl font-bold mb-2">{restaurant.merchant_name}</h3>
+        <div className="text-white">
           <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-4 text-sm">
-              <div className="flex items-center space-x-1">
-                <Star className="w-4 h-4 text-yellow-400 fill-current" />
-                <span>{restaurant.rating}</span>
-              </div>
-              <div className="flex items-center space-x-1">
-                <Clock className="w-4 h-4" />
-                <span>{restaurant.deliveryTime} Phút</span>
-              </div>
-              <div className="flex items-center space-x-1">
-                <Truck className="w-4 h-4" />
-                <span>{restaurant.deliveryFee.toLocaleString('vi-VN')}đ</span>
-              </div>
-            </div>
-            <div className="absolute bottom-2 right-2 bg-white/80 backdrop-blur-sm px-2 py-1 rounded-lg flex items-center space-x-1 text-sm">
+            <div className="absolute bottom-2 left-2 bg-white/80 backdrop-blur-sm px-2 py-1 rounded-lg flex items-center space-x-1 text-sm">
               <OpeningStatus time_open={restaurant?.time_open}>
                 <div className="flex items-center space-x-2">
                   <OpeningStatus.Clock />
@@ -107,17 +92,54 @@ export const FeaturedRestaurant = ({ restaurant, promotion }) => {
         </div>
       </div>
 
-      <CardContent className="p-6">
-        <p className="text-gray-600 mb-4">{restaurant.description}</p>
+      <CardContent className="flex-1 flex flex-col mt-[-23px] sm:px-5 sm:pb-5 sm:pt-3">
+        <div className="flex justify-between items-start mb-2">
+          <h3 className="text-lg sm:text-xl font-bold text-slate-800 line-clamp-1 group-hover:text-orange-600 transition-colors">
+            {restaurant.merchant_name}
+          </h3>
+        </div>
+        {/* Description */}
+        <p className="text-sm text-slate-500 mb-1 line-clamp-2 min-h-[2.5em]">
+          {restaurant.description}
+        </p>
 
+        <div className="space-y-2">
+          {/* Distance and delivery time */}
+          <div className="flex mt-2 items-center justify-between text-sm">
+            <div className="flex items-center space-x-1 text-gray-500">
+              <Clock className="w-4 h-4" />
+              <span>{restaurant.deliveryTime} phút</span>
+            </div>
+
+            {restaurant.distance !== undefined && (
+              <div className="flex items-center space-x-1 text-gray-500">
+                <MapPin className="w-4 h-4" />
+                <span>{restaurant.distance} km</span>
+              </div>
+            )}
+          </div>
+
+          {/* Delivery fee */}
+          <div className="flex items-center justify-between w-full">
+            <span className="text-sm text-gray-500">Phí giao hàng:</span>
+            <div className="flex items-center space-x-1">
+              <Truck className="w-4 h-4 text-orange-500" />
+              <span className="font-medium text-orange-600">
+                {restaurant.deliveryFee === 0
+                  ? 'Miễn phí'
+                  : `${restaurant.deliveryFee?.toLocaleString('vi-VN')}đ`}
+              </span>
+            </div>
+          </div>
+        </div>
         {promotion && (
-          <div className="bg-orange-50 border border-orange-200 rounded-lg p-3 mb-4">
+          <div className="bg-orange-50 border border-orange-200 rounded-lg p-3 mb-2 mt-4">
             <p className="font-semibold text-orange-800 text-sm">{promotion.title}</p>
             <p className="text-orange-600 text-xs">{promotion.description}</p>
           </div>
         )}
 
-        <Button onClick={handleClick} className="w-full bg-orange-500 hover:bg-orange-600">
+        <Button onClick={handleClick} className="w-full bg-orange-500 hover:bg-orange-600 mt-2 ">
           Xem menu & đặt hàng
         </Button>
       </CardContent>
