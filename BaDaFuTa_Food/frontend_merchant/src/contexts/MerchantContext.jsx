@@ -1,6 +1,19 @@
-import { createContext, useContext, useState, useEffect, useCallback } from 'react';
-
+import { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
+import { toast } from 'sonner'; // <-- thêm import này
+import { io } from 'socket.io-client';
 const MerchantContext = createContext(undefined);
+
+// =======================
+// 🟢 Tạo socket 1 lần duy nhất
+// =======================
+const socket = io('https://badafuta-production.up.railway.app', {
+  path: '/socket.io',
+  transports: ['websocket', 'polling'],
+  secure: true,
+  reconnection: true,
+  reconnectionAttempts: Infinity,
+  reconnectionDelay: 1000,
+});
 
 export function MerchantProvider({ children }) {
   const [merchantSettings, setMerchantSettings] = useState({
@@ -18,23 +31,67 @@ export function MerchantProvider({ children }) {
   // Dashboard data state
   const [dashboardData, setDashboardData] = useState(null);
 
-  // Load merchantAuth
+  // =======================
+  // 🔹 Load merchantAuth từ localStorage ngay khi mount
+  // =======================
   useEffect(() => {
     const stored = localStorage.getItem('merchantAuth');
-    if (stored) setMerchantAuth(JSON.parse(stored));
+    if (stored) {
+      const parsed = JSON.parse(stored);
+      setMerchantAuth(parsed);
+    }
   }, []);
+
+  // =======================
+  // 🔹 Join socket room ngay khi có merchantAuth
+  // =======================
+  useEffect(() => {
+    if (!merchantAuth?.user_id) return;
+
+    // Join đúng room
+    socket.emit('joinMerchant', merchantAuth.user_id);
+    console.log('✅ Joined merchant room:', merchantAuth.user_id);
+
+    // Lắng nghe đơn mới
+    const handleNewOrder = (order) => {
+      if (order.merchant_id !== merchantAuth.user_id) return;
+      console.log('🔥 Đơn mới:', order);
+      setOrders((prev) => [order, ...prev]);
+      toast.success('🔥 Có đơn hàng mới!');
+    };
+
+    socket.on('newOrder', handleNewOrder);
+
+    return () => socket.off('newOrder', handleNewOrder);
+  }, [merchantAuth?.user_id]);
 
   // ✅ Fetch dashboard và lưu vào state
   const fetchDashboard = useCallback(async () => {
     try {
-      const response = await fetch('http://localhost:3000/api/merchant/overview', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ user_id: '7a11116f-f677-4015-8fec-68836c743ed2' }),
-      });
+      const response = await fetch(
+        'https://badafuta-production.up.railway.app/api/merchant/overview',
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ user_id: 'be32facc-e24e-4429-9059-a1298498584f' }),
+        },
+      );
       const data = await response.json();
       setDashboardData(data); // lưu vào state
       console.log('Dashboard data:', data);
+
+      // CHỈ SET ORDERS 1 LẦN DUY NHẤT TỪ API Ở ĐÂY
+      if (data?.data) {
+        const allOrders = [
+          ...(data.data.pendingOrderList || []),
+          ...(data.data.confirmedOrdersList || []),
+          ...(data.data.preparingOrdersList || []),
+          ...(data.data.deliveringOrdersList || []),
+          ...(data.data.completedOrdersList || []),
+          ...(data.data.canceledOrdersList || []),
+        ];
+        setOrders(allOrders); // ← Chỉ set 1 lần ở đây thôi!
+      }
     } catch (error) {
       console.error('Error fetching dashboard:', error);
     }
@@ -45,70 +102,45 @@ export function MerchantProvider({ children }) {
     fetchDashboard();
   }, [fetchDashboard]);
 
-  // ================= WebSocket =================
-  useEffect(() => {
-    if (!merchantAuth) return;
-
-    const ws = new WebSocket('ws://localhost:3000/ws/merchant'); // endpoint WebSocket backend
-
-    ws.onopen = () => {
-      console.log('WebSocket connected for merchant dashboard');
-      // Có thể gửi thông tin nhận dạng nhà hàng
-      ws.send(JSON.stringify({ type: 'subscribe', restaurantId: merchantAuth.restaurantId }));
-    };
-
-    ws.onmessage = (event) => {
-      const message = JSON.parse(event.data);
-      console.log('WS message:', message);
-
-      if (message.type === 'newOrder') {
-        // Cập nhật recentOrders và các stats
-        setDashboardData((prev) => ({
-          ...prev,
-          data: {
-            ...prev.data,
-            todayOrders: prev.data.todayOrders + 1,
-            pendingOrders: prev.data.pendingOrders + 1,
-            totalRevenue: prev.data.totalRevenue + message.data.total_amount,
-            todayRevenue: prev.data.todayRevenue + message.data.total_amount,
-            recentOrders: [message.data, ...prev.data.recentOrders],
-          },
-        }));
-      }
-
-      if (message.type === 'orderUpdated') {
-        // Cập nhật trạng thái đơn
-        setDashboardData((prev) => ({
-          ...prev,
-          data: {
-            ...prev.data,
-            recentOrders: prev.data.recentOrders.map((o) =>
-              o.id === message.data.id ? { ...o, status: message.data.status } : o,
-            ),
-            pendingOrders:
-              message.data.status.toLowerCase() === 'completed'
-                ? prev.data.pendingOrders - 1
-                : prev.data.pendingOrders,
-          },
-        }));
-      }
-    };
-
-    ws.onclose = () => {
-      console.log('WebSocket disconnected');
-    };
-
-    ws.onerror = (err) => console.error('WebSocket error:', err);
-
-    return () => ws.close();
-  }, [merchantAuth]);
   // ===========================================
+  // MerchantContext.jsx
+
+  const updateOrderStatus = async (orderId, status, reason) => {
+    try {
+      const response = await fetch(
+        'https://badafuta-production.up.railway.app/api/merchant/update-status',
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            user_id: 'be32facc-e24e-4429-9059-a1298498584f', // <- thử trực tiếp
+            order_id: orderId,
+            action: status,
+            reason: reason || '',
+          }),
+        },
+      );
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData?.error || 'Cập nhật thất bại');
+      }
+
+      const updatedOrder = await response.json();
+
+      setOrders((prev) =>
+        prev.map((o) => (o.id === orderId ? { ...o, status, notes: reason || o.notes } : o)),
+      );
+
+      return updatedOrder;
+    } catch (error) {
+      console.error(error);
+      toast.error(error.message || 'Có lỗi khi cập nhật đơn hàng');
+    }
+  };
 
   const updateMerchantSettings = (newSettings) =>
     setMerchantSettings((prev) => ({ ...prev, ...newSettings }));
-
-  const updateOrderStatus = (orderId, status) =>
-    setOrders((prev) => prev.map((o) => (o.id === orderId ? { ...o, status } : o)));
 
   const cancelOrder = (orderId, reason) =>
     setOrders((prev) =>
@@ -133,6 +165,7 @@ export function MerchantProvider({ children }) {
         merchantSettings,
         updateMerchantSettings,
         orders,
+        setOrders, // thêm dòng này
         updateOrderStatus,
         cancelOrder,
         autoConfirmEnabled: merchantSettings.autoConfirmOrders,

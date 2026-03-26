@@ -1,15 +1,18 @@
-import React, { useState, useEffect, useRef, useMemo } from 'react';
+import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
-import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
+import { MapContainer, TileLayer, Marker, Popup, Polyline, useMap } from 'react-leaflet';
 import { Button } from '../../components/ui/button';
 import L from 'leaflet';
 import {
   MapPin,
+  Map as MapIcon,
   MessageCircle,
   Phone,
+  Target,
   Package,
   Truck,
   Bike,
+  ArrowUpDown,
   Check,
   Home,
   Star,
@@ -21,10 +24,19 @@ import {
   Tag,
   Percent,
   DollarSign,
+  Clock,
+  ShoppingBag,
+  Loader2,
+  Battery,
+  Wifi,
+  Zap,
+  Navigation,
+  AlertTriangle,
+  Wind,
+  ShieldAlert,
 } from 'lucide-react';
 import 'leaflet/dist/leaflet.css';
-import { motion } from 'framer-motion';
-import TruckAnimated from '../../components/TruckAnimated'; // đường dẫn tùy dự án
+import { motion, AnimatePresence } from 'framer-motion';
 
 // Fix icon mặc định Leaflet
 delete L.Icon.Default.prototype._getIconUrl;
@@ -35,25 +47,120 @@ L.Icon.Default.mergeOptions({
 });
 
 const timelineSteps = [
-  { id: 1, label: 'Đã đặt đơn', icon: Check },
-  { id: 2, label: 'Tài xế nhận đơn', icon: Truck },
-  { id: 3, label: 'Tới quán', icon: MapPin },
-  { id: 4, label: 'Đã lấy đơn', icon: Package },
-  { id: 5, label: 'Giao thành công', icon: Home },
+  { id: 1, label: 'Đã đặt', icon: Check },
+  { id: 2, label: 'Cất cánh', icon: Truck },
+  { id: 3, label: 'Vận chuyển', icon: Package },
+  { id: 4, label: 'Đã giao', icon: Home },
 ];
+
+// Component giúp lấy map instance ra ngoài
+// --- SỬA LẠI COMPONENT NÀY ---
+const MapHandler = React.memo(({ onMapReady, onZoomStart, onZoomEnd }) => {
+  const map = useMap();
+  useEffect(() => {
+    onMapReady(map);
+
+    // Lắng nghe sự kiện Zoom
+    map.on('zoomstart', onZoomStart);
+    map.on('zoomend', onZoomEnd);
+
+    // Dọn dẹp khi unmount
+    return () => {
+      map.off('zoomstart', onZoomStart);
+      map.off('zoomend', onZoomEnd);
+    };
+  }, [map, onMapReady, onZoomStart, onZoomEnd]);
+  return null;
+});
+// Component tự động focus khi mới vào
+const FocusOnLoad = ({ flightData, orderId }) => {
+  const map = useMap();
+  const hasFocused = useRef(false);
+
+  useEffect(() => {
+    if (!flightData || hasFocused.current) return;
+
+    const storageKey = `order_${orderId}_start_simulation`;
+    const storedStart = localStorage.getItem(storageKey);
+
+    if (storedStart) {
+      const elapsed = Date.now() - parseInt(storedStart, 10);
+      let targetPos = flightData.startPos;
+
+      if (elapsed > flightData.totalDuration) {
+        targetPos = flightData.endPos;
+      } else if (elapsed > flightData.prepTime + flightData.takeoffTime) {
+        const progress =
+          (elapsed - flightData.prepTime - flightData.takeoffTime) / flightData.flightTime;
+        const lat =
+          flightData.startPos[0] + (flightData.endPos[0] - flightData.startPos[0]) * progress;
+        const lng =
+          flightData.startPos[1] + (flightData.endPos[1] - flightData.startPos[1]) * progress;
+        targetPos = [lat, lng];
+      } else {
+        targetPos = flightData.startPos;
+      }
+
+      map.setView(targetPos, 15, { animate: true, duration: 1 });
+      hasFocused.current = true;
+    }
+  }, [flightData, map, orderId]);
+
+  return null;
+};
 
 export const TrackOrderPage = () => {
   const location = useLocation();
-  const navigate = useNavigate(); // ✅ thêm dòng này
+  const navigate = useNavigate();
   const { id } = useParams();
 
-  // order có thể đến qua state (navigate) hoặc fetch bằng param id
   const orderFromState = location.state?.order || null;
-  const cameFrom = location.state?.from || null; // e.g. 'OrderSuccess' (nếu được set)
-
   const [order, setOrder] = useState(orderFromState || null);
   const [isDelivered, setIsDelivered] = useState(false);
+  const [isUpdating, setIsUpdating] = useState(false);
+  const [etaMinutes, setEtaMinutes] = useState(0);
 
+  // --- THÊM VÀO TRONG TrackOrderPage (Chỗ khai báo Ref) ---
+  const isZoomingRef = useRef(false); // Biến cờ: Đang zoom hay không?
+
+  // Dùng useCallback để truyền xuống MapHandler không bị render lại
+  const handleZoomStart = useCallback(() => {
+    isZoomingRef.current = true;
+  }, []);
+
+  const handleZoomEnd = useCallback(() => {
+    isZoomingRef.current = false;
+  }, []);
+
+  const [droneStats, setDroneStats] = useState({
+    battery: 100,
+    altitude: 0,
+    speed: 0,
+    signal: 100,
+    status: 'NORMAL', // NORMAL, WARNING, REROUTING
+    alertMessage: '',
+    latLng: '0, 0', // Tọa độ hiện tại
+    distanceRemaining: 0, // Km còn lại
+    currentAddress: 'Đang định vị...',
+    windSpeed: 0,
+  });
+
+  // Ref để đảm bảo sự kiện chỉ nổ ra 1 lần
+  const eventTriggeredRef = useRef(false);
+  const droneMarkerRef = useRef(null);
+  const mapRef = useRef(null);
+
+  const [isAutoFollow, setIsAutoFollow] = useState(true); // State để đổi màu nút
+  const isAutoFollowRef = useRef(true); // Ref để dùng trong vòng lặp animate (quan trọng)
+
+  // Hàm bật tắt
+  const toggleAutoFollow = () => {
+    const nextState = !isAutoFollow;
+    setIsAutoFollow(nextState);
+    isAutoFollowRef.current = nextState; // Cập nhật Ref ngay lập tức
+  };
+
+  // --- 1. CÁC HÀM TIỆN ÍCH ---
   function formatDateTime(date) {
     if (!date) return 'Không có';
     return new Date(date).toLocaleString('vi-VN', {
@@ -65,635 +172,995 @@ export const TrackOrderPage = () => {
     });
   }
 
-  // console.log('Received Order ID:', orderId); // kiểm tra
+  function haversineDistance(lat1, lng1, lat2, lng2) {
+    const toRad = (x) => (x * Math.PI) / 180;
+    const R = 6371;
+    const dLat = toRad(lat2 - lat1);
+    const dLng = toRad(lng2 - lng1);
+    const a =
+      Math.sin(dLat / 2) ** 2 +
+      Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLng / 2) ** 2;
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    return R * c;
+  }
 
-  // --- Helpers: orderKey (dùng để lưu localStorage) và apiId (dùng cho API) ---
-  const orderKey = useMemo(() => {
-    // prefer internal id, then order_id, then route param
-    return (
-      (order && (order.id || order._id || order.order_id)) ||
-      (orderFromState && (orderFromState.id || orderFromState._id || orderFromState.order_id)) ||
-      id ||
-      null
-    );
-  }, [order, orderFromState, id]);
-
-  // --- restore step & start time from localStorage keyed by orderKey ---
-  const [currentStep, setCurrentStep] = useState(() => {
+  // Hàm lấy địa chỉ từ tọa độ (Dùng LocationIQ token cũ của bạn)
+  const fetchAddressName = async (lat, lng) => {
     try {
-      const key = id ? `order_${id}_step` : null;
-      const saved = key ? localStorage.getItem(key) : null;
-      return saved ? Number(saved) : orderFromState?.currentStep || 1;
-    } catch (e) {
-      return orderFromState?.currentStep || 1;
+      const LOCATIONIQ_TOKEN = 'pk.4e0ece0ff0632fae5010642d702d5dfa';
+      const url = `https://us1.locationiq.com/v1/reverse.php?key=${LOCATIONIQ_TOKEN}&lat=${lat}&lon=${lng}&format=json&accept-language=vi`;
+
+      const res = await fetch(url);
+      const data = await res.json();
+
+      if (data.address) {
+        // Lọc lấy Xã, Huyện, Tỉnh cho gọn
+        const ward = data.address.suburb || data.address.quarter || data.address.village || '';
+        const district = data.address.city_district || data.address.district || '';
+        const city = data.address.city || data.address.state || '';
+
+        // Ghép chuỗi: "P. Bến Nghé, Q.1, TP.HCM"
+        const parts = [ward, district, city].filter((p) => p);
+        return parts.length > 0 ? parts.join(', ') : 'Vùng không xác định';
+      }
+      return 'Đang bay qua vùng biển/rừng...';
+    } catch (err) {
+      return 'Mất tín hiệu vệ tinh...';
     }
-  });
-
-  const [stepStartTime, setStepStartTime] = useState(() => {
-    try {
-      const key = id ? `order_${id}_step_start` : null;
-      const saved = key ? localStorage.getItem(key) : null;
-      return saved ? Number(saved) : Date.now();
-    } catch (e) {
-      return Date.now();
-    }
-  });
-
-  // cho phép auto tracking theo mặc định; chúng ta sẽ resume từ savedStep nếu có
-  const [isAutoTracking, setIsAutoTracking] = useState(true);
-
-  // const [isAutoTracking, setIsAutoTracking] = useState(() => {
-  //   const fromSuccess = location.state?.from === 'OrderSuccess';
-  //   return fromSuccess || !!orderFromState; // ✅ Cho phép auto nếu từ OrderSuccess
-  // });
-
-  // ref để đảm bảo updateBody chỉ gọi 1 lần
-  const hasUpdatedRef = useRef(false);
-  // ref để giữ timer id
-  const timerRef = useRef(null);
-
-  // Tạm set currentStep = 2 để test thấy tài xế luôn
-  const testOrder = {
-    driver: {
-      name: 'Trương Quốc Bảo',
-      BS: '79-Z1 51770',
-      SĐT: '0399503025',
-    },
-    created_at: new Date(),
   };
 
-  // -------- Fetch order nếu cần (reload trường hợp mất state) --------
-  useEffect(() => {
-    // If we already have orderFromState, set it (and attempt to restore saved step/time)
-    if (orderFromState) {
-      setOrder(orderFromState);
-
-      // restore saved step/start if exists for that order
-      const keyBase =
-        orderFromState.id || orderFromState._id || orderFromState.order_id || id || null;
-      if (keyBase) {
-        const savedStep = localStorage.getItem(`order_${keyBase}_step`);
-        const savedStart = localStorage.getItem(`order_${keyBase}_step_start`);
-        if (savedStep) setCurrentStep(Number(savedStep));
-        if (savedStart) setStepStartTime(Number(savedStart));
-      }
-      return;
+  // Fetch Order & LocationIQ
+  async function getLatLngFromAddress(address) {
+    if (!address) return null;
+    const LOCATIONIQ_TOKEN = 'pk.4e0ece0ff0632fae5010642d702d5dfa';
+    const cleanAddress = address
+      .replace(/TP\.? ?HCM/g, 'Thành phố Hồ Chí Minh')
+      .replace(/Q\.?/g, 'Quận')
+      .trim();
+    const url = `https://us1.locationiq.com/v1/search.php?key=${LOCATIONIQ_TOKEN}&q=${encodeURIComponent(
+      cleanAddress,
+    )}&format=json&limit=1&countrycodes=vn&addressdetails=1`;
+    try {
+      const res = await fetch(url);
+      const data = await res.json();
+      if (data && data.length > 0 && !data.error)
+        return { lat: parseFloat(data[0].lat), lng: parseFloat(data[0].lon) };
+      return null;
+    } catch (err) {
+      return null;
     }
+  }
 
-    // else try fetch by route param id (most cases)
-    if (id) {
-      fetch(`/apiLocal/order/getOrder/${id}`)
-        .then((res) => {
-          if (!res.ok) throw new Error('Fetch order failed');
-          return res.json();
-        })
-        .then((data) => {
-          setOrder(data);
+  useEffect(() => {
+    if (order && !order.delivery_location && order.delivery_address) {
+      getLatLngFromAddress(order.delivery_address).then((loc) => {
+        if (loc) setOrder((prev) => ({ ...prev, delivery_location: loc }));
+      });
+    }
+  }, [order]);
 
-          // restore saved step/start for fetched order
-          const keyBase = data.id || data._id || data.order_id || id;
-          const savedStep = localStorage.getItem(`order_${keyBase}_step`);
-          const savedStart = localStorage.getItem(`order_${keyBase}_step_start`);
-          if (savedStep) setCurrentStep(Number(savedStep));
-          if (savedStart) setStepStartTime(Number(savedStart));
-        })
-        .catch((err) => {
-          console.error('❌ Fetch order error:', err);
-        });
+  useEffect(() => {
+    if (!orderFromState && id) {
+      fetch(`https://badafuta-production.up.railway.app/api/order/getOrder/${id}`)
+        .then((res) => (res.ok ? res.json() : Promise.reject('Failed')))
+        .then((data) => setOrder(data))
+        .catch((err) => console.error(err));
     }
   }, [id, orderFromState]);
 
-  // -------- Persist currentStep and stepStartTime keyed by the actual orderKey --------
-  const stepDuration = 20000; // 20s mỗi step
+  // --- 2. LOGIC ANIMATION ĐÃ ĐƯỢC TỐI ƯU ---
 
-  useEffect(() => {
-    if (!orderKey) return;
+  // a. Tính toán thông số bay (Chỉ tính lại khi order thay đổi)
+  const flightData = useMemo(() => {
+    if (!order || !order.merchant_location || !order.delivery_location) return null;
 
-    const savedStep = Number(localStorage.getItem(`order_${orderKey}_step`)) || 1;
-    const savedStart = Number(localStorage.getItem(`order_${orderKey}_step_start`)) || Date.now();
+    const startPos = [Number(order.merchant_location.lat), Number(order.merchant_location.lng)];
+    const endPos = [Number(order.delivery_location.lat), Number(order.delivery_location.lng)];
+    const distance = haversineDistance(startPos[0], startPos[1], endPos[0], endPos[1]);
 
-    const now = Date.now();
-    const stepsPassed = Math.floor((now - savedStart) / stepDuration);
-    const updatedStep = Math.min(savedStep + stepsPassed, timelineSteps.length);
+    const PREP_TIME = 5000;
+    const TAKEOFF_TIME = 5000;
+    const MIN_FLIGHT_TIME = 20000;
 
-    setCurrentStep(updatedStep);
+    const droneSpeed = 200; // km/h
+    let flightTime = (distance / droneSpeed) * 3600 * 1000;
+    if (flightTime < MIN_FLIGHT_TIME) flightTime = MIN_FLIGHT_TIME;
 
-    // reset stepStartTime cho step hiện tại
-    setStepStartTime(now - ((now - savedStart) % stepDuration));
+    console.log('Thời gian bay drone (ms):', flightTime);
+    console.log(
+      `Drone tốc độ ${droneSpeed} km/h → bay ${distance.toFixed(2)}km chỉ mất ${(
+        flightTime / 1000
+      ).toFixed(1)} giây`,
+    );
 
-    // update localStorage
-    localStorage.setItem(`order_${orderKey}_step`, updatedStep);
-    localStorage.setItem(`order_${orderKey}_step_start`, now - ((now - savedStart) % stepDuration));
-  }, [orderKey]);
+    console.log('Distance (km):', distance);
 
-  // Clear timer on unmount
-  useEffect(() => {
-    return () => {
-      if (timerRef.current) {
-        clearTimeout(timerRef.current);
-        timerRef.current = null;
-      }
+    return {
+      startPos,
+      endPos,
+      distance: distance || 0, // Fallback nếu NaN
+      flightTime,
+      prepTime: PREP_TIME,
+      takeoffTime: TAKEOFF_TIME,
+      totalDuration: PREP_TIME + TAKEOFF_TIME + flightTime,
     };
-  }, []);
+  }, [order]);
 
-  // -------- Auto increment step logic (robust — resumes using saved start time) --------
+  // b. Hàm helper tính toán trạng thái hiện tại dựa trên thời gian trôi qua
+  const calculateState = (elapsed, config) => {
+    if (!config) return { step: 1, progress: 0 };
+
+    if (elapsed > config.totalDuration) return { step: 4, progress: 1 };
+
+    if (elapsed > config.prepTime + config.takeoffTime) {
+      // Step 3: Đang bay
+      const flightElapsed = elapsed - config.prepTime - config.takeoffTime;
+      return { step: 3, progress: Math.min(flightElapsed / config.flightTime, 1) };
+    }
+
+    if (elapsed > config.prepTime) return { step: 2, progress: 0 }; // Cất cánh
+    return { step: 1, progress: 0 }; // Chuẩn bị
+  };
+
+  // c. State Lazy Initialization: Tính ngay step khi component mount (Fix lỗi F5)
+  const [currentStep, setCurrentStep] = useState(() => {
+    if (!order || !flightData) return 1;
+
+    const orderKey = order.id || order._id || id;
+    const storageKey = `order_${orderKey}_start_simulation`;
+    const storedStart = localStorage.getItem(storageKey);
+
+    if (storedStart) {
+      const elapsed = Date.now() - parseInt(storedStart, 10);
+      // Nếu đã xong quá 5 phút -> Reset về 1 để demo lại
+      if (elapsed > flightData.totalDuration + 5 * 60 * 1000) return 1;
+
+      return calculateState(elapsed, flightData).step;
+    }
+    return 1;
+  });
+
+  // d. Effect chạy Animation Loop
   useEffect(() => {
-    if (!order || !isAutoTracking) return;
+    if (!flightData) return;
+    const orderKey = order.id || order._id || id;
+    const storageKey = `order_${orderKey}_start_simulation`;
+    let startTime = localStorage.getItem(storageKey);
+    let now = Date.now();
 
-    // ensure we don't double-update when currentStep already past final
-    if (currentStep > timelineSteps.length) return;
+    if (!startTime || now - parseInt(startTime) > flightData.totalDuration + 300000) {
+      startTime = now;
+      localStorage.setItem(storageKey, startTime);
+    } else {
+      startTime = parseInt(startTime, 10);
+    }
 
-    // compute stepDuration and remaining
-    const stepDuration = 20000; // 20s per step
-    const now = Date.now();
+    let animationFrameId;
+    let lastUiUpdate = 0;
+    let lastGeoCheck = 0;
 
-    // If saved start time is in future or not a number, reset to now
-    const start = Number(stepStartTime) || now;
-    // elapsed in current step
-    const elapsed = Math.max(0, now - start);
-    const remaining = Math.max(stepDuration - elapsed, 0);
+    const animate = () => {
+      const currentTime = Date.now();
+      const elapsed = currentTime - startTime;
+      const { step, progress } = calculateState(elapsed, flightData);
 
-    // If we're already at final step, run completion flow
-    if (currentStep >= timelineSteps.length) {
-      localStorage.removeItem(`order_${orderKey}_step`);
-      localStorage.removeItem(`order_${orderKey}_step_start`);
-      // completion
-      (async () => {
-        if (hasUpdatedRef.current) return; // already handled
-        hasUpdatedRef.current = true;
+      // 1. UPDATE DOM (60FPS - Mượt)
+      if (step === 3 && droneMarkerRef.current && !isZoomingRef.current) {
+        const lat =
+          flightData.startPos[0] + (flightData.endPos[0] - flightData.startPos[0]) * progress;
+        const lng =
+          flightData.startPos[1] + (flightData.endPos[1] - flightData.startPos[1]) * progress;
 
-        try {
-          // choose api identifier (order.id || order.order_id || id)
-          const apiId = order.id || order._id || order.order_id || id;
-          if (!apiId) {
-            console.error('No order id available for update');
-            return;
-          }
+        droneMarkerRef.current.setLatLng([lat, lng]);
 
-          const res = await fetch(`/apiLocal/order/${apiId}/updateBody`, {
-            method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              status: 'COMPLETED',
-              status_payment: 'SUCCESS',
-              delivered_at: new Date().toISOString(),
-            }),
-          });
-
-          if (!res.ok) throw new Error('Update failed');
-          const data = await res.json();
-
-          // cleanup + navigate
-          setIsAutoTracking(false);
-          setIsDelivered(true);
-          localStorage.removeItem(`order_${apiId}_step`);
-          localStorage.removeItem(`order_${apiId}_step_start`);
-
-          navigate('/my-orders', {
-            state: { activeTab: 'COMPLETED', updatedOrder: data },
-          });
-        } catch (err) {
-          console.error('❌ Error updating order on completion:', err);
+        if (mapRef.current && isAutoFollowRef.current) {
+          mapRef.current.setView([lat, lng], 15, { animate: false });
         }
-      })();
-
-      return;
-    }
-
-    // Otherwise schedule increment after remaining milliseconds
-    timerRef.current = setTimeout(() => {
-      setCurrentStep((prev) => Math.min(prev + 1, timelineSteps.length));
-      setStepStartTime(Date.now());
-    }, remaining);
-
-    return () => {
-      if (timerRef.current) {
-        clearTimeout(timerRef.current);
-        timerRef.current = null;
+      } else if (step === 4 && droneMarkerRef.current) {
+        droneMarkerRef.current.setLatLng(flightData.endPos);
+        if (mapRef.current && isAutoFollowRef.current) {
+          mapRef.current.setView(flightData.endPos, 15, { animate: true });
+        }
       }
+
+      // 2. UPDATE REACT STATE (10FPS - Không lag)
+      if (currentTime - lastUiUpdate > 100 || step !== currentStep) {
+        lastUiUpdate = currentTime;
+        setCurrentStep(step);
+
+        // Tính ETA
+        if (step < 4) {
+          const remainingMs = flightData.totalDuration - elapsed;
+          const mins = Math.ceil(remainingMs / 60000);
+          setEtaMinutes((prev) => (prev !== mins && mins > 0 ? mins : prev));
+        } else setEtaMinutes(0);
+
+        // Tính Stats
+        let stats = {};
+        if (step === 2)
+          stats = {
+            altitude: Math.min(50, ((elapsed - flightData.prepTime) / 100) * 2),
+            speed: 15,
+            status: 'NORMAL',
+          };
+
+        if (step === 3 && currentTime - lastGeoCheck > 3000) {
+          lastGeoCheck = currentTime;
+
+          // Tính tọa độ hiện tại
+          const curLat =
+            flightData.startPos[0] + (flightData.endPos[0] - flightData.startPos[0]) * progress;
+          const curLng =
+            flightData.startPos[1] + (flightData.endPos[1] - flightData.startPos[1]) * progress;
+
+          // Gọi hàm lấy địa chỉ (Async nhưng không cần await để tránh chặn animation)
+          fetchAddressName(curLat, curLng).then((addr) => {
+            setDroneStats((prev) => ({ ...prev, currentAddress: addr }));
+          });
+        } else if (step === 3) {
+          // --- TÍNH TOÁN VỊ TRÍ HIỆN TẠI ---
+          const currentLat =
+            flightData.startPos[0] + (flightData.endPos[0] - flightData.startPos[0]) * progress;
+          const currentLng =
+            flightData.startPos[1] + (flightData.endPos[1] - flightData.startPos[1]) * progress;
+
+          // Tính khoảng cách còn lại (Tổng quãng đường * % chưa đi)
+          let distRemain = flightData.distance * (1 - progress);
+          if (isNaN(distRemain)) distRemain = 0; // Nếu NaN thì về 0
+
+          stats = {
+            battery: Math.max(20, 100 - progress * 80),
+            altitude: 120 + Math.sin(currentTime / 500) * 5,
+            speed: 200 + Math.cos(currentTime / 1000) * 10,
+            signal: Math.max(70, 100 - progress * 20 + Math.random() * 5),
+            latLng: `${currentLat.toFixed(4)}, ${currentLng.toFixed(4)}`, // Làm tròn 4 số lẻ
+            distanceRemaining: distRemain.toFixed(2), // Làm tròn 2 số lẻ (VD: 3.52 km)
+            windSpeed: (2 + Math.random() * 6).toFixed(1),
+          };
+          // Sự kiện ngẫu nhiên
+          if (progress > 0.4 && progress < 0.7 && !eventTriggeredRef.current) {
+            eventTriggeredRef.current = true;
+            const events = [
+              { msg: '⚠️ CẢNH BÁO: Phát hiện dây điện cao thế!', type: 'REROUTING' },
+              { msg: '🚫 VÙNG CẤM BAY: Đang đổi hướng...', type: 'REROUTING' },
+              { msg: '⛈️ THỜI TIẾT XẤU: Gió giật cấp 7', type: 'WARNING' },
+            ];
+            const evt = events[Math.floor(Math.random() * events.length)];
+            setDroneStats((prev) => ({ ...prev, status: evt.type, alertMessage: evt.msg }));
+            setTimeout(
+              () => setDroneStats((prev) => ({ ...prev, status: 'NORMAL', alertMessage: '' })),
+              5000,
+            );
+          }
+        } else if (step === 4)
+          stats = { altitude: 0, speed: 0, status: 'NORMAL', distanceRemaining: 0, windSpeed: 0 };
+
+        setDroneStats((prev) =>
+          prev.status !== 'NORMAL' && step === 3
+            ? { ...prev, ...stats, status: prev.status }
+            : { ...prev, ...stats },
+        );
+      }
+
+      if (elapsed <= flightData.totalDuration + 1000)
+        animationFrameId = requestAnimationFrame(animate);
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [order, isAutoTracking, currentStep, stepStartTime, id]);
 
-  if (!order) return <p className="text-center mt-10">Đang tải đơn hàng...</p>;
+    animationFrameId = requestAnimationFrame(animate);
+    return () => cancelAnimationFrame(animationFrameId);
+  }, [flightData, order]);
 
-  const createdAt = new Date(order.created_at);
-  const estimatedDelivery = new Date(createdAt.getTime() + 40 * 60 * 1000);
-  // Xác định màu theo trạng thái
-  const truckColor = () => {
-    switch (currentStep) {
-      case 1:
-        return 'text-gray-400'; // chuẩn bị
-      case 2:
-        return 'text-orange-400'; // đang nhận đơn
-      case 3:
-        return 'text-yellow-500'; // tới quán
-      case 4:
-        return 'text-blue-500'; // đang vận chuyển
-      case 5:
-        return 'text-green-500'; // đã giao
-      default:
-        return 'text-gray-400';
-    }
-  };
+  // --- 3. RENDER ---
+  if (!order)
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <Loader2 className="animate-spin text-orange-500 w-8 h-8" />
+      </div>
+    );
 
-  console.log('👉 order.driver:', order.driver);
-  console.log('👉 currentStep:', currentStep);
+  const restaurantPos = order.merchant_location
+    ? [order.merchant_location.lat, order.merchant_location.lng]
+    : [0, 0];
+  const deliveryPos = order.delivery_location
+    ? [order.delivery_location.lat, order.delivery_location.lng]
+    : null;
+  // const estimatedDelivery = new Date(new Date(order.created_at).getTime() + 15 * 60 * 1000);
 
-  const handleBack = () => {
-    navigate('/my-orders');
-  };
+  let estimatedDelivery;
+  if (flightData) {
+    const storageKey = `order_${order.id || order._id || id}_start_simulation`;
+    const storedStart = localStorage.getItem(storageKey);
+    estimatedDelivery = storedStart
+      ? new Date(parseInt(storedStart) + flightData.totalDuration)
+      : new Date(Date.now() + flightData.totalDuration);
+  } else estimatedDelivery = new Date(Date.now() + 15 * 60 * 1000);
 
-  // For UI: compute stepProgress for active step using stepStartTime
-  const activeElapsed = Math.min(Math.max(0, Date.now() - stepStartTime), 20000);
-  const activeProgress = Math.min(activeElapsed / 20000, 1);
+  const handleBack = () => navigate('/my-orders');
+
+  const droneIcon = new L.DivIcon({
+    html: `
+      <svg width="48" height="48" viewBox="0 0 200 200" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <ellipse cx="100" cy="90" rx="44" ry="22" fill="#1e293b"/>
+        <g class="drone-propellers"><circle cx="68" cy="68" r="20" fill="#fb923c" opacity="0.4"/><circle cx="132" cy="68" r="20" fill="#fb923c" opacity="0.4"/><circle cx="68" cy="112" r="20" fill="#fb923c" opacity="0.4"/><circle cx="132" cy="112" r="20" fill="#fb923c" opacity="0.4"/></g>
+        <rect x="63" y="60" width="10" height="36" rx="5" fill="#fb923c"/><rect x="127" y="60" width="10" height="36" rx="5" fill="#fb923c"/><rect x="63" y="104" width="10" height="36" rx="5" fill="#fb923c"/><rect x="127" y="104" width="10" height="36" rx="5" fill="#fb923c"/>
+        <rect x="82" y="125" width="36" height="42" rx="8" fill="#ea580c"/><rect x="82" y="125" width="36" height="10" fill="#f97316"/>
+        <text x="100" y="148" text-anchor="middle" fill="white" font-size="18" font-weight="bold" font-family="Arial">BĐPT</text>
+        <line x1="90" y1="112" x2="88" y2="125" stroke="#94a3b8" stroke-width="4"/><line x1="110" y1="112" x2="112" y2="125" stroke="#94a3b8" stroke-width="4"/>
+        <circle cx="100" cy="80" r="10" fill="#fb923c"><animate attributeName="opacity" values="0.4;1;0.4" dur="1.5s" repeatCount="indefinite"/></circle>
+      </svg>`,
+    className: 'custom-drone-icon',
+    iconSize: [48, 68],
+    iconAnchor: [24, 54],
+    popupAnchor: [0, -50],
+  });
 
   console.log('Order object received:', order);
   console.log('Order ID:', order?.order_id);
 
+  console.log('lat:', order?.merchant_location.lat);
+  console.log('lng:', order?.merchant_location.lng);
+
+  console.log('👉 order.driver:', order.driver);
+  console.log('👉 currentStep:', currentStep);
+
   return (
-    <div className="max-w-6xl mx-auto p-4 space-y-6">
-      {/* Tiêu đề */}
-      {/* Nút back  */}
-      <Button onClick={handleBack} variant="outline" className="mb-6 mt-4">
-        <ArrowLeft className="w-4 h-4 mr-2" />
-        Quay lại Đơn hàng của tôi
-      </Button>
-      {/* <div className="max-w-2xl mx-auto space-y-6"> */}
-      {/* Tiêu đề */}
-      <div className="text-center mb-6">
-        <h2 className="text-2xl md:text-3xl font-bold">Theo dõi đơn hàng</h2>
-      </div>
-
-      {/* Khối thông tin */}
-      <div className="bg-gray-50 p-4 md:p-6 rounded-xl shadow-sm text-gray-700 text-sm space-y-4">
-        {/* Dự kiến giao hàng */}
-        <div className="flex items-center space-x-3 w-full">
-          <Calendar className="w-6 h-6 text-orange-500 flex-shrink-0" />
-          <p className="text-gray-600 text-sm md:text-base">
-            Dự kiến giao hàng:{' '}
-            <span className="font-semibold text-orange-500">
-              {estimatedDelivery.toLocaleTimeString('vi-VN', {
-                hour: '2-digit',
-                minute: '2-digit',
-              })}
-            </span>
-          </p>
+    <div className="min-h-screen bg-gray-50/50 pb-12 font-sans">
+      <div className="max-w-5xl mx-auto px-4 md:px-6 pt-6">
+        {/* Header Navigation */}
+        <div className="flex items-center justify-between mb-8">
+          <Button
+            onClick={handleBack}
+            variant="ghost"
+            className="hover:bg-orange-50 text-gray-600 hover:text-orange-600 pl-0 md:pl-4 transition-colors"
+          >
+            <ArrowLeft className="w-5 h-5 mr-2" />
+            <span className="hidden md:inline">Quay lại danh sách</span>
+          </Button>
         </div>
-
-        {/* Trạng thái tài xế */}
-        <div className="flex items-center space-x-3 w-full">
-          <Truck className={`w-6 h-6 flex-shrink-0 ${truckColor()}`} />
-          <p className="text-gray-600 text-sm md:text-base break-words">
-            {currentStep === 1 && 'Đơn hàng đang chuẩn bị...'}
-            {currentStep === 2 && 'Tài xế đã nhận đơn và đang trên đường tới quán...'}
-            {currentStep === 3 && 'Tài xế đã tới quán và đang lấy đơn...'}
-            {currentStep === 4 && 'Đơn hàng đang được vận chuyển...'}
-            {currentStep === 5 && 'Đơn đã giao thành công 🎉'}
-          </p>
+        <div className="flex justify-center mb-8">
+          <h2 className="text-2xl md:text-3xl font-bold bg-clip-text text-gray-600">
+            Theo dõi đơn hàng
+          </h2>
         </div>
-      </div>
-
-      {/* </div> */}
-
-      {/* Timeline responsive */}
-      <div className="flex flex-col md:flex-row md:justify-between items-center gap-6 relative">
-        {timelineSteps.map((step, index) => {
-          const StepIcon = step.icon;
-          const isCompleted = index + 1 < currentStep;
-          const isActive = index + 1 === currentStep;
-
-          const stepDuration = 20000;
-          const now = Date.now();
-          const elapsed = Math.max(0, now - stepStartTime);
-          const stepProgress = Math.min(elapsed / stepDuration, 1);
-
-          return (
-            <div
-              key={step.id}
-              className="flex md:flex-1 flex-col items-center text-center relative"
-            >
-              {/* Line between steps */}
-              {index < timelineSteps.length - 1 && (
+        <div className="w-10 md:w-32"></div>
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          {/* Cột trái: Map & Status */}
+          <div className="lg:col-span-2 space-y-6">
+            {/* Status Card */}
+            <div className="bg-white p-6 rounded-3xl shadow-lg shadow-orange-100/50 border border-orange-50">
+              <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
+                <div>
+                  <p className="text-gray-500 text-sm mb-1">Trạng thái hiện tại</p>
+                  {/* THÊM: BẢNG CẢNH BÁO NGUY HIỂM */}
+                  <AnimatePresence>
+                    {droneStats.alertMessage && (
+                      <motion.div
+                        initial={{ height: 0, opacity: 0 }}
+                        animate={{ height: 'auto', opacity: 1 }}
+                        exit={{ height: 0, opacity: 0 }}
+                        className="bg-red-50 border-l-4 border-red-500 p-3 mb-6 rounded-r-lg overflow-hidden relative z-10 mt-4"
+                      >
+                        <div className="flex items-center gap-3">
+                          <ShieldAlert className="w-6 h-6 text-red-600 animate-bounce" />
+                          <div>
+                            <p className="font-bold text-red-700 text-sm">CẢNH BÁO AN TOÀN</p>
+                            <p className="text-red-600 text-xs">{droneStats.alertMessage}</p>
+                          </div>
+                        </div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                  <div className="flex items-center gap-2">
+                    {currentStep === 1 && (
+                      <span className="inline-flex px-3 py-1 rounded-full bg-gray-100 text-gray-600 font-medium text-sm">
+                        Đang chuẩn bị
+                      </span>
+                    )}
+                    {currentStep === 2 && (
+                      <span className="inline-flex px-3 py-1 rounded-full bg-orange-100 text-orange-600 font-medium text-sm animate-pulse">
+                        Drone đang cất cánh
+                      </span>
+                    )}
+                    {currentStep === 3 && (
+                      <span className="inline-flex px-3 py-1 rounded-full bg-blue-100 text-blue-600 font-medium text-sm animate-pulse">
+                        Đang bay tới bạn
+                      </span>
+                    )}
+                    {currentStep === 4 && (
+                      <span className="inline-flex px-3 py-1 rounded-full bg-green-100 text-green-600 font-medium text-sm">
+                        Giao thành công
+                      </span>
+                    )}
+                  </div>
+                </div>
+                {/* --- KHỐI THỜI GIAN THÔNG MINH --- */}
                 <div
-                  className="hidden md:block absolute top-5 left-2/2 transform -translate-x-1/2 h-1 z-0 bg-gray-300 overflow-visible"
-                  style={{ width: '100%' }}
+                  className={`flex items-center gap-3 px-4 py-2 rounded-2xl transition-colors duration-500 ${
+                    // Nếu đang bay và còn dưới 5 phút -> Chuyển màu đỏ cảnh báo
+                    currentStep === 3 && etaMinutes <= 5
+                      ? 'bg-red-50 border border-red-100'
+                      : 'bg-orange-50'
+                  }`}
                 >
-                  {/* Thanh màu cam tải dần */}
-                  <motion.div
-                    key={`progress-${currentStep}`}
-                    className="h-full bg-orange-500 origin-left"
-                    initial={{ scaleX: isCompleted ? 1 : stepProgress }}
-                    animate={{ scaleX: isCompleted ? 1 : isActive ? 1 : 0 }}
-                    transition={{
-                      duration: isActive ? (1 - stepProgress) * 20 : 0,
-                      ease: 'linear',
-                    }}
-                  />
-
-                  {/* 🚚 Xe chạy trên line */}
-                  {isActive && (
-                    <motion.div
-                      className="absolute top-[-20px] z-10"
-                      initial={{ left: `${stepProgress * 100}%` }}
-                      animate={{ left: '100%' }}
-                      transition={{ duration: (1 - stepProgress) * 20, ease: 'linear' }}
-                    >
-                      <TruckAnimated />
-                    </motion.div>
+                  {currentStep === 3 && etaMinutes <= 5 ? (
+                    // Icon Chuông rung khi sắp đến
+                    <div className="relative">
+                      <span className="absolute -top-1 -right-1 flex h-3 w-3">
+                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                        <span className="relative inline-flex rounded-full h-3 w-3 bg-red-500"></span>
+                      </span>
+                      <Clock className="w-5 h-5 text-red-500 animate-pulse" />
+                    </div>
+                  ) : (
+                    // Icon Đồng hồ bình thường
+                    <Clock className="w-5 h-5 text-orange-500" />
                   )}
+
+                  <div>
+                    {/* LOGIC HIỂN THỊ TEXT */}
+                    {currentStep === 4 ? (
+                      // Case 1: Đã giao
+                      <>
+                        <p className="text-xs text-green-600 font-bold">Đã hoàn tất</p>
+                        <p className="font-bold text-gray-800 text-sm">Thành công</p>
+                      </>
+                    ) : currentStep === 3 && etaMinutes <= 5 ? (
+                      // Case 2: Sắp đến (< 5 phút) -> HIỆN CẢNH BÁO
+                      <div className="flex flex-col">
+                        <p className="text-[10px] font-bold text-red-500 uppercase tracking-wider animate-pulse">
+                          Sắp đến nơi!
+                        </p>
+                        <p className="font-bold text-red-600 text-xs md:text-sm leading-tight">
+                          Còn {etaMinutes} phút nữa
+                          <br />
+                          <span className="font-normal text-gray-600 text-[10px]">
+                            Vui lòng chuẩn bị nhận hàng
+                          </span>
+                        </p>
+                      </div>
+                    ) : (
+                      // Case 3: Còn xa -> Hiện giờ dự kiến
+                      <>
+                        <p className="text-xs text-gray-500">Dự kiến giao</p>
+                        <p className="font-bold text-gray-800">
+                          {estimatedDelivery.toLocaleTimeString('vi-VN', {
+                            hour: '2-digit',
+                            minute: '2-digit',
+                          })}
+                        </p>
+                      </>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* Timeline */}
+              <div className="relative px-2">
+                <div className="flex justify-between items-center relative z-10">
+                  {timelineSteps.map((step, index) => {
+                    const StepIcon = step.icon;
+                    const isCompleted = index + 1 < currentStep;
+                    const isActive = index + 1 === currentStep;
+
+                    return (
+                      <div key={step.id} className="flex flex-col items-center gap-2 w-20">
+                        <motion.div
+                          className={`w-10 h-10 md:w-12 md:h-12 flex items-center justify-center rounded-full border-2 shadow-sm transition-all duration-300 ${
+                            isCompleted
+                              ? 'bg-orange-500 border-orange-500 text-white shadow-orange-200'
+                              : isActive
+                              ? 'bg-white border-orange-500 text-orange-500 ring-4 ring-orange-50'
+                              : 'bg-gray-50 border-gray-200 text-gray-400'
+                          }`}
+                        >
+                          <StepIcon
+                            className="w-5 h-5 md:w-6 md:h-6"
+                            strokeWidth={isActive ? 2.5 : 2}
+                          />
+                        </motion.div>
+                        <span
+                          className={`text-xs font-semibold text-center ${
+                            isCompleted || isActive ? 'text-gray-800' : 'text-gray-400'
+                          }`}
+                        >
+                          {step.label}
+                        </span>
+                      </div>
+                    );
+                  })}
+                </div>
+                <div className="absolute top-5 md:top-6 left-10 right-10 h-1 bg-gray-100 rounded-full -z-0">
+                  <motion.div
+                    className="h-full bg-orange-500 rounded-full"
+                    initial={{ width: '0%' }}
+                    animate={{
+                      width: `${((currentStep - 1) / (timelineSteps.length - 1)) * 100}%`,
+                    }}
+                    transition={{ duration: 1, ease: 'easeInOut' }}
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Map Section */}
+            <div className="bg-white p-2 rounded-3xl shadow-xl shadow-gray-200/50 border border-white relative overflow-hidden group">
+              <div className="h-80 md:h-[450px] w-full rounded-2xl overflow-hidden relative z-0">
+                <MapContainer
+                  center={restaurantPos}
+                  zoom={13}
+                  scrollWheelZoom={false}
+                  className="h-full w-full outline-none"
+                >
+                  <FocusOnLoad flightData={flightData} orderId={order.id || order._id || id} />
+                  <MapHandler
+                    onMapReady={(map) => {
+                      mapRef.current = map;
+                    }}
+                    onZoomStart={handleZoomStart}
+                    onZoomEnd={handleZoomEnd}
+                  />
+                  <div className="absolute bottom-4 left-4 z-[500] flex flex-col gap-2">
+                    <Button
+                      className={`rounded-full shadow-lg transition-all px-4 py-2 flex items-center gap-2 ${
+                        isAutoFollow
+                          ? 'bg-blue-600 hover:bg-blue-700 text-white'
+                          : 'bg-white hover:bg-gray-100 text-gray-700 border border-gray-200'
+                      }`}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        e.preventDefault();
+                        toggleAutoFollow();
+                      }}
+                      onDoubleClick={(e) => e.stopPropagation()}
+                      onMouseDown={(e) => e.stopPropagation()}
+                      onTouchStart={(e) => e.stopPropagation()}
+                    >
+                      {isAutoFollow ? (
+                        <Check className="w-4 h-4" />
+                      ) : (
+                        <MapPin className="w-4 h-4" />
+                      )}
+                      <span className="text-xs font-semibold">
+                        {isAutoFollow ? 'Tắt theo dõi' : 'Bật theo dõi'}
+                      </span>
+                    </Button>
+                  </div>
+                  <TileLayer
+                    url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                    attribution="&copy; OpenStreetMap"
+                  />
+                  <Marker position={restaurantPos}>
+                    <Popup className="font-sans">
+                      <span className="font-bold">Nhà hàng:</span> {order.merchant_name}
+                    </Popup>
+                  </Marker>
+
+                  {deliveryPos && (
+                    <>
+                      <Marker position={deliveryPos}>
+                        <Popup className="font-sans">
+                          <span className="font-bold">Nhà bạn</span>
+                        </Popup>
+                      </Marker>
+                      <Polyline
+                        positions={[restaurantPos, deliveryPos]}
+                        color={droneStats.status !== 'NORMAL' ? '#ef4444' : '#f97316'} // Đỏ nếu lỗi, Cam nếu thường
+                        weight={4}
+                        dashArray="10, 10"
+                        opacity={0.6}
+                      />
+
+                      {/* FIX: Luôn mount Marker nhưng dùng Opacity để ẩn hiện */}
+                      {/* Giữ Ref luôn sống để không bị null khi F5 */}
+                      <Marker
+                        ref={droneMarkerRef}
+                        icon={droneIcon}
+                        position={restaurantPos}
+                        opacity={currentStep >= 2 ? 1 : 0}
+                        zIndexOffset={1000}
+                      />
+                    </>
+                  )}
+                </MapContainer>
+              </div>
+              {/* --- HUD MỚI (CHẾ ĐỘ 1 CỘT DỌC CHO MOBILE) --- */}
+              {currentStep >= 2 && currentStep < 4 && (
+                <div
+                  className="
+                  z-[400] font-mono text-xs rounded-xl border shadow-xl backdrop-blur-md transition-all
+      
+                  /* Cấu hình chung (Mobile + Desktop): */
+                  /* Nằm dưới map (mt-3), Chiều rộng Full (w-full) */
+                  mt-3 w-full 
+                  
+                  /* Màu sắc: Nền tối (Slate 900), Chữ trắng */
+                  bg-slate-900 text-white border-slate-700 
+                  
+                  /* Bố cục: Xếp dọc (flex-col), khoảng cách 3, padding 4 */
+                  flex flex-col gap-3 p-4
+                "
+                >
+                  {/* Header */}
+                  <div className="flex justify-between items-center mb-1 md:mb-3 pb-2 border-b border-white/20">
+                    <span className="font-bold text-orange-400 flex items-center gap-1">
+                      <Target className="w-3 h-3" /> DRONE-01
+                    </span>
+                    <span className="flex items-center gap-1 text-gray-400">
+                      <Wifi className="w-3 h-3 text-green-400" /> {Math.round(droneStats.signal)}%
+                    </span>
+                  </div>
+
+                  {/* Nhóm 1: Thông tin vị trí */}
+                  <div className="space-y-3 md:space-y-2">
+                    <div className="flex justify-between items-center">
+                      <div className="flex items-center gap-1.5 text-cyan-400">
+                        <MapIcon className="w-3.5 h-3.5 " />
+                        <span className="text-xs font-medium">GPS</span>
+                      </div>
+                      <div className="text-white text-xs font-medium leading-tight truncate">
+                        {droneStats.latLng}
+                      </div>
+                    </div>
+
+                    <div className="flex justify-between items-center">
+                      <div className="flex items-center gap-1.5 text-gray-400">
+                        <MapPin className="w-3 h-3" />
+                        Đang bay qua:
+                      </div>
+                      <div className="text-white text-xs font-medium leading-tight truncate">
+                        {droneStats.currentAddress}
+                      </div>
+                    </div>
+
+                    <div className="flex justify-between items-center">
+                      <div className="flex items-center gap-1.5 text-orange-400">
+                        <Navigation className="w-3.5 h-3.5" /> DIST
+                      </div>
+                      <div className="font-bold text-orange-400">
+                        {droneStats.distanceRemaining} km
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Đường kẻ phân cách (Giờ hiện cả trên Mobile cho dễ nhìn) */}
+                  <div className="w-full h-[1px] bg-white/10 my-1"></div>
+
+                  {/* Nhóm 2: Thông số kỹ thuật */}
+                  <div className="space-y-3 md:space-y-2">
+                    <div className="flex justify-between items-center">
+                      <div className="flex items-center gap-1.5 text-emerald-400">
+                        <Battery className="w-3.5 h-3.5" /> PIN
+                      </div>
+                      <div
+                        className={`font-bold ${
+                          droneStats.battery < 20 ? 'text-red-500 animate-pulse' : 'text-green-400'
+                        }`}
+                      >
+                        {Math.round(droneStats.battery)}%
+                      </div>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <div className="flex items-center gap-1.5 text-blue-400">
+                        <Zap className="w-3.5 h-3.5" /> SPD
+                      </div>
+                      <div className="font-bold text-blue-400">
+                        {Math.round(droneStats.speed)} km/h
+                      </div>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <div className="flex items-center gap-1.5 text-gray-400">
+                        <ArrowUpDown className="w-3.5 h-3.5 text-yellow-400" /> ALT
+                      </div>
+                      <div className="font-bold text-yellow-400">
+                        {Math.round(droneStats.altitude)} m
+                      </div>
+                    </div>
+                    {/* ... (Các dòng Battery, SPD cũ ...) */}
+
+                    <div className="flex justify-between items-center">
+                      <div className="flex items-center gap-1.5 text-gray-400">
+                        {/* Icon Gió màu Cyan */}
+                        <Wind className="w-3.5 h-3.5 text-cyan-400" />
+                        <span className="text-xs">WIND</span>
+                      </div>
+                      <div className="font-bold text-cyan-400">{droneStats.windSpeed} m/s</div>
+                    </div>
+
+                    {/* Dòng Altitude (Độ cao) cũ của bạn ở dưới đây */}
+                    <div className="flex justify-between items-center">{/* ... */}</div>
+                  </div>
                 </div>
               )}
 
-              {/* Icon */}
+              {/* Driver / Drone Info Overlay */}
+              {currentStep >= 2 && (
+                <div className="absolute top-4 right-4 z-[500]">
+                  <motion.div
+                    initial={{ opacity: 0, y: -10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="bg-white/90 backdrop-blur-md p-3 rounded-2xl shadow-lg border border-white/50 flex items-center gap-3 max-w-[280px]"
+                  >
+                    <div className="w-10 h-10 rounded-full bg-slate-800 flex items-center justify-center shrink-0">
+                      <img
+                        src="https://cdn-icons-png.flaticon.com/512/3159/3159100.png"
+                        alt="Drone"
+                        className="w-6 h-6 invert"
+                      />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <h4 className="font-bold text-gray-800 text-sm truncate">Drone A1 (Quad)</h4>
+                      <div className="flex items-center text-xs text-gray-500">
+                        <Star className="w-3 h-3 text-yellow-500 mr-1" fill="currentColor" />
+                        <span>5.0</span>
+                      </div>
+                    </div>
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      className="rounded-full hover:bg-orange-50 text-orange-500"
+                      onClick={() => navigate(`/chat-driver/${order.driver?.id}`)}
+                    >
+                      <MessageCircle className="w-5 h-5" />
+                    </Button>
+                  </motion.div>
+                </div>
+              )}
+            </div>
+
+            {/* Confirm Button */}
+            {currentStep === timelineSteps.length && !isDelivered && (
               <motion.div
-                className="w-10 h-10 md:w-12 md:h-12 flex items-center justify-center rounded-full border-2 mb-2 z-10"
-                initial={{
-                  backgroundColor: '#f3f3f3', // gray ban đầu
-                  borderColor: '#d1d5db',
-                  color: '#9ca3af',
-                }}
-                animate={{
-                  backgroundColor: isCompleted
-                    ? '#f97316' // bg-orange-500 hoàn thành
-                    : isActive
-                    ? ['#f3f3f3', '#f97316'] // từ gray → cam dần
-                    : '#f3f3f3', // chưa tới: gray
-                  borderColor: isCompleted
-                    ? '#f97316'
-                    : isActive
-                    ? ['#d1d5db', '#fb923c'] // từ gray → border-orange-400
-                    : '#d1d5db',
-                  color: isCompleted
-                    ? '#ffffff'
-                    : isActive
-                    ? ['#9ca3af', '#f97316'] // text từ gray → cam
-                    : '#9ca3af',
-                }}
-                transition={{
-                  duration: isActive ? 3 : 0, // chạy từ từ trong 3 giây khi active
-                  ease: 'easeInOut',
-                }}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="bg-green-50 border border-green-100 p-6 rounded-2xl text-center shadow-sm"
               >
-                <StepIcon
-                  className="w-5 h-5 md:w-6 md:h-6"
-                  style={{
-                    stroke: isCompleted || isActive ? '#ffffff' : '#9ca3af',
+                <h3 className="text-lg font-bold text-green-700 mb-2">Đơn hàng đã đến nơi! 🎉</h3>
+                <p className="text-gray-600 mb-4 text-sm">
+                  Cảm ơn bạn đã sử dụng dịch vụ. Chúc bạn ngon miệng!
+                </p>
+                <Button
+                  disabled={isUpdating}
+                  className="bg-green-600 hover:bg-green-700 text-white px-8 py-6 rounded-xl shadow-lg shadow-green-600/30 text-sm font-semibold w-full md:w-auto transition-all transform hover:scale-105 disabled:opacity-70 disabled:cursor-not-allowed disabled:hover:scale-100"
+                  onClick={async () => {
+                    setIsUpdating(true);
+                    try {
+                      const apiId = order.id || order._id || order.order_id || id;
+                      if (!apiId) return;
+
+                      const res = await fetch(
+                        `https://badafuta-production.up.railway.app/api/order/${apiId}/updateBody`,
+                        {
+                          method: 'PUT',
+                          headers: { 'Content-Type': 'application/json' },
+                          body: JSON.stringify({
+                            status: 'COMPLETED',
+                            status_payment: 'SUCCESS',
+                            delivered_at: new Date().toISOString(),
+                          }),
+                        },
+                      );
+
+                      if (!res.ok) throw new Error('Update failed');
+                      const data = await res.json();
+
+                      setIsDelivered(true);
+                      navigate('/my-orders', {
+                        state: { activeTab: 'COMPLETED', updatedOrder: data },
+                      });
+                    } catch (err) {
+                      console.error('❌ Lỗi khi xác nhận:', err);
+                      setIsUpdating(false);
+                    }
                   }}
-                />
+                >
+                  {isUpdating ? (
+                    <Loader2 className="w-6 h-6 mr-2 animate-spin" />
+                  ) : (
+                    <Check className="w-6 h-6 mr-2" />
+                  )}
+                  {isUpdating ? 'Đang xử lý...' : 'Xác nhận đã nhận hàng'}
+                </Button>
               </motion.div>
-
-              {/* Label */}
-              <motion.span
-                className="text-xs md:text-sm font-medium"
-                initial={{ color: '#9ca3af' }} // xám ban đầu
-                animate={{
-                  color: isCompleted
-                    ? '#f97316' // cam full nếu đã hoàn thành
-                    : isActive
-                    ? ['#9ca3af', '#f97316'] // chuyển từ xám → cam mượt
-                    : '#9ca3af', // chưa tới step
-                }}
-                transition={{ duration: isActive ? 3 : 0, ease: 'easeInOut' }}
-              >
-                {step.label}
-              </motion.span>
-            </div>
-          );
-        })}
-      </div>
-      {/* ✅ Driver Info chỉ hiện khi currentStep ≥ 2 */}
-      {testOrder.driver && currentStep >= 2 && (
-        // <div className="mt-4 text-sm text-gray-700 flex items-center space-x-2 bg-gray-50 p-3 rounded-xl shadow-sm">
-        <div className="mt-4 bg-gray-50 p-4 md:p-3 rounded-xl shadow-sm flex flex-col md:flex-row md:items-center space-y-2 md:space-y-0 md:space-x-3 text-gray-700 text-sm">
-          <span className="font-medium ">Tài xế:</span>
-          {/* Ảnh + thông tin */}
-          <div className="flex items-center space-x-2 md:space-x-3 flex-wrap">
-            <img
-              src={
-                testOrder.driver?.avatar ||
-                'https://scontent.fsgn2-10.fna.fbcdn.net/v/t39.30808-6/487326873_1887063878796318_9080709797256676382_n.jpg?_nc_cat=109&ccb=1-7&_nc_sid=94e2a3&_nc_ohc=treCi7K2T6YQ7kNvwFF10Nh&_nc_oc=AdlUuTytQt-R2TK52H5r46SC9Nau9ZJ6fyIbujyuF5NoIxATLgChqysYBgd7qvsKSrUhietYcqIt_5zpoKol9Mwv&_nc_zt=23&_nc_ht=scontent.fsgn2-10.fna&_nc_gid=exNZjuM-vVhrNERk1uvp-w&oh=00_AfhqOXRDKIUgDydZ8TKCkLNEEfkX0S1GZT9HnZrpt1q0rQ&oe=69137A79'
-              }
-              alt="Driver avatar"
-              className="w-8 h-8 rounded-full border border-gray-300"
-            />
-            <div className="flex flex-col md:flex-row md:items-center md:space-x-4 space-y-1 md:space-y-0">
-              {/* Tên tài xế */}
-              <span className="text-gray-500">{testOrder.driver?.name} |</span>
-              {/* Biển số xe */}
-              <span className="text-gray-500 flex items-center">
-                <Bike className="w-4 h-4 mr-1 text-orange-500" />
-                Biển số: {testOrder.driver?.BS}
-              </span>
-              {/* Rating */}
-              <span className=" text-gray-500">5.0</span>
-              <Star className="w-4 h-4 text-yellow-500" />
-            </div>
-          </div>
-
-          {/* SĐT */}
-          {testOrder.driver?.SĐT && (
-            <span className="flex items-center text-gray-500">
-              | <Phone className="w-4 h-4 mx-2 text-orange-500" /> {testOrder.driver.SĐT}
-            </span>
-          )}
-          {/* Icon tin nhắn */}
-          {/* 💬 Icon tin nhắn */}
-          <button
-            onClick={() => navigate(`/chat-driver/${testOrder.driver?.id}`)}
-            className="mt-2 md:mt-0 ml-0 md:ml-auto flex items-center gap-1 text-gray-500 hover:text-orange-600 transition"
-          >
-            <MessageCircle className="w-4 h-4 text-orange-500 " />
-            <span>Nhắn tin</span>
-          </button>
-        </div>
-      )}
-
-      {/* Order info responsive */}
-      <div className="bg-white p-4 md:p-6 rounded-lg shadow-sm space-y-2 text-sm text-gray-500 md:text-base">
-        {/* <p className="text-lg">Thông tin đơn hàng</p> */}
-
-        <div className="flex flex-col space-y-4 bg-white p-4 rounded-lg shadow-sm">
-          {/* Từ */}
-          <div className="flex items-start space-x-2">
-            {/* Chấm trạng thái */}
-            <span className="w-3 h-3 mt-1 rounded-full bg-orange-500 flex-shrink-0"></span>
-
-            <div className="flex flex-col">
-              {/* Từ: Tên quán" */}
-              <div className="flex space-x-1 items-center">
-                <span className="text-gray-700 font-semibold">Từ: </span>
-                <span className="text-gray-600 font-medium">
-                  {order?.merchant_name || 'Đang tải tên quán...'}
-                </span>
-              </div>
-              {/* Địa chỉ */}
-              <span className="text-gray-500 text-sm">
-                {order?.merchant_address || 'Đang tải địa chỉ...'}
-              </span>
-              <span className="text-gray-500 text-sm">{order?.merchant_phone}</span>
-            </div>
-          </div>
-
-          {/* Line nối */}
-          <div className="w-0.5 bg-gray-300 h-6 mx-1 ml-1"></div>
-
-          {/* Đến */}
-          <div className="flex items-start space-x-2">
-            {/* Chấm xanh */}
-            <span className="w-3 h-3 mt-1 rounded-full bg-green-500 flex-shrink-0"></span>
-
-            {/* Nội dung Đến */}
-            <div className="flex flex-col">
-              {/* Hàng chữ "Đến: Địa chỉ" */}
-              <div className="flex items-center space-x-1">
-                <span className="text-gray-700 font-semibold">Đến: </span>
-                <span className="text-gray-600 font-medium">
-                  {order?.delivery_address || 'Đang tải địa chỉ...'}
-                </span>
-              </div>
-
-              {/* Tên + số điện thoại */}
-              <span className="text-gray-500 text-sm mt-1">
-                {order.receiver_name || 'Đang tải tên người nhận...'} |{' '}
-                {order.receiver_phone || 'Đang tải số điện thoại...'}
-              </span>
-            </div>
-          </div>
-        </div>
-        <div className="space-y-6">
-          {/* Tóm tắt đơn hàng */}
-          <div className="bg-white p-6 rounded-xl shadow-md space-y-4 text-gray-600">
-            <h2 className="text-xl font-semibold text-gray-800">Tóm tắt đơn hàng</h2>
-
-            {order?.items?.map((item, index) => (
-              <div
-                key={index}
-                className="flex items-center space-x-4 p-2 rounded-lg bg-gray-100 transition"
-              >
-                {/* Hình món */}
-                {item?.image_item?.url ? (
-                  <img
-                    src={item.image_item.url}
-                    alt={item.name_item}
-                    className="w-16 h-16 rounded-lg object-cover"
-                  />
-                ) : (
-                  <div className="w-16 h-16 bg-gray-200 flex items-center justify-center text-xs text-gray-400 rounded-lg">
-                    No Image
-                  </div>
-                )}
-                {/* Tên + số lượng + topping */}
-                <div className="flex-1 flex flex-col">
-                  <span className="font-medium text-gray-800">Tên món: {item.name_item}</span>
-                  <span className="text-sm">Số lượng: {item.quantity}</span>
-                  <span className="text-sm">
-                    Giá: {Number(item.price).toLocaleString('vi-VN')}đ
-                  </span>
-                  <span className="text-sm">
-                    Topping:{' '}
-                    {item.options
-                      .map((opt) => `${opt.option_name} (${opt.option_item_name})`)
-                      .join(', ') || 'Hình như bạn chưa chọn topping cho món này!'}
-                  </span>
-                </div>
-              </div>
-            ))}
-            <div className="text-sm space-y-2">
-              {/* <div className="flex justify-between items-center"> */}
-              <div className="flex justify-between items-center mt-3 text-sm text-gray-600 px-2">
-                <div className="flex items-center space-x-2">
-                  <Truck className="w-4 h-4 text-orange-500" />
-                  <span className="text-gray-600">Phí giao hàng:</span>
-                </div>
-                <span className="text-gray-600">
-                  {Number(order.delivery_fee).toLocaleString('vi-VN')}đ
-                </span>
-              </div>
-
-              <div className="flex justify-between items-center mt-3 text-sm text-gray-600 px-2">
-                <div className="flex items-center space-x-2">
-                  <Tag className="w-4 h-4 text-blue-500" />
-                  <span className="text-gray-600">Phí áp dụng:</span>
-                </div>
-                <span className="text-gray-600">{order.feesapply || 'Không có'}</span>
-              </div>
-
-              <div className="flex justify-between items-center mt-3 text-sm text-gray-600 px-2">
-                <div className="flex items-center space-x-2">
-                  <Percent className="w-4 h-4 text-green-500" />
-                  <span className="text-gray-600">Giảm giá:</span>
-                </div>
-                <span className="text-gray-600">{order.discount || '0'}đ</span>
-              </div>
-
-              <div className="flex justify-between items-center mt-3 text-sm text-gray-600 px-2">
-                <div className="flex items-center space-x-2">
-                  <DollarSign className="w-4 h-4 text-red-500" />
-                  <span className="text-gray-600">Tổng tiền:</span>
-                </div>
-                <span className="font-bold text-gray-800">
-                  {Number(order.total_amount).toLocaleString('vi-VN')}đ
-                </span>
-              </div>
-            </div>
-          </div>
-          {/* Thông tin đơn hàng */}
-          <div className="bg-white p-6 rounded-xl shadow-md space-y-4 text-gray-600">
-            <h2 className="text-xl font-semibold text-gray-800 pb-2">Thông tin đơn hàng</h2>
-
-            {/* Dụng cụ ăn uống */}
-            <div className="flex justify-between items-center mt-3 text-sm text-gray-600 px-2">
-              <div className="flex items-center space-x-2">
-                <ForkKnife className="w-4 h-4 text-orange-500" />
-                <span>Dụng cụ ăn uống</span>
-              </div>
-              <span className="text-gray-600">{order.utensils || 'Không có'}</span>
-            </div>
-
-            {/* Ghi chú */}
-            <div className="flex justify-between items-center mt-3 text-sm text-gray-600 px-2 ">
-              <div className="flex items-center space-x-2">
-                <FileText className="w-4 h-4 text-blue-500" />
-                <span>Ghi chú</span>
-              </div>
-              <span className="text-gray-600">{order.note || 'Không có'}</span>
-            </div>
-            {/* Mã đơn */}
-            <div className="flex justify-between items-center mt-3 text-sm text-gray-600 px-2 ">
-              <div className="flex items-center space-x-2">
-                <FileText className="w-4 h-4 text-blue-500" />
-                <span>Mã đơn</span>
-              </div>
-              <span className="text-gray-600">{order.order_id || 'Không có'}</span>
-            </div>
-            {/* Thời gian đặt hàng */}
-            <div className="flex justify-between items-center mt-3 text-sm text-gray-600 px-2">
-              <div className="flex items-center space-x-2">
-                <Calendar className="w-4 h-4 text-green-500" />
-                <span>Thời gian đặt hàng</span>
-              </div>
-              <span className="text-gray-600">{formatDateTime(order.created_at)}</span>
-            </div>
-
-            {/* Giao lúc (nếu có) */}
-            {order.delivered_at && (
-              <div className="flex justify-between items-center mt-3 text-sm text-gray-600 px-2">
-                <div className="flex items-center space-x-2">
-                  <Clock className="w-4 h-4 text-purple-500" />
-                  <span>Giao lúc</span>
-                </div>
-                <span className="text-gray-600">{formatDateTime(order.delivered_at)}</span>
-              </div>
             )}
+          </div>
 
-            {/* Thanh toán */}
-            <div className="flex justify-between items-center mt-3 text-sm text-gray-600 px-2">
-              <div className="flex items-center space-x-2">
-                <CreditCard className="w-4 h-4 text-purple-500" />
-                <span>Thanh toán</span>
+          {/* Cột phải: Thông tin đơn hàng */}
+          <div className="space-y-6">
+            {/* Locations Info */}
+            <div className="bg-white p-6 rounded-3xl shadow-sm border border-gray-100">
+              <h3 className="font-bold text-gray-800 mb-4 flex items-center gap-2">
+                <MapPin className="w-5 h-5 text-orange-500" />
+                Lộ trình
+              </h3>
+
+              <div className="flex flex-col">
+                {/* TỪ */}
+                <div className="flex gap-3">
+                  <div className="flex flex-col items-center">
+                    <div className="mt-1 w-4 h-4 rounded-full bg-orange-500 ring-4 ring-white shadow-md z-10 shrink-0"></div>
+                    <div className="w-0.5 bg-gray-300 flex-1 translate-y-1"></div>
+                  </div>
+                  <div className="flex flex-col gap-1 pb-8 w-full">
+                    <p className="text-xs text-gray-400 font-medium">Điểm lấy hàng</p>
+                    <p className="font-semibold text-gray-800 text-sm md:text-base">
+                      {order?.merchant_name}
+                    </p>
+                    <p className="text-gray-500 text-sm line-clamp-2">{order?.merchant_address}</p>
+                    <p className="text-gray-400 text-xs">{order?.merchant_phone}</p>
+                  </div>
+                </div>
+
+                {/* ĐẾN */}
+                <div className="flex gap-3">
+                  <div className="flex flex-col items-center">
+                    <div className="mt-1 w-4 h-4 rounded-full bg-green-500 ring-4 ring-white shadow-md z-10 shrink-0"></div>
+                  </div>
+                  <div className="flex flex-col gap-1 w-full">
+                    <p className="text-xs text-gray-400 font-medium">Điểm giao hàng</p>
+                    <p className="font-semibold text-gray-800 text-sm md:text-base">
+                      {order.receiver_name}
+                    </p>
+                    <p className="text-gray-500 text-sm line-clamp-2">{order?.delivery_address}</p>
+                    <p className="text-gray-400 text-xs">{order.receiver_phone}</p>
+                  </div>
+                </div>
               </div>
-              <span className="text-gray-600">{order.payment_method}</span>
+            </div>
+
+            {/* Order Summary */}
+            <div className="space-y-4">
+              <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+                <div className="bg-gray-50/50 px-4 py-3 border-b border-gray-100 flex items-center gap-2">
+                  <ShoppingBag className="w-4 h-4 text-blue-500" />
+                  <h3 className="font-bold text-gray-800 text-sm uppercase tracking-wide">
+                    Chi tiết đơn hàng
+                  </h3>
+                </div>
+
+                <div className="px-4 py-2">
+                  {order?.items?.map((item, index) => (
+                    <div
+                      key={index}
+                      className="flex gap-3 py-3 border-b border-gray-50 last:border-0"
+                    >
+                      <div className="shrink-0">
+                        {item?.image_item?.url ? (
+                          <img
+                            src={item.image_item.url}
+                            alt={item.name_item}
+                            className="w-16 h-16 rounded-lg object-cover border border-gray-100"
+                          />
+                        ) : (
+                          <div className="w-16 h-16 bg-gray-50 border border-gray-200 flex items-center justify-center text-[10px] text-gray-400 rounded-lg font-medium">
+                            No Img
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="flex-1 min-w-0 flex flex-col justify-between">
+                        <div className="flex justify-between items-start gap-2">
+                          <p className="font-semibold text-gray-800 text-sm line-clamp-2 leading-tight">
+                            {item.name_item}
+                          </p>
+                          <span className="font-bold text-orange-600 text-sm whitespace-nowrap">
+                            {Number(item.price).toLocaleString('vi-VN')}đ
+                          </span>
+                        </div>
+                        <p className="text-xs text-gray-500 mt-1">
+                          Số lượng:{' '}
+                          <span className="font-medium text-gray-900">x{item.quantity}</span>
+                        </p>
+                        <div className="mt-1.5 bg-gray-50 px-2 py-1.5 rounded-lg border border-gray-100 text-xs text-gray-600 leading-snug">
+                          Topping:{' '}
+                          {item.options && item.options.length > 0
+                            ? item.options
+                                .map((opt) => `${opt.option_name} (${opt.option_item_name})`)
+                                .join(', ')
+                            : 'Hình như bạn chưa chọn topping cho món này!'}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                <div className="bg-gray-50/30 px-4 py-3 border-t border-gray-100 space-y-2">
+                  <div className="flex justify-between items-center text-xs">
+                    <div className="flex items-center gap-2 text-gray-500">
+                      <Truck className="w-3.5 h-3.5" />
+                      <span>Phí giao hàng</span>
+                    </div>
+                    <span className="font-medium text-gray-700">
+                      {Number(order.delivery_fee).toLocaleString('vi-VN')}đ
+                    </span>
+                  </div>
+                  <div className="flex justify-between items-center text-xs">
+                    <div className="flex items-center gap-2 text-gray-500">
+                      <Tag className="w-3.5 h-3.5 text-blue-500" />
+                      <span>Phí dịch vụ</span>
+                    </div>
+                    <span className="font-medium text-gray-700">{order.feesapply || '0đ'}</span>
+                  </div>
+                  <div className="flex justify-between items-center text-xs">
+                    <div className="flex items-center gap-2 text-gray-500">
+                      <Percent className="w-3.5 h-3.5 text-green-500" />
+                      <span>Giảm giá</span>
+                    </div>
+                    <span className="font-medium text-green-600">
+                      -{Number(order.discount || 0).toLocaleString('vi-VN')}đ
+                    </span>
+                  </div>
+                  <div className="border-t border-dashed border-gray-300 my-2"></div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm font-bold text-gray-800">Tổng thanh toán</span>
+                    <span className="text-lg font-bold text-orange-600">
+                      {Number(order.total_amount).toLocaleString('vi-VN')}đ
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Info Extra */}
+              <div className="bg-white px-4 py-3 rounded-2xl shadow-sm border border-gray-100">
+                <h3 className="text-gray-700 font-bold mb-2 text-xs uppercase tracking-wide">
+                  Thông tin thêm
+                </h3>
+                <div className="flex flex-col divide-y divide-gray-50 text-xs">
+                  <div className="flex justify-between py-2">
+                    <div className="flex items-center gap-2 text-gray-500">
+                      <ForkKnife className="w-3.5 h-3.5 text-orange-500" />
+                      <span>Dụng cụ</span>
+                    </div>
+                    <span className="font-medium text-gray-800">{order.utensils || 'Không'}</span>
+                  </div>
+                  <div className="flex justify-between py-2">
+                    <div className="flex items-center gap-2 text-gray-500">
+                      <FileText className="w-3.5 h-3.5 text-blue-500" />
+                      <span>Ghi chú</span>
+                    </div>
+                    <span className="font-medium text-gray-800 text-right max-w-[60%] truncate">
+                      {order.note || 'Không'}
+                    </span>
+                  </div>
+                  <div className="flex justify-between py-2">
+                    <div className="flex items-center gap-2 text-gray-500">
+                      <Tag className="w-3.5 h-3.5 text-gray-600" />
+                      <span>Mã đơn</span>
+                    </div>
+                    <span className="font-mono bg-gray-100 px-1.5 rounded text-[10px] text-gray-600 border border-gray-200">
+                      {order.order_id || 'N/A'}
+                    </span>
+                  </div>
+                  <div className="flex justify-between py-2">
+                    <div className="flex items-center gap-2 text-gray-500">
+                      <Calendar className="w-3.5 h-3.5 text-green-500" />
+                      <span>Đặt lúc</span>
+                    </div>
+                    <span className="font-medium text-gray-800">
+                      {formatDateTime(order.created_at)}
+                    </span>
+                  </div>
+                  <div className="flex justify-between py-2">
+                    <div className="flex items-center gap-2 text-gray-500">
+                      <Clock className="w-3.5 h-3.5 text-purple-500" />
+                      {/* SỬA Ở ĐÂY: Dựa vào currentStep để đổi chữ */}
+                      <span>{currentStep === 4 ? 'Giao lúc' : 'Dự kiến giao'}</span>
+                    </div>
+                    <span className="font-medium text-gray-800">
+                      {/* estimatedDelivery chính là thời điểm Drone chạm đích */}
+                      {formatDateTime(estimatedDelivery)}
+                    </span>
+                  </div>
+                  <div className="flex justify-between items-center pt-2">
+                    <div className="flex items-center gap-2 text-gray-500">
+                      <CreditCard className="w-3.5 h-3.5 text-indigo-500" />
+                      <span>Thanh toán</span>
+                    </div>
+                    <span className="font-bold text-[10px] uppercase text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded">
+                      {order.payment_method}
+                    </span>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         </div>

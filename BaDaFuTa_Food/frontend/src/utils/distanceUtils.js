@@ -27,10 +27,8 @@ export function getDistanceKm(lat1, lng1, lat2, lng2) {
  * @returns {number} phí ship (VNĐ)
  */
 export function calculateDeliveryFee(distanceKm) {
-  if (distanceKm <= 2) return 10000;
-  if (distanceKm <= 5) return 15000;
-  if (distanceKm <= 10) return 20000;
-  return 30000; // >10km
+  if (distanceKm <= 3) return 16000;
+  return 16000 + Math.ceil(distanceKm - 3) * 4000;
 }
 /**
  * Tính thời gian giao hàng dựa vào khoảng cách (km)

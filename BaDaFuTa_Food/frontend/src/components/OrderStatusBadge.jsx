@@ -7,7 +7,7 @@ export const OrderStatusBadge = ({ status, showIcon = false }) => {
       case "PENDING": // trạng thái mới
         return {
           color: "bg-yellow-100 text-yellow-800 border-yellow-200",
-          text: "Đang chờ",
+          text: "Chờ xác nhận",
           icon: Clock,
         };
       case "COMPLETED":

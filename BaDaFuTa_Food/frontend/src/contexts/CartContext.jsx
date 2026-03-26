@@ -167,6 +167,7 @@ const cartReducer = (state = initialCart, action) => {
         menuItem,
         restaurant,
         quantity,
+        deliveryFee: restaurant.deliveryFee || 0,
         selectedToppings: normalizedToppings,
         selectedOptions: normalizedToppings,
         specialInstructions,
@@ -196,7 +197,7 @@ const cartReducer = (state = initialCart, action) => {
       return { items: updatedItems, total: recalcTotal(updatedItems) };
     }
     case 'CLEAR_CART':
-      return { items: [], total: 0 };
+      return { items: [], total: 0, toastInfo: null };
     default:
       return safeState;
 
@@ -392,8 +393,22 @@ export const CartProvider = ({ children }) => {
   const removeItem = (id) => dispatch({ type: 'REMOVE_ITEM', payload: id });
   const updateQuantity = (id, quantity) =>
     dispatch({ type: 'UPDATE_QUANTITY', payload: { id, quantity } });
-  const clearCart = () => dispatch({ type: 'CLEAR_CART' });
+  const clearCart = () => {
+    // 1) Clear state trong RAM
+    dispatch({ type: 'CLEAR_CART' });
 
+    // 2) Clear luôn tất cả cart trong localStorage (guest + user)
+    try {
+      Object.keys(localStorage).forEach((key) => {
+        if (key.startsWith(STORAGE_KEY + '_')) {
+          localStorage.removeItem(key);
+        }
+      });
+      // console.log('✅ Cleared all cart keys startsWith', STORAGE_KEY + '_');
+    } catch (e) {
+      console.warn('Failed to clear cart from localStorage:', e);
+    }
+  };
   return (
     <CartContext.Provider
       value={{

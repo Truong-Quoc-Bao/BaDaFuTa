@@ -1,6 +1,6 @@
-import { defineConfig } from "vite";
-import react from "@vitejs/plugin-react";
-import tailwindcss from "@tailwindcss/vite";
+import { defineConfig } from 'vite';
+import react from '@vitejs/plugin-react';
+import tailwindcss from '@tailwindcss/vite';
 
 // https://vite.dev/config/
 export default defineConfig({
@@ -13,36 +13,45 @@ export default defineConfig({
     },
     host: true,
     port: 5173,
+    strictPort: false,
     // ✅ Cho phép ngrok host truy cập
     allowedHosts: [
-      "localhost",
-      "127.0.0.1",
-      "172.20.10.3",
-      "192.168.100.124",
-      "unnibbed-unthrilled-averi.ngrok-free.dev", // thêm host ngrok
+      'localhost',
+      '127.0.0.1',
+      '172.20.10.3',
+      '192.168.100.124',
+      'unnibbed-unthrilled-averi.ngrok-free.dev', // thêm host ngrok
     ],
     proxy: {
-      "/api192": {
-        target: "http://192.168.100.124:3000",
+      '/api192': {
+        target: 'http://192.168.100.124:3000',
         changeOrigin: true,
-        rewrite: (path) => path.replace(/^\/api192/, "/api"),
+        rewrite: (path) => path.replace(/^\/api192/, '/api'),
       },
-      "/apiLocal": {
-        target: "http://localhost:3000",
+      '/apiLocal': {
+        target: 'http://localhost:3000',
         changeOrigin: true,
-        rewrite: (path) => path.replace(/^\/apiLocal/, "/api"),
+        rewrite: (path) => path.replace(/^\/apiLocal/, '/api'),
       },
-      "/api172": {
-        target: "http://172.20.10.3:3000",
+      '/api172': {
+        target: 'http://172.20.10.3:3000',
         changeOrigin: true,
-        rewrite: (path) => path.replace(/^\/api172/, "/api"),
+        rewrite: (path) => path.replace(/^\/api172/, '/api'),
       },
     },
   },
   resolve: {
     alias: {
-      "@": "/src",
+      '@': '/src',
     },
+  },
+  build: {
+    rollupOptions: {
+      external: ['socket.io-client'], // 🔹 Thêm dòng này
+    },
+  },
+  optimizeDeps: {
+    include: ['socket.io-client'],
   },
 });
 

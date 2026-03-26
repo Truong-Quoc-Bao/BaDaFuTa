@@ -10,6 +10,8 @@ import { Button } from '../../components/ui/button';
 import { Badge } from '../../components/ui/badge';
 import { MenuItemCard } from '../../components/MenuItemCard';
 import { ImageWithFallback } from '../../components/figma/ImageWithFallback';
+import { motion } from 'framer-motion'; // Để làm hiệu ứng nảy nút
+// import { toast } from 'sonner'; // (Tuỳ chọn) Nếu bạn có dùng thư viện thông báo
 
 export const RestaurantPage = () => {
   const navigate = useNavigate();
@@ -22,45 +24,55 @@ export const RestaurantPage = () => {
   const [loading, setLoading] = useState(true);
   const [errMsg, setErrMsg] = useState('');
 
-  //Lấy menu
-  // useEffect(() => {
-  //   if (!id) return;
+  // Key để lưu danh sách yêu thích trong localStorage
+  const FAVORITE_KEY = 'favoriteRestaurants';
 
-  //   const ac = new AbortController();
-  //   async function fetchMenu() {
-  //     try {
-  //       setLoading(true);
-  //       setErrMsg("");
+  // Giả lập trạng thái ban đầu (thường sẽ lấy từ props hoặc API)
+  const [isFavorite, setIsFavorite] = useState(false);
+  const [isAnimating, setIsAnimating] = useState(false);
 
-  //       const res = await fetch(
-  //         //`http://localhost:3000/api/restaurants/${encodeURIComponent(
-  //         `http://192.168.100.124:3000/api/restaurants/${encodeURIComponent(
-  //         // `http://172.20.10.3:3000/api/restaurants/${encodeURIComponent(
-  //           id
-  //         )}/menu`,
-  //         { signal: ac.signal }
-  //       );
-  //       if (!res.ok) {
-  //         const t = await res.text().catch(() => "");
-  //         throw new Error(t || "Không tìm thấy quán");
-  //       }
-  //       const data = await res.json();
+  useEffect(() => {
+    if (!id) return;
+    const favorites = JSON.parse(localStorage.getItem(FAVORITE_KEY) || '{}');
+    setIsFavorite(!!favorites[id]); // true nếu đã thích trước đó
+  }, [id]);
 
-  //       setRestaurant(data.merchant ?? null);
-  //       setMenu(Array.isArray(data.menu) ? data.menu : []);
-  //     } catch (e) {
-  //       if (e.name !== "AbortError") {
-  //         console.error("fetchMenu error:", e);
-  //         setErrMsg("Không tải được dữ liệu nhà hàng. Vui lòng thử lại.");
-  //       }
-  //     } finally {
-  //       setLoading(false);
-  //     }
-  //   }
+  const handleToggleFavorite = (e) => {
+    // Ngăn sự kiện nổi bọt (nếu nút này nằm trên thẻ Card có thể click được)
+    e.stopPropagation();
+    e.preventDefault();
 
-  //   fetchMenu();
-  //   return () => ac.abort();
-  // }, [id]);
+    const newState = !isFavorite;
+    setIsFavorite(newState);
+    setIsAnimating(true);
+
+    // Cập nhật localStorage
+    const favorites = JSON.parse(localStorage.getItem(FAVORITE_KEY) || '{}');
+
+    if (newState) {
+      // Thêm vào danh sách yêu thích
+      favorites[id] = {
+        restaurantId: id,
+        name: restaurant?.merchant_name || 'Nhà hàng',
+        coverImage: restaurant?.cover_image?.url,
+        savedAt: new Date().toISOString(),
+      };
+      toast.success('Đã thêm vào yêu thích ❤️');
+    } else {
+      // Xóa khỏi danh sách
+      delete favorites[id];
+      toast.success('Đã huỷ yêu thích 💔');
+    }
+
+    localStorage.setItem(FAVORITE_KEY, JSON.stringify(favorites));
+
+    // Reset animation sau khi chạy xong
+    setTimeout(() => setIsAnimating(false), 300);
+
+    // TODO: Gọi API cập nhật server tại đây
+    // console.log("Đã cập nhật yêu thích:", newState);
+    // toast.success(newState ? 'Đã thêm vào yêu thích ❤️' : 'Đã huỷ yêu thích 💔');
+  };
 
   useEffect(() => {
     if (!id) return;
@@ -70,7 +82,9 @@ export const RestaurantPage = () => {
     async function fetchMenu() {
       const hosts = [
         // `/api192/restaurants/${encodeURIComponent(id)}/menu`,
-        `/apiLocal/restaurants/${encodeURIComponent(id)}/menu`,
+        // `/apiLocal/restaurants/${encodeURIComponent(id)}/menu`,
+        `https://badafuta-production.up.railway.app/api/restaurants/${encodeURIComponent(id)}/menu`,
+
         // `/api172/restaurants/${encodeURIComponent(id)}/menu`,
       ];
       setLoading(true);
@@ -140,15 +154,41 @@ export const RestaurantPage = () => {
         {/* RIGHT: 6/10 - Black Banner (căn top) */}
         <div className="relative lg:col-span-6 bg-gray-800 px-6 md:px-8 lg:px-10 py-6 md:py-8">
           {/* Floating Action Button (góc phải trên) */}
-          <div className="absolute top-4 right-4">
-            <Button
-              size="sm"
-              className="bg-white/20 hover:bg-white/30 backdrop-blur-md border-white/30 text-white shadow-lg"
-              variant="outline"
+          <div className="absolute top-16 right-4 z-30 sm:top-4 h-5">
+            <motion.button
+              whileTap={{ scale: 0.9 }} // Hiệu ứng lún xuống khi bấm
+              onClick={handleToggleFavorite}
+              className={`
+                  relative overflow-hidden group flex items-center  gap-2 px-4 py-2 rounded-full border shadow-lg transition-all duration-300
+                  ${
+                    isFavorite
+                      ? 'bg-white border-white text-orange-500' // Style khi ĐÃ thích: Nền trắng, chữ cam
+                      : 'bg-black/30 backdrop-blur-md border-white/30 text-white hover:bg-black/40' // Style khi CHƯA thích: Nền kính mờ
+                  }
+                `}
             >
-              <Star className="w-4 h-4 mr-2" />
-              Yêu thích
-            </Button>
+              {/* Icon Ngôi sao */}
+              <motion.div
+                animate={isAnimating ? { scale: [1, 1.5, 1], rotate: [0, 15, -15, 0] } : {}}
+                transition={{ duration: 0.4 }}
+              >
+                <Star
+                  className={`w-4 h-4 transition-colors duration-300 ${
+                    isFavorite ? 'fill-orange-500 text-orange-500' : 'text-white'
+                  }`}
+                />
+              </motion.div>
+
+              {/* Text */}
+              <span className="text-sm font-semibold tracking-wide">
+                {isFavorite ? 'Đã thích' : 'Yêu thích'}
+              </span>
+
+              {/* Hiệu ứng bóng sáng khi hover (Chỉ hiện khi chưa thích) */}
+              {!isFavorite && (
+                <div className="absolute inset-0 rounded-full ring-2 ring-white/0 group-hover:ring-white/20 transition-all duration-500" />
+              )}
+            </motion.button>
           </div>
 
           {/* Restaurant Name & Cuisine (căn top) */}
@@ -160,7 +200,9 @@ export const RestaurantPage = () => {
               <Award className="w-6 h-6 text-yellow-400" />
             </div>
             <div className="flex items-center gap-3">
-              <Badge className="bg-orange-500 text-white border-0 px-3 py-1">Việt Nam</Badge>
+              <Badge className="bg-orange-500 text-white border-0 px-3 py-1">
+                {restaurant?.cuisine}
+              </Badge>
               <Badge variant="outline" className="bg-gray-600 border-gray-500 text-white px-3 py-1">
                 Cao cấp
               </Badge>
@@ -175,7 +217,15 @@ export const RestaurantPage = () => {
                   <Star className="w-3 h-3 text-white fill-current" />
                 </div>
                 <div>
-                  <div className="text-white font-bold text-sm">{restaurant?.rating ?? '4.8'}</div>
+                  <div className="text-white font-bold text-sm flex items-center gap-1">
+                    {restaurant?.rating != null ? (
+                      <>
+                        {restaurant.rating} <Star className="w-4 h-4 text-yellow-400" />
+                      </>
+                    ) : (
+                      'Chưa có đánh giá nhà hàng'
+                    )}
+                  </div>
                   <div className="text-xs text-gray-300">Đánh giá</div>
                 </div>
               </div>
@@ -188,7 +238,7 @@ export const RestaurantPage = () => {
                 </div>
                 <div>
                   <div className="text-white font-bold text-sm">
-                    {restaurant?.delivery_time ?? '25-35 phút'}
+                    {restaurant?.deliveryTime ?? '30-40 phút'}
                   </div>
                   <div className="text-xs text-gray-300">Giao hàng</div>
                 </div>
@@ -203,8 +253,8 @@ export const RestaurantPage = () => {
                 <div>
                   <div className="text-white font-bold text-sm">
                     {restaurant?.delivery_fee
-                      ? `${restaurant.delivery_fee.toLocaleString('vi-VN')}đ`
-                      : 'Miễn phí'}
+                      ? `${restaurant.deliveryFee.toLocaleString('vi-VN')}đ`
+                      : 'Thu theo App'}
                   </div>
                   <div className="text-xs text-gray-300">Phí ship</div>
                 </div>
@@ -232,12 +282,31 @@ export const RestaurantPage = () => {
       <div className="bg-white rounded-xl shadow-sm border border-gray-100 mb-8 overflow-hidden">
         <div className="p-6">
           {/* Restaurant Description */}
-          <div className="mb-6">
-            <h3 className="font-bold text-gray-900 mb-3">Về nhà hàng</h3>
-            <p className="text-gray-600 leading-relaxed mb-4">{/* {restaurant.description} */}</p>
-            <div className="flex items-center space-x-2 text-gray-500">
-              <MapPin className="w-4 h-4 text-orange-500" />
-              <span className="text-sm">{restaurant?.location.address}</span>
+          <div className="mb-6 bg-white p-5 rounded-2xl shadow-sm border border-gray-100">
+            {/* Tiêu đề có điểm nhấn màu cam */}
+            <h3 className="text-lg font-bold text-gray-800 mb-4 flex items-center gap-2">
+              <span className="w-1 h-5 bg-orange-500 rounded-full block"></span>
+              Về nhà hàng
+            </h3>
+
+            {/* Phần mô tả: canh đều 2 bên, giãn dòng dễ đọc */}
+            <p className="text-gray-600 text-sm leading-7 mb-6 text-justify">
+              {restaurant?.description || 'Chưa có mô tả cho nhà hàng này.'}
+            </p>
+
+            {/* Phần địa chỉ: Đóng khung nổi bật */}
+            <div className="flex items-start gap-3 bg-orange-50/50 p-4 rounded-xl border border-orange-100/50 hover:border-orange-200 transition-colors">
+              <div className="bg-white p-2 rounded-full shadow-sm shrink-0 text-orange-500">
+                <MapPin className="w-5 h-5" />
+              </div>
+              <div className="flex-1">
+                <p className="text-xs text-orange-600/70 font-semibold uppercase tracking-wider mb-1">
+                  Địa chỉ quán
+                </p>
+                <span className="text-sm font-medium text-gray-800 leading-snug block">
+                  {restaurant?.location.address || 'Đang cập nhật địa chỉ...'}
+                </span>
+              </div>
             </div>
           </div>
 
@@ -335,6 +404,7 @@ export const RestaurantPage = () => {
                     originalPrice: rawItem.originalPrice ?? rawItem.price,
                     // Thêm
                     categoryId: category.id ?? category.category_id,
+                    categoryName: category.category_name,
                     restaurantId: restaurant?.id,
                     sku: rawItem.sku ?? null,
                     tags: rawItem.tags ?? [],

@@ -1,5 +1,6 @@
-import { prisma } from '@/libs/prisma';
-import { MerchantOverviewResponse } from './merchant-dashboard.type';
+import { prisma } from "@/libs/prisma";
+import { order_status } from "@prisma/client";
+import { OrderItemDetail, OrderDetail } from "./merchant-dashboard.type";
 
 export const merchantDashboardRepository = {
   /** Lấy merchant_id từ user_id (chủ nhà hàng) */
@@ -31,8 +32,8 @@ export const merchantDashboardRepository = {
     const orders = await prisma.order.findMany({
       where: {
         merchant_id: merchantId,
-        status: 'COMPLETED',
-        status_payment: 'SUCCESS',
+        status: "COMPLETED",
+        status_payment: "SUCCESS",
       },
       select: {
         total_amount: true,
@@ -54,8 +55,8 @@ export const merchantDashboardRepository = {
     const orders = await prisma.order.findMany({
       where: {
         merchant_id: merchantId,
-        status: 'COMPLETED',
-        status_payment: 'SUCCESS',
+        status: "COMPLETED",
+        status_payment: "SUCCESS",
         created_at: { gte: today },
       },
       select: {
@@ -84,7 +85,7 @@ export const merchantDashboardRepository = {
     return prisma.order.count({
       where: {
         merchant_id: merchantId,
-        status: 'PENDING',
+        status: "PENDING",
       },
     });
   },
@@ -92,7 +93,7 @@ export const merchantDashboardRepository = {
   /** Tổng số khách hàng duy nhất */
   async countUniqueCustomers(merchantId: string): Promise<number> {
     const res = await prisma.order.groupBy({
-      by: ['user_id'],
+      by: ["user_id"],
       where: { merchant_id: merchantId },
     });
     return res.length;
@@ -102,7 +103,7 @@ export const merchantDashboardRepository = {
   async getRecentOrders(merchantId: string, limit = 10) {
     const orders = await prisma.order.findMany({
       where: { merchant_id: merchantId },
-      orderBy: { created_at: 'desc' },
+      orderBy: { created_at: "desc" },
       take: limit,
       include: {
         user: { select: { full_name: true } },
@@ -112,12 +113,91 @@ export const merchantDashboardRepository = {
 
     return orders.map((o) => ({
       id: o.id,
-      user_name: o.user?.full_name || 'Khách lạ',
+      user_name: o.user?.full_name || "Khách lạ",
       item_count: o.items.length,
       total_amount: Number(o.total_amount) - Number(o.delivery_fee), // ⭐
       status: o.status,
       payment_method: o.payment_method,
       created_at: o.created_at,
     }));
+  },
+};
+export const merchantOrderRepository = {
+  /** Map Prisma order → OrderDetail cho FE */
+  mapOrderToDetail(order: any): OrderDetail {
+    return {
+      id: order.id,
+      user_name: order.user?.full_name ?? "Khách lạ",
+      user_phone: order.user?.phone ?? "",
+      delivery_address: order.delivery_address ?? "",
+      note: order.note ?? null,
+      total_amount: Number(order.total_amount),
+      delivery_fee: Number(order.delivery_fee),
+      status: order.status,
+      payment_method: order.payment_method,
+      created_at: order.created_at,
+
+      items: order.items.map(
+        (item: any): OrderItemDetail => ({
+          id: item.id,
+          name: item.menu_item?.name_item ?? "Unknown",
+          price: Number(item.price),
+          quantity: Number(item.quantity),
+          note: item.note ?? "",
+        })
+      ),
+    };
+  },
+
+  /** Core dùng chung cho tất cả trạng thái */
+  async getOrdersByStatus(
+    merchantId: string,
+    status: string
+  ): Promise<OrderDetail[]> {
+    const orders = await prisma.order.findMany({
+      where: {
+        merchant_id: merchantId,
+        status: status as order_status,
+      },
+      orderBy: { created_at: "desc" },
+      include: {
+        user: { select: { full_name: true, phone: true } },
+        items: {
+          select: {
+            id: true,
+            price: true,
+            quantity: true,
+            note: true,
+            menu_item: {
+              select: {
+                name_item: true,
+              },
+            },
+          },
+        },
+      },
+    });
+
+    return orders.map((o) => this.mapOrderToDetail(o));
+  },
+
+  /** Các hàm theo trạng thái */
+  getPendingOrders(merchantId: string) {
+    return this.getOrdersByStatus(merchantId, "PENDING");
+  },
+  getConfirmedOrders(merchantId: string) {
+    return this.getOrdersByStatus(merchantId, "CONFIRMED");
+  },
+  getPreparingOrders(merchantId: string) {
+    return this.getOrdersByStatus(merchantId, "PREPARING");
+  },
+  getDeliveringOrders(merchantId: string) {
+    return this.getOrdersByStatus(merchantId, "DELIVERING");
+  },
+  getCompletedOrders(merchantId: string) {
+    return this.getOrdersByStatus(merchantId, "COMPLETED");
+  },
+  getCanceledOrders(merchantId: string) {
+    return this.getOrdersByStatus(merchantId, "CANCELED");
   },
 };
