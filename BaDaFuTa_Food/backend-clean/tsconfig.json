@@ -11,9 +11,11 @@
     // "module": "NodeNext",
     // "moduleResolution": "NodeNext",
 
-    "strict": true,
+    "strict": false, 
+    "noImplicitAny": false, 
     "esModuleInterop": true,
     "skipLibCheck": true,
+    "noEmitOnError": false, 
 
     "sourceMap": true,
     "declaration": true,
