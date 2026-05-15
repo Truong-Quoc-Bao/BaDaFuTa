@@ -1148,33 +1148,45 @@ if (data.success) {
 }
 
 // 
-// 1. Sửa lại tryHosts để truyền lỗi đi chính xác
-const tryHosts = async (path, payload) => {
-  const promises = hosts.map((host) =>
-    fetchWithTimeout(
-      `${host}${path}`,
-      {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-      },
-      8000,
-    )
-      .then(async (res) => {
-        const data = await res.json();
-        if (data.success) return { data, host };
-        // Quăng lỗi để Promise.any biết host này thất bại và tìm host khác
-        throw new Error(data.message || 'Lỗi logic');
-      })
-      .catch((err) => {
-        // BẮT BUỘC phải reject err để AggregateError có dữ liệu
-        return Promise.reject(err);
-      }),
-  );
-  return Promise.any(promises); 
+// 
+const handleSendOtp = async (e) => {
+  e.preventDefault();
+  const normalizedEmail = email.trim().toLowerCase();
+  const savedEmail = sessionStorage.getItem('otpEmail');
+  const currentCountdown = countdown;
+
+  if (currentCountdown > 0 && normalizedEmail === savedEmail) {
+    setOtpError(`Vui lòng chờ ${currentCountdown}s trước khi gửi lại!`);
+    return;
+  }
+
+  setLoading(true);
+  setEmailError('');
+  setOtpError('');
+  setOtpMessage('');
+
+  try {
+    const { data } = await tryHosts('/otp/send', { email: normalizedEmail });
+
+    setOtpSent(true);
+    setOtp('');
+    setOtpMessage(`Đã gửi mã OTP thành công đến email: "${normalizedEmail}"!`);
+    startCountdown();
+    sessionStorage.setItem('otpEmail', normalizedEmail);
+    sessionStorage.setItem('otpSentAt', Date.now().toString());
+  } catch (err) {
+    console.error('Lỗi gửi OTP:', err);
+    // ✅ FIX: Lấy message từ AggregateError hoặc err.message
+    const msg = err.errors ? err.errors[0].message : err.message;
+    setOtpError(msg || 'Không thể kết nối máy chủ!');
+    
+    emailRef.current?.focus();
+  } finally {
+    setLoading(false);
+  }
 };
 
-// 2. Sửa lại handleVerifyOtp để bắt lỗi "Hết hạn" từ AggregateError
+
 const handleVerifyOtp = async () => {
   if (otp.length < 6) {
     setOtpError('Vui lòng nhập đủ 6 số!');
@@ -1187,29 +1199,26 @@ const handleVerifyOtp = async () => {
   setOtpMessage('');
 
   try {
+    const normalizedEmail = email.trim().toLowerCase();
     const { data } = await tryHosts('/otp/verify', { 
-      email: email.trim().toLowerCase(), 
+      email: normalizedEmail, 
       otp 
     });
 
-    // Nếu code chạy đến đây, chắc chắn data.success là true
     setOtpError('');
     setOtpMessage('Xác minh thành công!');
     sessionStorage.removeItem('otpEmail');
     sessionStorage.removeItem('otpSentAt');
-    // Chuyển hướng
-    setTimeout(() => navigate('/register', { state: { email: email.trim().toLowerCase() } }), 500);
+    // ✅ Chuyển sang đăng ký với email đã chuẩn hóa
+    setTimeout(() => navigate('/register', { state: { email: normalizedEmail } }), 500);
 
   } catch (err) {
-    // 🚩 XỬ LÝ LỖI Ở ĐÂY (Vì tryHosts đã throw lỗi khi success: false)
     console.error('Lỗi Verify:', err);
-
-    // Lấy tin nhắn từ host đầu tiên trả về lỗi
     const msg = err.errors ? err.errors[0].message : err.message;
 
     if (msg.includes('hết hạn') || msg.includes('chưa được gửi')) {
       setOtpError('⚠️ Mã OTP đã hết hạn hoặc không tồn tại. Vui lòng nhấn "Gửi lại ngay".');
-    } else if (msg.includes('không chính xác')) {
+    } else if (msg.includes('không chính xác') || msg.includes('không đúng')) {
       setOtpError('Mã OTP không đúng, vui lòng thử lại!');
     } else {
       setOtpError('Không thể kết nối máy chủ hoặc có lỗi xảy ra!');

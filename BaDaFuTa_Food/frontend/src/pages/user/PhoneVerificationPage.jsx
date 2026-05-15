@@ -409,6 +409,7 @@ export default function EmailVerification() {
     }
   }, []);
 
+  //
   const handleEmailChange = (value) => {
     setEmail(value);
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -417,6 +418,7 @@ export default function EmailVerification() {
     else setEmailError('');
   };
   const startCountdown = () => setCountdown(60);
+
   // Đếm ngược
   useEffect(() => {
     if (countdown <= 0) return;
@@ -424,16 +426,16 @@ export default function EmailVerification() {
     return () => clearTimeout(timer);
   }, [countdown]);
 
+  //
   const handleSendOtp = async (e) => {
     e.preventDefault();
 
-    const normalizedEmail = email.trim(); // 👈 khai báo trước
+    const normalizedEmail = email.trim().toLowerCase(); // 👈 khai báo trước
     const savedEmail = sessionStorage.getItem('otpEmail');
     const currentCountdown = countdown; // 👈 lưu lại trước khi gọi API
 
     if (currentCountdown > 0 && normalizedEmail === savedEmail) {
       console.log('số giây còn lại', currentCountdown);
-      // setOtpError(`Vui lòng chờ ${countdown}s trước khi gửi lại!`);
       setOtpError(
         `Email này vừa được gửi OTP, vui lòng chờ ${currentCountdown}s trước khi gửi lại hoặc dùng email khác!`,
       );
@@ -443,12 +445,9 @@ export default function EmailVerification() {
 
     setOtpError('');
 
-    // const normalizedEmail = email.trim();
-    // ✅ Fix: set emailError thay vì otpError
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!normalizedEmail || emailError || !emailRegex.test(normalizedEmail)) {
       setEmailError('Vui lòng nhập email hợp lệ!'); // 👈 đây
-      // setOtpError('Server đang khởi động, vui lòng thử lại sau 30 giây!');
       emailRef.current?.focus(); // 🔴 focus input
       return;
     }
@@ -456,27 +455,22 @@ export default function EmailVerification() {
     setEmailError(''); // clear lỗi trước khi gửi
     setOtpError('');
     setOtpMessage('');
+
     try {
-      // const res = await fetch("/api192/otp/send", {
-      //   method: "POST",
-      //   headers: { "Content-Type": "application/json" },
-      //   body: JSON.stringify({ email: normalizedEmail }),
-      // });
       const { data, host } = await tryHosts('/otp/send', {
         email: normalizedEmail,
       });
-      if (data.success) {
-        setOtpSent(true);
-        setOtp(''); // 👈 xóa OTP cũ
-        setOtpMessage(`Đã gửi mã OTP thành công đến email: "${email}"!`);
-        startCountdown();
-        sessionStorage.setItem('otpEmail', normalizedEmail); // 👈
-        sessionStorage.setItem('otpSentAt', Date.now().toString()); // 👈
-      } else {
-        setOtpError(data.message || 'Không thể gửi OTP!');
-      }
+
+      setOtpSent(true);
+      setOtp(''); // 👈 xóa OTP cũ
+      setOtpMessage(`Đã gửi mã OTP thành công đến email: "${email}"!`);
+      startCountdown();
+      sessionStorage.setItem('otpEmail', normalizedEmail); // 👈
+      sessionStorage.setItem('otpSentAt', Date.now().toString()); // 👈
     } catch (err) {
       console.error('Lỗi fetch:', err);
+      setOtpError(data.message || 'Không thể gửi OTP!');
+      const msg = err.errors ? err.errors[0].message : err.message;
       if (currentCountdown === 0) {
         setOtpError('Không thể kết nối server!');
       }
