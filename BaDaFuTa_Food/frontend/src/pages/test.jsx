@@ -572,3 +572,330 @@ useEffect(() => {
 const data = await res.json();
 console.log('Response status:', res.status);
 console.log('Response data:', data); // 👈 thêm dòng này
+
+
+
+
+// Xóa đoạn này
+{countdown === 0 && otpSent && (
+  <button
+    type="button"
+    onClick={handleSendOtp}
+    className="text-xs text-orange-500 hover:text-orange-600 underline w-full text-center"
+    disabled={loading}
+  >
+    Gửi lại OTP
+  </button>
+)}
+
+const startCountdown = () => setCountdown(300); // 5 phút
+
+
+// Thay vì
+<p>Gửi lại OTP sau {countdown}s</p>
+
+// Thành
+<p>Có thể gửi lại sau {countdown}s · OTP có hiệu lực trong 5 phút</p>
+
+
+
+setOtpError('Server đang khởi động, vui lòng thử lại sau 30 giây!');
+emailRef.current?.focus();
+
+const handleSendOtp = async (e) => {
+  e.preventDefault();
+  
+  // 👈 thêm check này vào đầu
+  if (countdown > 0) {
+    setOtpError(`Vui lòng chờ ${countdown}s trước khi gửi lại!`);
+    return;
+  }
+  
+  // ... phần còn lại giữ nguyên
+
+  // Sau khi gửi OTP thành công
+if (data.success) {
+  setOtpSent(true);
+  setOtpMessage(`Đã gửi mã OTP thành công đến email ${email}!`);
+  startCountdown();
+  sessionStorage.setItem('otpEmail', normalizedEmail); // 👈
+  sessionStorage.setItem('otpSentAt', Date.now().toString()); // 👈
+}
+
+useEffect(() => {
+  const otpEmail = sessionStorage.getItem('otpEmail');
+  const otpSentAt = sessionStorage.getItem('otpSentAt');
+  if (otpEmail && otpSentAt) {
+    const elapsed = Math.floor((Date.now() - parseInt(otpSentAt)) / 1000);
+    const remaining = 60 - elapsed;
+    setEmail(otpEmail);
+    setOtpSent(true);
+    if (remaining > 0) setCountdown(remaining);
+  }
+}, []);
+
+
+if (data.success) {
+  setOtpSent(true);
+  setOtpMessage(`Đã gửi mã OTP thành công đến email ${email}!`);
+  startCountdown();
+  sessionStorage.setItem('otpEmail', normalizedEmail); // 👈
+  sessionStorage.setItem('otpSentAt', Date.now().toString()); // 👈
+}
+
+if (data.success) {
+  setOtpError('');
+  setOtpMessage('Xác minh thành công!');
+  sessionStorage.removeItem('otpEmail'); // 👈
+  sessionStorage.removeItem('otpSentAt'); // 👈
+  setTimeout(() => navigate('/register', { state: { email } }), 500);
+}
+
+if (data.success) {
+  setOtpSent(true);
+  setOtp(''); // 👈 xóa OTP cũ
+  setOtpMessage(`Đã gửi mã OTP thành công đến email ${email}!`);
+  startCountdown();
+  sessionStorage.setItem('otpEmail', normalizedEmail);
+  sessionStorage.setItem('otpSentAt', Date.now().toString());
+}
+
+// trong onChange của ô OTP
+if (newOtp.length === 6) {
+  handleVerifyOtp(); // tự động verify
+}
+
+onChange={(e) => {
+  const val = e.target.value.replace(/\D/g, '');
+  const otpArr = otp.split('');
+  otpArr[i] = val;
+  const newOtp = otpArr.join('').slice(0, 6);
+  setOtp(newOtp);
+  setOtpError('');
+  // tự động focus ô tiếp theo
+  if (val && i < 5) {
+    document.getElementById(`otp-${i + 1}`)?.focus();
+  }
+  // 👈 thêm vào đây
+  if (newOtp.length === 6) {
+    handleVerifyOtp();
+  }
+}}
+
+
+
+
+if (newOtp.length === 6 && !loading) {
+  setTimeout(() => handleVerifyOtp(), 300); // 👈 chờ 300ms mới verify
+}
+
+const handleVerifyOtp = async () => {
+  if (!otp.trim() || otp.length < 6) {
+    setOtpError('Vui lòng nhập đủ 6 số!');
+    return;
+  }
+  if (loading) return; // 👈 đang gọi API thì không gọi nữa
+  // ... phần còn lại giữ nguyên
+
+  // Cũ
+if (newOtp.length === 6) {
+  handleVerifyOtp();
+}
+
+// Mới
+if (newOtp.length === 6 && !loading) {
+  setTimeout(() => handleVerifyOtp(), 300);
+}
+
+
+const handleVerifyOtp = async () => {
+  if (!otp.trim() || otp.length < 6) {
+    setOtpError('Vui lòng nhập đủ 6 số!');
+    return;
+  }
+  if (loading) return; // 👈 thêm
+  
+  setLoading(true);
+  setOtpError('');
+  setOtpMessage('');
+  try {
+    const { data } = await tryHosts('/otp/verify', { email, otp });
+    if (data.success) {
+
+
+      <div className="flex justify-between items-center">
+  <Label htmlFor="email">Email *</Label>
+  {otpSent && (
+    <button
+      type="button"
+      className="text-xs text-orange-500 hover:text-orange-600 underline"
+      onClick={() => {
+        setOtpSent(false);
+        setOtp('');
+        setOtpError('');
+        setOtpMessage('');
+        setCountdown(0);
+        sessionStorage.removeItem('otpEmail');
+        sessionStorage.removeItem('otpSentAt');
+      }}
+    >
+      Đổi email
+    </button>
+  )}
+</div>
+
+onClick={() => {
+  setOtpSent(false);
+  setOtp('');
+  setOtpError(''); // 👈 cái này có chưa?
+  setOtpMessage('');
+  setCountdown(0);
+  sessionStorage.removeItem('otpEmail');
+  sessionStorage.removeItem('otpSentAt');
+}}
+
+if (!otp.trim()) {
+  setOtpError('Vui lòng nhập mã OTP!');
+  return;
+}
+if (otp.length < 6) {
+  setOtpError('Vui lòng nhập đủ 6 số!');
+  return;
+}
+
+{otpError && !otpSent && <p className="text-xs text-red-500">{otpError}</p>}
+
+const handleSendOtp = async (e) => {
+  e.preventDefault();
+  
+  const normalizedEmail = email.trim(); // 👈 khai báo trước
+  const savedEmail = sessionStorage.getItem('otpEmail');
+  
+  // chỉ chặn nếu cùng email cũ
+  if (countdown > 0 && normalizedEmail === savedEmail) {
+    setOtpError(`Vui lòng chờ ${countdown}s trước khi gửi lại!`);
+    return;
+  }
+
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  if (!normalizedEmail || emailError || !emailRegex.test(normalizedEmail)) {
+    setEmailError('Vui lòng nhập email hợp lệ!');
+    emailRef.current?.focus();
+    return;
+  }
+
+  // ... phần còn lại giữ nguyên
+
+  if (countdown > 0 && normalizedEmail === savedEmail) {
+    setOtpError(`Email này vừa được gửi OTP, vui lòng chờ ${countdown}s hoặc dùng email khác!`);
+    return;
+  }
+
+  {/* Button */}
+{!otpSent ? (
+  <Button
+    onClick={handleSendOtp}
+    className="w-full bg-orange-500 hover:bg-orange-600"
+    disabled={loading}
+  >
+    {loading ? (
+      <>
+        <Loader2 className="w-4 h-4 mr-2 animate-spin" /> Đang gửi OTP...
+      </>
+    ) : (
+      'Gửi OTP'
+    )}
+  </Button>
+) : (
+  ...
+)}
+
+{/* 👈 dán xuống đây, sau button */}
+{countdown > 0 && !otpSent && (
+  <p className="text-xs text-orange-500 text-center">
+    Vui lòng chờ {countdown}s trước khi gửi OTP cho email mới
+  </p>
+)}
+{otpError && !otpSent && (
+  <p className="text-xs text-red-500 text-center">{otpError}</p>
+)}
+
+onClick={() => {
+  setOtpSent(false);
+  setOtp('');
+  setOtpError('');
+  setOtpMessage('');
+  // sessionStorage.removeItem('otpEmail'); // 👈 bỏ dòng này
+  sessionStorage.removeItem('otpSentAt');
+}}
+
+const normalizedEmail = email.trim();
+const savedEmail = sessionStorage.getItem('otpEmail');
+
+if (countdown > 0 && normalizedEmail === savedEmail) {
+  setOtpError(
+    `Email này vừa được gửi OTP, vui lòng chờ ${countdown}s trước khi gửi lại hoặc dùng email khác!`,
+  );
+  return;
+}
+
+setOtpError('');
+
+const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+if (!normalizedEmail || emailError || !emailRegex.test(normalizedEmail)) {
+  setEmailError('Vui lòng nhập email hợp lệ!');
+  emailRef.current?.focus();
+  return;
+}
+
+setLoading(true);
+setEmailError('');
+setOtpError('');
+setOtpMessage('');
+try {
+
+} catch (err) {
+  console.error('Lỗi fetch:', err);
+  if (countdown > 0) {
+    setOtpError(`Email này vừa được gửi OTP, vui lòng chờ ${countdown}s trước khi gửi lại!`);
+  } else {
+    setOtpError('Không thể kết nối server!');
+  }
+  emailRef.current?.focus();
+}
+
+const handleSendOtp = async (e) => {
+  e.preventDefault();
+  
+  const normalizedEmail = email.trim();
+  const savedEmail = sessionStorage.getItem('otpEmail');
+  const currentCountdown = countdown; // 👈 lưu lại trước khi gọi API
+
+  if (currentCountdown > 0 && normalizedEmail === savedEmail) {
+    setOtpError(`Email này vừa được gửi OTP, vui lòng chờ ${currentCountdown}s trước khi gửi lại hoặc dùng email khác!`);
+    return;
+  }
+  // ...
+  } catch (err) {
+    if (currentCountdown > 0) {
+      setOtpError(`Email này vừa được gửi OTP, vui lòng chờ ${currentCountdown}s trước khi gửi lại hoặc dùng email khác!`);
+    } else {
+      setOtpError('Không thể kết nối server!');
+    }
+  }
+
+
+
+} catch (err) {
+  console.error('Lỗi fetch:', err);
+  if (currentCountdown === 0) {
+    setOtpError('Không thể kết nối server!');
+  }
+  emailRef.current?.focus();
+} finally {
+
+
+
+
+
+  `Email này vừa được gửi OTP, vui lòng chờ ${currentCountdown}s trước khi gửi lại hoặc dùng email khác!`,

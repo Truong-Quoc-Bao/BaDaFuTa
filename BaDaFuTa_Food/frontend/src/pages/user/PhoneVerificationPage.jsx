@@ -393,6 +393,19 @@ export default function EmailVerification() {
     );
     return Promise.any(promises); // trả về host thành công đầu tiên
   };
+
+  useEffect(() => {
+    const otpEmail = sessionStorage.getItem('otpEmail');
+    const otpSentAt = sessionStorage.getItem('otpSentAt');
+    if (otpEmail && otpSentAt) {
+      const elapsed = Math.floor((Date.now() - parseInt(otpSentAt)) / 1000);
+      const remaining = 60 - elapsed;
+      setEmail(otpEmail);
+      setOtpSent(true);
+      if (remaining > 0) setCountdown(remaining);
+    }
+  }, []);
+
   const handleEmailChange = (value) => {
     setEmail(value);
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -407,13 +420,32 @@ export default function EmailVerification() {
     const timer = setTimeout(() => setCountdown(countdown - 1), 1000);
     return () => clearTimeout(timer);
   }, [countdown]);
+
   const handleSendOtp = async (e) => {
     e.preventDefault();
-    const normalizedEmail = email.trim();
+
+    const normalizedEmail = email.trim(); // 👈 khai báo trước
+    const savedEmail = sessionStorage.getItem('otpEmail');
+    const currentCountdown = countdown; // 👈 lưu lại trước khi gọi API
+
+    if (currentCountdown > 0 && normalizedEmail === savedEmail) {
+      console.log('số giây còn lại', currentCountdown);
+      // setOtpError(`Vui lòng chờ ${countdown}s trước khi gửi lại!`);
+      setOtpError(
+        `Email này vừa được gửi OTP, vui lòng chờ ${currentCountdown}s trước khi gửi lại hoặc dùng email khác!`,
+      );
+
+      return;
+    }
+
+    setOtpError('');
+
+    // const normalizedEmail = email.trim();
     // ✅ Fix: set emailError thay vì otpError
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!normalizedEmail || emailError || !emailRegex.test(normalizedEmail)) {
       setEmailError('Vui lòng nhập email hợp lệ!'); // 👈 đây
+      // setOtpError('Server đang khởi động, vui lòng thử lại sau 30 giây!');
       emailRef.current?.focus(); // 🔴 focus input
       return;
     }
@@ -432,14 +464,19 @@ export default function EmailVerification() {
       });
       if (data.success) {
         setOtpSent(true);
-        setOtpMessage(`Đã gửi mã OTP thành công đến email ${email}!`);
+        setOtp(''); // 👈 xóa OTP cũ
+        setOtpMessage(`Đã gửi mã OTP thành công đến email: "${email}"!`);
         startCountdown();
+        sessionStorage.setItem('otpEmail', normalizedEmail); // 👈
+        sessionStorage.setItem('otpSentAt', Date.now().toString()); // 👈
       } else {
         setOtpError(data.message || 'Không thể gửi OTP!');
       }
     } catch (err) {
       console.error('Lỗi fetch:', err);
-      setOtpError('Không thể kết nối server!');
+      if (currentCountdown === 0) {
+        setOtpError('Không thể kết nối server!');
+      }
       emailRef.current?.focus(); // 👈 focus nếu lỗi mạng
     } finally {
       setLoading(false);
@@ -448,8 +485,16 @@ export default function EmailVerification() {
   const handleVerifyOtp = async () => {
     if (!otp.trim()) {
       setOtpError('Vui lòng nhập mã OTP!');
+
       return;
     }
+    if (otp.length < 6) {
+      setOtpError('Vui lòng nhập đủ 6 số!');
+
+      return;
+    }
+
+    if (loading) return;
     setLoading(true);
     setOtpError('');
     setOtpMessage('');
@@ -463,13 +508,18 @@ export default function EmailVerification() {
       if (data.success) {
         setOtpError('');
         setOtpMessage('Xác minh thành công!');
+        sessionStorage.removeItem('otpEmail'); // 👈
+        sessionStorage.removeItem('otpSentAt'); // 👈
         setTimeout(() => navigate('/register', { state: { email } }), 500);
       } else {
         setOtpError(data.message || 'OTP không đúng!');
       }
     } catch (err) {
       console.error('Lỗi fetch:', err);
-      setOtpError('Không thể kết nối server!');
+      // setOtpError('Không thể kết nối server!');
+      if (currentCountdown === 0) {
+        setOtpError('Không thể kết nối server!');
+      }
     } finally {
       setLoading(false);
     }
@@ -499,7 +549,26 @@ export default function EmailVerification() {
           <CardContent className="space-y-4">
             {/* Email input */}
             <div className="space-y-2">
-              <Label htmlFor="email">Email *</Label>
+              <div className="flex justify-between items-center">
+                <Label htmlFor="email">Email *</Label>
+                {otpSent && (
+                  <button
+                    type="button"
+                    className="text-xs text-orange-500 hover:text-orange-600 underline"
+                    onClick={() => {
+                      setOtpSent(false);
+                      setOtp('');
+                      setOtpError('');
+                      setOtpMessage('');
+                      // setCountdown(0);
+                      // sessionStorage.removeItem('otpEmail');
+                      sessionStorage.removeItem('otpSentAt');
+                    }}
+                  >
+                    Đổi email
+                  </button>
+                )}
+              </div>
               <div className="relative">
                 <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
                 <Input
@@ -530,7 +599,7 @@ export default function EmailVerification() {
             </div>
             {/* OTP input */}
             {/* OTP input */}
-            {otpSent && (
+            {/* {otpSent && (
               <div className="space-y-2">
                 <Label htmlFor="otp">Mã OTP</Label>
                 <div className="relative">
@@ -556,9 +625,9 @@ export default function EmailVerification() {
                   {otpError && (
                     <XCircle className="absolute right-3 top-1/2 transform -translate-y-1/2 text-red-500 w-4 h-4" />
                   )}
-                </div>
-                {/* Hiển thị thông báo OTP */}
-                {otpError && <p className="text-xs text-red-500">{otpError}</p>}
+                </div> */}
+            {/* Hiển thị thông báo OTP */}
+            {/* {otpError && <p className="text-xs text-red-500">{otpError}</p>}
                 {otpMessage && !otpError && <p className="text-xs text-green-500">{otpMessage}</p>}
                 {countdown > 0 && (
                   <p className="text-xs text-gray-500 mt-1">
@@ -576,9 +645,103 @@ export default function EmailVerification() {
                   </button>
                 )}
               </div>
+            )} */}
+            {/*  */}
+            {/*  */}
+            {/*  */}
+
+            {otpSent && (
+              <div className="space-y-3">
+                <Label className="text-center block">Mã OTP</Label>
+
+                {/* 6 ô riêng lẻ */}
+                <div className="flex justify-center gap-2">
+                  {[0, 1, 2, 3, 4, 5].map((i) => (
+                    <input
+                      key={i}
+                      id={`otp-${i}`}
+                      type="text"
+                      inputMode="numeric"
+                      maxLength={1}
+                      value={otp[i] || ''}
+                      onChange={(e) => {
+                        const val = e.target.value.replace(/\D/g, ''); // chỉ số
+                        const otpArr = otp.split('');
+                        otpArr[i] = val;
+                        const newOtp = otpArr.join('').slice(0, 6);
+                        setOtp(newOtp);
+                        setOtpError('');
+                        // tự động focus ô tiếp theo
+                        if (val && i < 5) {
+                          document.getElementById(`otp-${i + 1}`)?.focus();
+                        }
+                        if (newOtp.length === 6 && !loading) {
+                          setTimeout(() => handleVerifyOtp(), 300);
+                        }
+                      }}
+                      onKeyDown={(e) => {
+                        // backspace → focus ô trước
+                        if (e.key === 'Backspace' && !otp[i] && i > 0) {
+                          document.getElementById(`otp-${i - 1}`)?.focus();
+                        }
+                      }}
+                      onPaste={(e) => {
+                        // paste cả chuỗi OTP
+                        e.preventDefault();
+                        const pasted = e.clipboardData
+                          .getData('text')
+                          .replace(/\D/g, '')
+                          .slice(0, 6);
+                        setOtp(pasted);
+                        setOtpError('');
+                        document.getElementById(`otp-${Math.min(pasted.length, 5)}`)?.focus();
+                      }}
+                      className={cn(
+                        'w-11 h-12 text-center text-lg font-semibold border-2 rounded-lg outline-none transition-all',
+                        otpError
+                          ? 'border-red-500 text-red-500'
+                          : otp[i]
+                          ? 'border-orange-500 text-orange-600'
+                          : 'border-gray-300 focus:border-orange-400',
+                      )}
+                    />
+                  ))}
+                </div>
+
+                {otpError && <p className="text-xs text-red-500 text-center">{otpError}</p>}
+                {otpMessage && !otpError && (
+                  <p className="text-xs text-green-500 text-center">{otpMessage}</p>
+                )}
+                {countdown > 0 && (
+                  <p className="text-xs text-gray-500 text-center">
+                    {' '}
+                    Bạn có thể gửi lại OTP sau {countdown}s · OTP có hiệu lực trong 5 phút
+                  </p>
+                )}
+                {/* {countdown === 0 && otpSent && (
+                  <button
+                    type="button"
+                    onClick={handleSendOtp}
+                    className="text-xs text-orange-500 hover:text-orange-600 underline w-full text-center"
+                    disabled={loading}
+                  >
+                    Gửi lại OTP
+                  </button>
+                )} */}
+              </div>
             )}
+            {/*  */}
+            {/*  */}
+            {/*  */}
+
             {/* Hiển thị lỗi khi chưa gửi OTP */}
-            {otpError && !otpSent && <p className="text-xs text-red-500">{otpError}</p>}
+            {countdown > 0 && !otpSent && (
+              <p className="text-xs text-orange-500">
+                Email này vừa được gửi OTP, vui lòng chờ {countdown}s trước khi gửi lại hoặc dùng
+                email khác!
+              </p>
+            )}
+            {/* {otpError && !otpSent && <p className="text-xs text-red-500">{otpError }</p>} */}
             {/* Button */}
             {!otpSent ? (
               <Button
