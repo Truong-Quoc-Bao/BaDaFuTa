@@ -512,19 +512,59 @@ export const RestaurantPage = () => {
 
 
 
-{countdown > 0 && (
-  <p className="text-xs text-gray-500 mt-1">
-                      Bạn có thể gửi lại OTP sau {countdown}s
-  </p>
-                  )}
-  {/* 👇 thêm nút này */}
-  {countdown === 0 && otpSent && (
-  <button
-  type="button"
-  onClick={handleSendOtp}
-  className="text-xs text-orange-500 hover:text-orange-600 underline mt-1"
-  disabled={loading}
-  >
-                    Gửi lại OTP
-  </button>
-                )}
+import nodemailer from 'nodemailer';
+import { otpStore } from './otp.store';
+const transporter = nodemailer.createTransport({
+service: 'gmail',
+auth: {
+user: process.env.GMAIL_USER,
+pass: process.env.GMAIL_APP_PASS,
+  },
+});
+export const otpService = {
+async sendOtp(email: string) {
+if (!email) throw new Error('Thiếu email!');
+// Rate limit: không gửi lại nếu chưa đến 1 phút
+const existing = otpStore[email];
+if (existing && Date.now() < existing.expiry - 4 * 60 * 1000) {
+throw new Error('Vui lòng chờ 1 phút trước khi gửi lại!');
+    }
+const otp = Math.floor(100000 + Math.random() * 900000);
+otpStore[email] = {
+code: otp,
+expiry: Date.now() + 5 * 60 * 1000, // hết hạn sau 5 phút
+    };
+try { // 👈
+await transporter.sendMail({
+from: `"App của bạn" <${process.env.GMAIL_USER}>`,
+to: email,
+subject: 'Mã OTP xác nhận',
+html: `
+        <h2>Mã OTP của bạn</h2>
+        <p style="font-size:32px;font-weight:bold;letter-spacing:8px">${otp}</p>
+        <p>Mã có hiệu lực trong <b>5 phút</b>.</p>
+        <p>Nếu bạn không yêu cầu, hãy bỏ qua email này.</p>
+      `,
+    });
+console.log('✅ Gửi mail thành công tới:', email); // 👈
+    } catch (mailErr: any) { // 👈
+console.error('❌ Lỗi nodemailer:', mailErr.message); // 👈
+throw new Error('Không thể gửi email: ' + mailErr.message); // 👈
+    }
+return { success: true, message: `OTP đã gửi tới ${email}` };
+  },
+async verifyOtp(email: string, otp: number) {
+if (!email || !otp) throw new Error('Thiếu thông tin!');
+const record = otpStore[email];
+if (!record) throw new Error('OTP chưa được gửi!');
+if (Date.now() > record.expiry) {
+delete otpStore[email];
+throw new Error('OTP đã hết hạn!');
+    }
+if (parseInt(otp.toString()) !== record.code) {
+return { success: false, message: 'OTP không đúng!' };
+    }
+delete otpStore[email];
+return { success: true, message: 'Xác minh thành công!' };
+  },
+};

@@ -127,7 +127,7 @@ export default function HomePage() {
     async function loadVouchers() {
       try {
         // const res = await fetch('https://badafuta-production.up.railway.app/api/voucher/getAll', {
-        const res = await fetch('https://badafuta.onrender.com /api/voucher/getAll', {
+        const res = await fetch('https://badafuta.onrender.com/api/voucher/getAll', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({}),

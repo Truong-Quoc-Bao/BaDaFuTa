@@ -51,17 +51,27 @@ export const otpService = {
       expiry: Date.now() + 5 * 60 * 1000, // hết hạn sau 5 phút
     };
 
-    await transporter.sendMail({
-      from: `"App của bạn" <${process.env.GMAIL_USER}>`,
-      to: email,
-      subject: 'Mã OTP xác nhận',
-      html: `
+    try {
+      // 👈
+
+      await transporter.sendMail({
+        from: `"App của bạn" <${process.env.GMAIL_USER}>`,
+        to: email,
+        subject: 'Mã OTP xác nhận',
+        html: `
         <h2>Mã OTP của bạn</h2>
         <p style="font-size:32px;font-weight:bold;letter-spacing:8px">${otp}</p>
         <p>Mã có hiệu lực trong <b>5 phút</b>.</p>
         <p>Nếu bạn không yêu cầu, hãy bỏ qua email này.</p>
       `,
-    });
+      });
+
+      console.log('✅ Gửi mail thành công tới:', email); // 👈
+    } catch (mailErr: any) {
+      // 👈
+      console.error('❌ Lỗi nodemailer:', mailErr.message); // 👈
+      throw new Error('Không thể gửi email: ' + mailErr.message); // 👈
+    }
 
     return { success: true, message: `OTP đã gửi tới ${email}` };
   },

@@ -577,6 +577,8 @@ export default function EmailVerification() {
                 )}
               </div>
             )}
+            {/* Hiển thị lỗi khi chưa gửi OTP */}
+            {otpError && !otpSent && <p className="text-xs text-red-500">{otpError}</p>}
             {/* Button */}
             {!otpSent ? (
               <Button
