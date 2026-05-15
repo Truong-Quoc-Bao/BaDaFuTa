@@ -499,11 +499,6 @@ export default function EmailVerification() {
     setOtpError('');
     setOtpMessage('');
     try {
-      // const res = await fetch("/api192/otp/verify", {
-      //   method: "POST",
-      //   headers: { "Content-Type": "application/json" },
-      //   body: JSON.stringify({ email, otp }),
-      // });
       const { data } = await tryHosts('/otp/verify', { email, otp });
       if (data.success) {
         setOtpError('');
@@ -512,10 +507,17 @@ export default function EmailVerification() {
         sessionStorage.removeItem('otpSentAt'); // 👈
         setTimeout(() => navigate('/register', { state: { email } }), 500);
       } else {
-        if (data.message?.toLowerCase().includes('hết hạn') || data.error_code === 'OTP_EXPIRED') {
-          setOtpError('⚠️ Mã OTP đã hết hạn. Vui lòng nhấn "Gửi lại" để nhận mã mới.');
+        const msg = data.message || '';
+        if (
+          msg.includes('hết hạn') ||
+          msg.includes('chưa được gửi') || // <--- Thêm cái này
+          data.error_code === 'OTP_EXPIRED'
+        ) {
+          setOtpError(
+            '⚠️ Mã OTP đã hết hạn hoặc không tồn tại. Vui lòng nhấn "Gửi lại ngay" để nhận mã mới.',
+          );
         } else {
-          setOtpError(data.message || 'Mã OTP không đúng, vui lòng thử lại!');
+          setOtpError(msg || 'Mã OTP không đúng, vui lòng thử lại!');
         }
         // setOtpError(data.message || 'OTP không đúng!');
       }
@@ -727,7 +729,7 @@ export default function EmailVerification() {
                   </div>
                 )}
 
-                {otpError && <p className="text-xs text-red-500 text-center">{otpError}</p>}
+                {/* {otpError && <p className="text-xs text-red-500 text-center">{otpError}</p>} */}
                 {otpMessage && !otpError && (
                   <p className="text-xs text-green-500 text-center">{otpMessage}</p>
                 )}

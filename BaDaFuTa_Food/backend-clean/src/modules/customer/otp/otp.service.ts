@@ -82,12 +82,18 @@ export const otpService = {
 
   async verifyOtp(email: string, otp: number) {
     if (!email || !otp) throw new Error('Thiếu thông tin!');
+
     const record = otpStore[email];
-    if (!record) throw new Error('OTP chưa được gửi!');
+
+    if (!record) {
+      throw new Error('Mã OTP đã hết hạn hoặc chưa được gửi!');
+    }
+
     if (Date.now() > record.expiry) {
       delete otpStore[email];
       throw new Error('OTP đã hết hạn!');
     }
+    
     if (parseInt(otp.toString()) !== record.code) {
       return { success: false, message: 'OTP không đúng!' };
     }
