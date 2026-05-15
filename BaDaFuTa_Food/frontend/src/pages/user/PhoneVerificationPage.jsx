@@ -365,7 +365,7 @@ export default function EmailVerification() {
   const emailRef = useRef(null); // 👈 thêm ref
   // const hosts = ['https://badafuta-production.up.railway.app/api'];
   const hosts = ['https://badafuta.onrender.com/api'];
-  const fetchWithTimeout = (url, options, timeout = 5000) => {
+  const fetchWithTimeout = (url, options, timeout = 30000) => {
     return Promise.race([
       fetch(url, options),
       new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout')), timeout)),

@@ -4,9 +4,9 @@ const cache = {}; // cache tạm memory
 export async function fetchFromHosts(key, hosts = [], options = {}) {
   if (cache[key]) return cache[key]; // nếu đã có cache thì dùng luôn
 
-  const fetchWithTimeout = (url, timeout = 3000) =>
+  const fetchWithTimeout = (url, timeout = 30000) =>
     new Promise((resolve, reject) => {
-      const timer = setTimeout(() => reject(new Error("Timeout")), timeout);
+      const timer = setTimeout(() => reject(new Error('Timeout')), timeout);
       fetch(url, options)
         .then((res) => {
           clearTimeout(timer);
@@ -23,7 +23,7 @@ export async function fetchFromHosts(key, hosts = [], options = {}) {
     fetchWithTimeout(host).catch((err) => {
       console.warn(`${host} lỗi: ${err.message}, bỏ qua...`);
       return Promise.reject();
-    })
+    }),
   );
 
   try {
@@ -31,7 +31,7 @@ export async function fetchFromHosts(key, hosts = [], options = {}) {
     cache[key] = data; // lưu cache
     return data;
   } catch (err) {
-    console.error("Không thể lấy dữ liệu từ bất kỳ host nào", err);
+    console.error('Không thể lấy dữ liệu từ bất kỳ host nào', err);
     throw err;
   }
 }
