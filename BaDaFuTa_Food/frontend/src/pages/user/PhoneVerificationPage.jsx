@@ -500,7 +500,7 @@ export default function EmailVerification() {
     try {
       const { data } = await tryHosts('/otp/verify', {
         email: email.trim().toLowerCase(),
-        otp,
+        otp: parseInt(otp),
       });
 
       setOtpError('');
@@ -512,17 +512,23 @@ export default function EmailVerification() {
       // setOtpError(data.message || 'OTP không đúng!');
     } catch (err) {
       // 🚩 XỬ LÝ LỖI Ở ĐÂY (Vì tryHosts đã throw lỗi khi success: false)
-      console.error('Lỗi Verify:', err);
-
-      // Lấy tin nhắn từ host đầu tiên trả về lỗi
       const msg = err.errors ? err.errors[0].message : err.message;
 
-      if (msg.includes('hết hạn') || msg.includes('chưa được gửi')) {
-        setOtpError('⚠️ Mã OTP đã hết hạn hoặc không tồn tại. Vui lòng nhấn "Gửi lại ngay".');
-      } else if (msg.includes('không chính xác')) {
-        setOtpError('Mã OTP không đúng, vui lòng thử lại!');
+      // ✅ ƯU TIÊN 1: Kiểm tra lỗi "Không chính xác" trước
+      if (msg.includes('không chính xác') || msg.includes('không đúng')) {
+        setOtpError('❌ ' + msg);
+        // Không setOtp('') ở đây để người dùng sửa lại số sai
+      }
+      // 🚩 ƯU TIÊN 2: Các lỗi hệ thống/hết hạn
+      else if (
+        msg.includes('hết hạn') ||
+        msg.includes('chưa được gửi') ||
+        msg.includes('không tồn tại')
+      ) {
+        setOtpError('⚠️ ' + msg);
+        setOtp(''); // Xóa mã vì mã này coi như hỏng
       } else {
-        setOtpError('Không thể kết nối máy chủ hoặc có lỗi xảy ra!');
+        setOtpError('Có lỗi xảy ra, vui lòng thử lại!');
       }
     } finally {
       setLoading(false);
@@ -714,15 +720,20 @@ export default function EmailVerification() {
 
                 {/* otp hết hạn  */}
                 {otpError && (
-                  <div
-                    className={cn(
-                      'text-xs text-center p-2.5 rounded-xl mt-4 animate-in fade-in slide-in-from-top-1 duration-300',
-                      otpError.includes('hết hạn')
-                        ? 'bg-red-50 text-red-600 border border-red-100 font-semibold shadow-sm'
-                        : 'text-red-500 font-medium',
+                  <div className="mt-4">
+                    {/* Kiểm tra nếu tin nhắn có dấu ⚠️ (Lỗi hệ thống) -> Hiện BOX */}
+                    {otpError.includes('⚠️') ? (
+                      <div className="bg-red-50 text-red-600 border border-red-100 p-3 rounded-xl flex items-center justify-center gap-2 animate-in fade-in slide-in-from-top-1 shadow-sm">
+                        <span className="text-[13px] font-semibold text-center leading-tight italic">
+                          {otpError}
+                        </span>
+                      </div>
+                    ) : (
+                      /* Nếu là lỗi ❌ (Nhập sai) hoặc lỗi khác -> Hiện chữ đỏ */
+                      <p className="text-xs text-red-500 text-center font-bold animate-in fade-in zoom-in duration-300">
+                        {otpError}
+                      </p>
                     )}
-                  >
-                    {otpError}
                   </div>
                 )}
 

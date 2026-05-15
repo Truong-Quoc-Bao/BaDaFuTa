@@ -86,11 +86,11 @@ export const otpService = {
     if (!email || !otp) throw new Error('Thiếu thông tin!');
 
     const normalizedEmail = email.trim().toLowerCase();
-    // const record = otpStore[email];
     const record = otpStore[normalizedEmail]; // Tìm bằng email đã chuẩn hóa
 
     if (!record) {
-      throw new Error('Mã OTP đã hết hạn hoặc chưa được gửi!');
+      // Đổi message để FE dễ phân biệt
+      throw new Error('Mã OTP không tồn tại hoặc đã hết hạn!');
     }
 
     if (Date.now() > record.expiry) {
@@ -98,7 +98,8 @@ export const otpService = {
       throw new Error('Mã OTP đã hết hạn!');
     }
 
-    if (parseInt(otp.toString()) !== record.code) {
+    if (Number(otp) !== record.code) {
+      // Trả về success false chứ không throw Error để FE nhận diện dễ hơn
       return { success: false, message: 'Mã OTP không chính xác!' };
     }
 

@@ -1200,28 +1200,95 @@ const handleVerifyOtp = async () => {
 
   try {
     const normalizedEmail = email.trim().toLowerCase();
-    const { data } = await tryHosts('/otp/verify', { 
-      email: normalizedEmail, 
-      otp 
+    const { data } = await tryHosts('/otp/verify', {
+      email: normalizedEmail,
+      otp,
     });
 
+    // Nếu thành công
     setOtpError('');
     setOtpMessage('Xác minh thành công!');
     sessionStorage.removeItem('otpEmail');
     sessionStorage.removeItem('otpSentAt');
-    // ✅ Chuyển sang đăng ký với email đã chuẩn hóa
     setTimeout(() => navigate('/register', { state: { email: normalizedEmail } }), 500);
 
   } catch (err) {
     console.error('Lỗi Verify:', err);
+    // Lấy message lỗi từ Server (thông qua AggregateError của Promise.any)
+    const msg = err.errors ? err.errors[0].message : err.message;
+    
+    setOtpError(msg); // Gán nguyên văn lỗi để UI bên dưới xử lý
+
+    // Nếu lỗi là hết hạn, xóa luôn OTP cũ cho người dùng nhập lại cái mới
+    if (msg.includes('hết hạn') || msg.includes('chưa được gửi')) {
+      setOtp(''); 
+    }
+  } finally {
+    setLoading(false);
+  }
+};
+
+{/* Phần hiển thị lỗi phân loại UI */}
+{otpError && (
+  <div className="mt-4">
+    {/* Trường hợp 1: Lỗi hết hạn hoặc không tồn tại -> Hiện BOX đỏ nổi bật */}
+    {(otpError.includes('hết hạn') || otpError.includes('chưa được gửi')) ? (
+      <div className="bg-red-50 text-red-600 border border-red-100 p-3 rounded-xl flex items-center justify-center gap-2 animate-in fade-in slide-in-from-top-1 shadow-sm">
+        <span className="text-[13px] font-semibold text-center leading-tight">
+          ⚠️ {otpError}
+        </span>
+      </div>
+    ) : (
+      /* Trường hợp 2: Lỗi nhập sai mã -> Chỉ hiện dòng chữ đỏ đơn giản */
+      <p className="text-xs text-red-500 text-center font-bold animate-in fade-in zoom-in duration-300">
+        ❌ {otpError}
+      </p>
+    )}
+  </div>
+)}
+
+
+const handleVerifyOtp = async () => {
+  if (otp.length < 6) {
+    setOtpError('Vui lòng nhập đủ 6 số!');
+    return;
+  }
+
+  if (loading) return;
+  setLoading(true);
+  setOtpError('');
+  setOtpMessage('');
+
+  try {
+    const normalizedEmail = email.trim().toLowerCase();
+    const { data } = await tryHosts('/otp/verify', {
+      email: normalizedEmail,
+      otp: parseInt(otp), // Đảm bảo gửi số
+    });
+
+    // Nếu thành công (data.success là true)
+    setOtpError('');
+    setOtpMessage('Xác minh thành công!');
+    sessionStorage.removeItem('otpEmail');
+    sessionStorage.removeItem('otpSentAt');
+    setTimeout(() => navigate('/register', { state: { email: normalizedEmail } }), 500);
+
+  } catch (err) {
+    console.error('Lỗi Verify:', err);
+    // Lấy tin nhắn từ host trả về lỗi
     const msg = err.errors ? err.errors[0].message : err.message;
 
-    if (msg.includes('hết hạn') || msg.includes('chưa được gửi')) {
-      setOtpError('⚠️ Mã OTP đã hết hạn hoặc không tồn tại. Vui lòng nhấn "Gửi lại ngay".');
-    } else if (msg.includes('không chính xác') || msg.includes('không đúng')) {
-      setOtpError('Mã OTP không đúng, vui lòng thử lại!');
+    // ✅ ƯU TIÊN 1: Kiểm tra lỗi "Không chính xác" trước
+    if (msg.includes('không chính xác') || msg.includes('không đúng')) {
+      setOtpError('❌ ' + msg); 
+      // Không setOtp('') ở đây để người dùng sửa lại số sai
+    } 
+    // 🚩 ƯU TIÊN 2: Các lỗi hệ thống/hết hạn
+    else if (msg.includes('hết hạn') || msg.includes('chưa được gửi') || msg.includes('không tồn tại')) {
+      setOtpError('⚠️ ' + msg);
+      setOtp(''); // Xóa mã vì mã này coi như hỏng
     } else {
-      setOtpError('Không thể kết nối máy chủ hoặc có lỗi xảy ra!');
+      setOtpError('Có lỗi xảy ra, vui lòng thử lại!');
     }
   } finally {
     setLoading(false);
