@@ -365,12 +365,14 @@ export default function EmailVerification() {
   const emailRef = useRef(null); // 👈 thêm ref
   // const hosts = ['https://badafuta-production.up.railway.app/api'];
   const hosts = ['https://badafuta.onrender.com/api'];
+
   const fetchWithTimeout = (url, options, timeout = 30000) => {
     return Promise.race([
       fetch(url, options),
       new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout')), timeout)),
     ]);
   };
+
   const tryHosts = async (path, payload) => {
     const promises = hosts.map((host) =>
       fetchWithTimeout(
@@ -383,24 +385,13 @@ export default function EmailVerification() {
         8000,
       )
         .then(async (res) => {
-          // Đọc nội dung JSON từ server trước
-          const data = await res.json();
-
-          if (data.success) {
-            return { data, host };
-          }
-
-          if (res.status >= 500) {
-            throw new Error(`Server ${host} gặp lỗi hệ thống`);
-          }
-
-          if (!res.ok) throw new Error(`Server ${host} trả lỗi`);
-          return res.json().then((data) => ({ data, host }));
+          const data = await res.json(); // Đọc 1 lần duy nhất
+          if (data.success) return { data, host };
+          // Quăng Error kèm message từ BE để Promise.any gom lại
           throw new Error(data.message || 'Lỗi logic');
         })
         .catch((err) => {
-          console.warn(err.message);
-          return Promise.reject();
+          return Promise.reject(err);
         }),
     );
     return Promise.any(promises); // trả về host thành công đầu tiên
@@ -494,6 +485,8 @@ export default function EmailVerification() {
       setLoading(false);
     }
   };
+
+  //
   const handleVerifyOtp = async () => {
     if (!otp.trim()) {
       setOtpError('Vui lòng nhập mã OTP!');
@@ -511,29 +504,31 @@ export default function EmailVerification() {
     setOtpError('');
     setOtpMessage('');
     try {
-      const { data } = await tryHosts('/otp/verify', { email, otp });
-      if (data.success) {
-        setOtpError('');
-        setOtpMessage('Xác minh thành công!');
-        sessionStorage.removeItem('otpEmail'); // 👈
-        sessionStorage.removeItem('otpSentAt'); // 👈
-        setTimeout(() => navigate('/register', { state: { email } }), 500);
-      } else {
-        const msg = data.message || '';
-        if (msg.includes('hết hạn') || msg.includes('chưa được gửi')) {
-          setOtpError(
-            '⚠️ Mã OTP đã hết hạn hoặc không tồn tại. Vui lòng nhấn "Gửi lại ngay" để nhận mã mới.',
-          );
-        } else {
-          setOtpError(msg || 'Mã OTP không đúng!');
-        }
-        // setOtpError(data.message || 'OTP không đúng!');
-      }
+      const { data } = await tryHosts('/otp/verify', {
+        email: email.trim().toLowerCase(),
+        otp,
+      });
+
+      setOtpError('');
+      setOtpMessage('Xác minh thành công!');
+      sessionStorage.removeItem('otpEmail'); // 👈
+      sessionStorage.removeItem('otpSentAt'); // 👈
+      setTimeout(() => navigate('/register', { state: { email } }), 500);
+
+      // setOtpError(data.message || 'OTP không đúng!');
     } catch (err) {
-      console.error('Lỗi fetch:', err);
-      // setOtpError('Không thể kết nối server!');
-      if (currentCountdown === 0) {
-        setOtpError('Không thể kết nối máy chủ. Vui lòng thử lại!');
+      // 🚩 XỬ LÝ LỖI Ở ĐÂY (Vì tryHosts đã throw lỗi khi success: false)
+      console.error('Lỗi Verify:', err);
+
+      // Lấy tin nhắn từ host đầu tiên trả về lỗi
+      const msg = err.errors ? err.errors[0].message : err.message;
+
+      if (msg.includes('hết hạn') || msg.includes('chưa được gửi')) {
+        setOtpError('⚠️ Mã OTP đã hết hạn hoặc không tồn tại. Vui lòng nhấn "Gửi lại ngay".');
+      } else if (msg.includes('không chính xác')) {
+        setOtpError('Mã OTP không đúng, vui lòng thử lại!');
+      } else {
+        setOtpError('Không thể kết nối máy chủ hoặc có lỗi xảy ra!');
       }
     } finally {
       setLoading(false);

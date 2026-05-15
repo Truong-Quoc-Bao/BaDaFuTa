@@ -1147,8 +1147,8 @@ if (data.success) {
   }
 }
 
-// frontend - EmailVerification.jsx
-
+// 
+// 1. Sửa lại tryHosts để truyền lỗi đi chính xác
 const tryHosts = async (path, payload) => {
   const promises = hosts.map((host) =>
     fetchWithTimeout(
@@ -1162,25 +1162,59 @@ const tryHosts = async (path, payload) => {
     )
       .then(async (res) => {
         const data = await res.json();
-        
-        // ✅ CHỈ CHẤP NHẬN NẾU SUCCESS LÀ TRUE
-        if (data.success) {
-          return { data, host };
-        }
-        
-        // Nếu success: false, ta quăng lỗi để Promise.any bỏ qua host này 
-        // và đợi kết quả từ các host khác
+        if (data.success) return { data, host };
+        // Quăng lỗi để Promise.any biết host này thất bại và tìm host khác
         throw new Error(data.message || 'Lỗi logic');
       })
       .catch((err) => {
+        // BẮT BUỘC phải reject err để AggregateError có dữ liệu
         return Promise.reject(err);
       }),
   );
+  return Promise.any(promises); 
+};
+
+// 2. Sửa lại handleVerifyOtp để bắt lỗi "Hết hạn" từ AggregateError
+const handleVerifyOtp = async () => {
+  if (otp.length < 6) {
+    setOtpError('Vui lòng nhập đủ 6 số!');
+    return;
+  }
+
+  if (loading) return;
+  setLoading(true);
+  setOtpError('');
+  setOtpMessage('');
 
   try {
-    return await Promise.any(promises);
+    const { data } = await tryHosts('/otp/verify', { 
+      email: email.trim().toLowerCase(), 
+      otp 
+    });
+
+    // Nếu code chạy đến đây, chắc chắn data.success là true
+    setOtpError('');
+    setOtpMessage('Xác minh thành công!');
+    sessionStorage.removeItem('otpEmail');
+    sessionStorage.removeItem('otpSentAt');
+    // Chuyển hướng
+    setTimeout(() => navigate('/register', { state: { email: email.trim().toLowerCase() } }), 500);
+
   } catch (err) {
-    // Chỉ khi TẤT CẢ các host đều báo lỗi hoặc hết hạn thì mới hiện lỗi cuối cùng
-    throw new Error("Mã OTP không đúng hoặc đã hết hạn!");
+    // 🚩 XỬ LÝ LỖI Ở ĐÂY (Vì tryHosts đã throw lỗi khi success: false)
+    console.error('Lỗi Verify:', err);
+
+    // Lấy tin nhắn từ host đầu tiên trả về lỗi
+    const msg = err.errors ? err.errors[0].message : err.message;
+
+    if (msg.includes('hết hạn') || msg.includes('chưa được gửi')) {
+      setOtpError('⚠️ Mã OTP đã hết hạn hoặc không tồn tại. Vui lòng nhấn "Gửi lại ngay".');
+    } else if (msg.includes('không chính xác')) {
+      setOtpError('Mã OTP không đúng, vui lòng thử lại!');
+    } else {
+      setOtpError('Không thể kết nối máy chủ hoặc có lỗi xảy ra!');
+    }
+  } finally {
+    setLoading(false);
   }
 };

@@ -33,12 +33,14 @@ export const otpService = {
   async sendOtp(email: string) {
     if (!email) throw new Error('Thiếu email!');
     // Rate limit: không gửi lại nếu chưa đến 1 phút
-    const existing = otpStore[email];
+    const normalizedEmail = email.trim().toLowerCase();
+
+    const existing = otpStore[normalizedEmail];
     if (existing && Date.now() < existing.expiry - 4 * 60 * 1000) {
       throw new Error('Vui lòng chờ 1 phút trước khi gửi lại!');
     }
     const otp = Math.floor(100000 + Math.random() * 900000);
-    otpStore[email] = {
+    otpStore[normalizedEmail] = {
       code: otp,
       expiry: Date.now() + 5 * 60 * 1000, // hết hạn sau 5 phút
     };
@@ -84,7 +86,6 @@ export const otpService = {
     if (!email || !otp) throw new Error('Thiếu thông tin!');
 
     const normalizedEmail = email.trim().toLowerCase();
-
     // const record = otpStore[email];
     const record = otpStore[normalizedEmail]; // Tìm bằng email đã chuẩn hóa
 
