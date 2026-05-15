@@ -37,6 +37,7 @@ export const momoRepository = {
           phone: data.phone,
           delivery_address: data.delivery_address,
           delivery_fee: BigInt(data.delivery_fee || 0),
+          voucher_id: data.voucher_id ?? null,
           note: data.note,
           total_amount: BigInt(data.total_amount),
           status: order_status.PENDING,
