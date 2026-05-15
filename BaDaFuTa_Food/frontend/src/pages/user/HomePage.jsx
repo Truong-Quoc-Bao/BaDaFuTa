@@ -1,4 +1,4 @@
-import { Search, TrendingUp, MapPin } from 'lucide-react';
+import { Search, TrendingUp, MapPin, Tag } from 'lucide-react';
 import { Input } from '../../components/ui/input';
 import { Button } from '../../components/ui/button';
 import RestaurantCard from '../../components/RestaurantCard';
@@ -19,6 +19,7 @@ export default function HomePage() {
 
   const [restaurantList, setRestaurantList] = useState([]);
   const [maxDistance, setMaxDistance] = useState(2); // km
+
   // Chuẩn hóa dữ liệu
   const normalizedRestaurants = restaurantList.map((r) => {
     let district = 'Không xác định';
@@ -72,15 +73,7 @@ export default function HomePage() {
     return name.includes(query) || cuisine.includes(query);
   });
 
-  const cuisineTypes = [
-    'Tất cả',
-    'Việt Nam',
-    'Coffee',
-    'Philippin',
-    'Thái Lan',
-    'Hàn Quốc',
-    'Mỹ',
-  ];
+  const cuisineTypes = ['Tất cả', 'Việt Nam', 'Coffee', 'Philippin', 'Thái Lan', 'Hàn Quốc', 'Mỹ'];
 
   const finalFilteredRestaurants =
     selectedCuisine === 'Tất cả'
@@ -126,6 +119,98 @@ export default function HomePage() {
   }, [searchQuery, selectedCuisine]);
   console.log(normalizedRestaurants.map((r) => r.district));
 
+  //Voucher
+  const [vouchers, setVouchers] = useState([]);
+
+  useEffect(() => {
+    async function loadVouchers() {
+      try {
+        const res = await fetch('https://badafuta-production.up.railway.app/api/voucher/getAll', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({}),
+        });
+
+        const json = await res.json();
+
+        console.log('Voucher API response:', json);
+
+        const list = [
+          ...(json.data?.appVouchers || []),
+          ...(json.data?.merchantVouchers || []),
+          ...(json.data?.userVouchers || []),
+        ];
+
+        setVouchers(list);
+      } catch (err) {
+        console.error('Lỗi load vouchers:', err);
+      }
+    }
+
+    loadVouchers();
+  }, []);
+  const [featuredRestaurants, setFeaturedRestaurants] = useState([]);
+
+  useEffect(() => {
+    async function fetchFeaturedRestaurants() {
+      try {
+        const res = await fetch(
+          'https://badafuta-production.up.railway.app/api/restaurants/future',
+        );
+        // const res = await fetch(
+        //   " http://localhost:3000/api/restaurants/future"
+        // );
+
+        if (!res.ok) throw new Error('Lỗi khi gọi API');
+
+        const data = await res.json();
+
+        // Map dữ liệu giống Restaurants list
+        const mapped = data.map((m) => {
+          const distance =
+            m.location && locationState.currentLocation
+              ? Math.round(
+                  calculateDistance(
+                    locationState.currentLocation.coordinates.lat,
+                    locationState.currentLocation.coordinates.lng,
+                    m.location.lat,
+                    m.location.lng,
+                  ) * 10,
+                ) / 10
+              : 0;
+
+          let deliveryFee = 0;
+          if (distance <= 3) deliveryFee = 16000;
+          else deliveryFee = 16000 + Math.ceil(distance - 3) * 4000; // <-- FIXED
+
+          const deliveryTime = 10 + Math.round(distance * 8);
+
+          return {
+            id: m.id,
+            merchant_name: m.merchant_name,
+            image: m.cover_image?.url || m.profile_image?.url,
+            cuisine: m.cuisine,
+            rating: m.rating,
+            description: m.description,
+            distance,
+            deliveryFee,
+            deliveryTime,
+            cover_image: m.cover_image,
+            location: m.location,
+            time_open: m.time_open || '10:00-22:00', // backend có trả thì dùng, không thì mặc định
+            isOpen: true,
+          };
+        });
+
+        setFeaturedRestaurants(mapped);
+      } catch (error) {
+        console.error('Lỗi load nhà hàng nổi bật:', error);
+      }
+    }
+
+    fetchFeaturedRestaurants();
+  }, [locationState.currentLocation]);
+
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       {/* Hero Section */}
@@ -150,11 +235,25 @@ export default function HomePage() {
 
       {/* Promotions */}
       <div className="mb-8">
-        <h2 className="text-xl md:text-2xl font-bold mb-4">Ưu đãi hôm nay</h2>
+        <h2 className="text-2xl font-bold mb-4">Ưu đãi hôm nay</h2>
+
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {promotions.map((promotion) => (
-            <PromotionBanner key={promotion.id} promotion={promotion} />
-          ))}
+          {vouchers?.length > 0 ? (
+            vouchers.map((voucher) => <PromotionBanner key={voucher.id} promotion={voucher} />)
+          ) : (
+            <div className="col-span-full py-16">
+              <div className="max-w-md mx-auto text-center">
+                <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-orange-100 mb-6">
+                  <Tag className="w-10 h-10 text-orange-500" />
+                </div>
+                <h3 className="text-2xl font-bold text-gray-800 mb-3">Chưa có ưu đãi nào</h3>
+                <p className="text-gray-600 leading-relaxed">
+                  Đừng buồn! Ưu đãi siêu hot sẽ được cập nhật hàng ngày. Bạn quay lại sau vài tiếng
+                  nữa nhé
+                </p>
+              </div>
+            </div>
+          )}
         </div>
       </div>
 
@@ -164,21 +263,26 @@ export default function HomePage() {
           <TrendingUp className="w-6 h-6 text-orange-500" />
           <h2 className="text-xl md:text-2xl font-bold">Nhà hàng nổi bật</h2>
         </div>
+
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-          {featuredRestaurants.map((restaurant, index) => (
-            <FeaturedRestaurant
-              key={restaurant.id}
-              restaurant={restaurant}
-              promotion={
-                index === 0
-                  ? {
-                      title: promotions[0].title,
-                      description: promotions[0].description,
-                    }
-                  : undefined
-              }
-            />
-          ))}
+          {featuredRestaurants.map((r, index) => {
+            const distance = r.distance || 0;
+            const deliveryFee = distance <= 3 ? 16000 : 16000 + Math.ceil(distance - 3) * 4000;
+            const deliveryTime = Math.max(10, Math.round(distance * 8));
+
+            return (
+              <FeaturedRestaurant
+                key={r.id}
+                restaurant={{
+                  ...r,
+                  distance,
+                  deliveryFee,
+                  deliveryTime,
+                }}
+                promotion={index === 0 ? promotions[0] : undefined}
+              />
+            );
+          })}
         </div>
       </div>
 

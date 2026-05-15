@@ -33,24 +33,39 @@ export const paymentController = {
   },
   async callback(req: Request, res: Response) {
     try {
-      const result = await paymentService.handleVnpayCallback(req.query);
+      console.log("🔔 [VNPay Redirect] query:", req.query);
 
-      if (result.status === "success") {
-        // ✅ Redirect về trang thông báo thành công
+      // Gọi service callback (trả về giống MoMo)
+      const callbackData = await paymentService.handleVnpayCallback(req.query);
+      console.log("📦 VNPay callback full data:", callbackData);
+
+      // ❌ THẤT BẠI
+      if (!callbackData || callbackData.status !== "success") {
         return res.redirect(
-          `http://localhost:5173/cart/checkout/ordersuccess?status=success&code=${result.code}`
-        );
-      } else {
-        // ❌ Redirect về trang thất bại
-        return res.redirect(
-          `http://localhost:5173/cart/checkout/orderfailed?status=failed&code=${result.code}`
+          `${
+            process.env.FRONTEND_URL || "https://ba-da-fu-ta-food.vercel.app"
+          }/cart/checkout/orderfailed?status=failed&code=${callbackData?.code}`
         );
       }
-    } catch (err: any) {
-      console.error("callback error:", err);
-      // ⚠️ Redirect về trang lỗi chung
+
+      // ⭐ Encode full order JSON giống MoMo
+      const base64 = encodeURIComponent(
+        Buffer.from(JSON.stringify(callbackData), "utf8").toString("base64")
+      );
+
+      // ⭐ Redirect về FE giống MoMo
       return res.redirect(
-        `http://localhost:5173/cart/checkout/orderfailed?status=error&message=${encodeURIComponent(
+        `${
+          process.env.FRONTEND_URL || "https://ba-da-fu-ta-food.vercel.app"
+        }/cart/checkout/ordersuccess?status=success&data=${base64}`
+      );
+    } catch (err: any) {
+      console.error("❌ [VNPay Redirect Error]:", err);
+
+      return res.redirect(
+        `${
+          process.env.FRONTEND_URL || "https://ba-da-fu-ta-food.vercel.app"
+        }/cart/checkout/orderfailed?status=error&message=${encodeURIComponent(
           err.message
         )}`
       );

@@ -1,1 +1,1 @@
-export { default as paymentRoute } from "./payment.route";
+export { default as paymentRoute } from "./vnpay.route";

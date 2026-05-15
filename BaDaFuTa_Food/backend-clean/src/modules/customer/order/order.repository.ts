@@ -24,10 +24,14 @@ export const CreateOrder = {
       total_amount: bigint;
       status?: string;
       status_payment?: string;
+      voucher_id?: string | null; // ✅ THÊM DÒNG NÀY
     }
   ) {
     const normalized = {
       ...data,
+
+      voucher_id: data.voucher_id ?? null, // ✅ OPTIONAL, không có thì để null
+
       status:
         ((
           data.status || "PENDING"
@@ -85,7 +89,25 @@ export const CreateOrder = {
   },
 
   /** 3️⃣ Lấy FULL ORDER + format JSON giống getOrder() */
-  async getFullOrder(tx: Prisma.TransactionClient, orderId: string) {
+  async getFullOrder(
+    tx: Prisma.TransactionClient,
+    orderId: string,
+    breakdown?: {
+      apply_type: "DELIVERY" | "MERCHANT" | "TOTAL" | null;
+      voucher_code: string | null;
+
+      items_before: number;
+      items_after: number;
+
+      delivery_before: number;
+      delivery_after: number;
+
+      total_before: number;
+      total_after: number;
+
+      discount_value: number;
+    }
+  ) {
     const fullOrder = await tx.order.findUnique({
       where: { id: orderId },
       include: {
@@ -109,6 +131,7 @@ export const CreateOrder = {
             },
           },
         },
+        voucher: true, // nếu bạn có relation voucher trong model order
       },
     });
 
@@ -116,6 +139,89 @@ export const CreateOrder = {
 
     const merchant_address =
       (fullOrder.merchant.location as any)?.address ?? "Chưa có địa chỉ";
+    const merchant_location = {
+      lat: (fullOrder.merchant.location as any)?.lat ?? "Chưa có lat",
+      lng: (fullOrder.merchant.location as any)?.lng ?? "Chưa có lng",
+    };
+
+    // 👇 Tạo object price_breakdown tùy theo apply_type
+    let price_breakdown: any = null;
+
+    if (breakdown) {
+      const {
+        apply_type,
+        voucher_code,
+        items_before,
+        items_after,
+        delivery_before,
+        delivery_after,
+        total_before,
+        total_after,
+        discount_value,
+      } = breakdown;
+
+      if (apply_type === "DELIVERY") {
+        // 👉 Case 1: Voucher áp cho phí vận chuyển
+        price_breakdown = {
+          apply_type,
+          voucher_code,
+
+          // in cho FE đúng yêu cầu:
+          delivery_before,
+          delivery_after,
+          discount_value, // số tiền giảm được từ ship
+
+          items_before,
+          items_after, // = items_before (không đổi)
+
+          total_after, // = items_before + delivery_after
+        };
+      } else if (apply_type === "MERCHANT") {
+        // 👉 Case 2: Voucher áp cho món ăn
+        price_breakdown = {
+          apply_type,
+          voucher_code,
+
+          items_before,
+          items_after,
+          discount_value, // số tiền giảm trên phần món
+
+          delivery_before,
+          delivery_after, // = delivery_before (không đổi)
+
+          total_after, // = items_after + delivery_before
+        };
+      } else if (apply_type === "TOTAL") {
+        // 👉 Case 3: Voucher áp cho tổng bill
+        price_breakdown = {
+          apply_type,
+          voucher_code,
+
+          items_before,
+          items_after, // = items_before (không đổi)
+
+          delivery_before,
+          delivery_after, // = delivery_before
+
+          total_before,
+          total_after, // = total_before - discount
+          discount_value, // số tiền giảm trên tổng
+        };
+      } else {
+        // Không áp voucher
+        price_breakdown = {
+          apply_type: null,
+          voucher_code: null,
+          items_before,
+          items_after,
+          delivery_before,
+          delivery_after,
+          total_before,
+          total_after,
+          discount_value,
+        };
+      }
+    }
 
     return {
       success: true,
@@ -125,6 +231,7 @@ export const CreateOrder = {
       merchant_id: fullOrder.merchant_id,
       merchant_name: fullOrder.merchant.merchant_name,
       merchant_address,
+      merchant_location,
       merchant_image: fullOrder.merchant.profile_image,
       merchant_phone: fullOrder.merchant.phone,
 
@@ -134,6 +241,7 @@ export const CreateOrder = {
       delivery_address: fullOrder.delivery_address,
       payment_method: fullOrder.payment_method,
       status_payment: fullOrder.status_payment,
+      voucher: fullOrder.voucher?.code,
 
       delivery_fee: String(fullOrder.delivery_fee ?? 0n),
       total_amount: String(fullOrder.total_amount ?? 0n),
@@ -141,6 +249,13 @@ export const CreateOrder = {
       status: fullOrder.status,
       note: fullOrder.note,
       created_at: fullOrder.created_at,
+
+      // 👉 thêm info voucher cơ bản (nếu muốn)
+      voucher_code: breakdown?.voucher_code ?? null,
+      voucher_apply_type: breakdown?.apply_type ?? null,
+
+      // 👉 breakdown cho FE in ra theo yêu cầu
+      price_breakdown,
 
       items: fullOrder.items.map((i) => ({
         id: i.id,
@@ -226,12 +341,19 @@ export const getOrder = {
 
     return orders.map((order) => {
       let merchant_address = "Chưa có địa chỉ";
+      let merchant_location: { lat: number | null; lng: number | null } | null =
+        null;
+
       if (
         typeof order.merchant?.location === "object" &&
-        order.merchant.location !== null &&
-        "address" in order.merchant.location
+        order.merchant.location !== null
       ) {
-        merchant_address = (order.merchant.location as any).address;
+        const loc = order.merchant.location as any;
+        merchant_address = loc.address ?? "Chưa có địa chỉ";
+        merchant_location = {
+          lat: loc.lat ?? null,
+          lng: loc.lng ?? null,
+        };
       }
 
       return {
@@ -240,8 +362,9 @@ export const getOrder = {
         order_id: order.id,
         merchant_name: order.merchant?.merchant_name ?? "Không xác định",
         merchant_address,
+        merchant_location,
         merchant_id: order.merchant_id,
-        merchant_image: order.merchant.profile_image,
+        merchant_image: order.merchant?.profile_image ?? null,
         merchant_phone: order.merchant?.phone ?? null,
         receiver_name: order.user?.full_name ?? "Không xác định",
         receiver_phone: order.user?.phone ?? null,
@@ -260,7 +383,6 @@ export const getOrder = {
           image_item: item.menu_item?.image_item,
           quantity: item.quantity,
           price: item.price.toString(),
-          // note: item.note,
           options:
             item.options?.map((opt) => ({
               option_id: opt.option_item.option.id,
@@ -274,7 +396,6 @@ export const getOrder = {
     });
   },
 };
-
 export const updateOrderBody = {
   async updateStatus(
     orderId: string,

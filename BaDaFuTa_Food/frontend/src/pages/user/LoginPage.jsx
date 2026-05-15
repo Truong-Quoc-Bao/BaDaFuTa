@@ -107,41 +107,68 @@ export default function LoginPage() {
       //   } else {
       //     setError('Đăng nhập thất bại! Vui lòng thử lại.');
       //   }
-      // } 
+      // }
       if (!res.ok) {
-        console.log(data);
-      
+        console.log('Lỗi từ server:', data);
+
         let errMsg = 'Đăng nhập thất bại! Vui lòng thử lại.';
-      
-        // Nếu server trả về data.error là JSON string, parse nó
+
         try {
-          const errorDetail = JSON.parse(data.error);
-          if (Array.isArray(errorDetail) && errorDetail[0]?.message) {
-            errMsg = errorDetail[0].message; // lấy thông báo lỗi chính xác từ server
-          } else if (typeof data.error === 'string') {
-            errMsg = data.error;
+          const parsed = JSON.parse(data.error);
+          if (Array.isArray(parsed) && parsed[0]?.message) {
+            errMsg = parsed[0].message;
           }
-        } catch (e) {
-          // parse thất bại, giữ nguyên errMsg mặc định
+        } catch (_) {
           if (data.error) errMsg = data.error;
         }
-      
-        setError(errMsg);
-      
-        // focus input phù hợp với loại lỗi
-        const lowerMsg = errMsg.toLowerCase();
-        if (lowerMsg.includes('email') || lowerMsg.includes('số điện thoại')) {
+
+        // Kiểm tra theo error_code trước
+        if (data.error_code === 'AUTH_USER_NOT_FOUND') {
+          const isEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(identifier);
+          const isPhone = /^\d{9,12}$/.test(identifier);
+
+          if (isEmail) setError('Email không tồn tại hoặc chưa đăng ký!');
+          else if (/^\d+$/.test(identifier) && !isPhone) setError('Số điện thoại không hợp lệ!');
+          else if (isPhone) setError('Số điện thoại không tồn tại hoặc chưa đăng ký!');
+          else setError('Tài khoản không tồn tại!');
+
           document.getElementById('email').focus();
-        } else if (lowerMsg.includes('mật khẩu')) {
-          document.getElementById('password').focus();
+          return;
         }
-      }
-      
-      else {
+
+        if (data.error_code === 'AUTH_WRONG_PASSWORD') {
+          setError('Mật khẩu không chính xác!');
+          document.getElementById('password').focus();
+          return;
+        }
+
+        // Fallback: check message từ server
+        const lower = errMsg.toLowerCase();
+        if (lower.includes('email')) {
+          setError('Email không đúng định dạng!');
+          document.getElementById('email').focus();
+          return;
+        }
+        if (lower.includes('số điện thoại') || lower.includes('identifier')) {
+          setError('Số điện thoại không đúng định dạng!');
+          document.getElementById('email').focus();
+          return;
+        }
+        if (lower.includes('mật khẩu') || lower.includes('wrong password')) {
+          setError('Mật khẩu không chính xác!');
+          document.getElementById('password').focus();
+          return;
+        }
+
+        setError(errMsg);
+      } else {
         //cách này lưu vào context nên là ko gây load trang mượt hơn
         localStorage.setItem('token', data.token);
         localStorage.setItem('user', JSON.stringify(data.user));
         dispatch({ type: 'LOGIN_SUCCESS', payload: data.user }); // cập nhật context
+
+        const redirectPath = localStorage.getItem('redirectAfterLogin') || '/';
+        localStorage.removeItem('redirectAfterLogin');
         navigate(redirectPath, { replace: true }); // chuyển sang theo yêu cầu
       }
     } catch (err) {
@@ -249,14 +276,15 @@ export default function LoginPage() {
                         type={showPassword ? 'text' : 'password'}
                         placeholder="Nhập mật khẩu"
                         className={`pl-10 pr-10 ${
-                          error === 'Vui lòng nhập mật khẩu!'
-                            ? 'border-red-500 focus:ring-red-500'
+                          error.toLowerCase().includes('mật khẩu') ||
+                          error.toLowerCase().includes('password')
+                            ? 'border-red-500 focus-visible:ring-red-500'
                             : ''
                         }`}
                         value={password}
                         onChange={(e) => setPassword(e.target.value)}
                         disabled={isLoading}
-                        autoFocus={error === 'Vui lòng nhập mật khẩu!'}
+                        autoFocus={error.toLowerCase().includes('mật khẩu')}
                         //
                       />
                       <button
@@ -271,7 +299,7 @@ export default function LoginPage() {
                         )}
                       </button>
                     </div>
-                    {error.includes('Mật khẩu') || error === 'Vui lòng nhập mật khẩu!' ? (
+                    {error.toLowerCase().includes('mật khẩu') || error.toLowerCase().includes('password') ? (
                       <p className="text-red-500 text-sm">{error}</p>
                     ) : null}
                   </div>
