@@ -108,42 +108,42 @@
 //   },
 // };
 
-import nodemailer from 'nodemailer';
+import * as Brevo from '@getbrevo/brevo';
 import { otpStore } from './otp.store';
 
-// Cấu hình bộ gửi mail dựa trên .env bạn cung cấp
-const transporter = nodemailer.createTransport({
-  host: process.env.SMTP_HOST, // smtp.gmail.com
-  port: Number(process.env.SMTP_PORT), // 587
-  secure: false, // false cho port 587
-  auth: {
-    user: process.env.GMAIL_USER, // badafuta@gmail.com
-    pass: process.env.GMAIL_APP_PASS, // dcfn ngqb hsal tsvd
-  },
-});
+// Khởi tạo instance và fix lỗi TS(2339) bằng cách sử dụng ép kiểu any
+const apiInstance = new (Brevo as any).TransactionalEmailsApi();
+
+// Thiết lập API Key
+apiInstance.setApiKey(
+  (Brevo as any).TransactionalEmailsApiApiKeys.apiKey,
+  process.env.BREVO_API_KEY as string,
+);
 
 export const otpService = {
   async sendOtp(email: string) {
     if (!email) throw new Error('Thiếu email!');
+
+    // GIỮ NGUYÊN 100% LOGIC RATE LIMIT VÀ CHUẨN HÓA
     const normalizedEmail = email.trim().toLowerCase();
 
     const existing = otpStore[normalizedEmail];
     if (existing && Date.now() < existing.expiry - 4 * 60 * 1000) {
       throw new Error('Vui lòng chờ 1 phút trước khi gửi lại!');
     }
+
     const otp = Math.floor(100000 + Math.random() * 900000);
     otpStore[normalizedEmail] = {
       code: otp,
-      expiry: Date.now() + 5 * 60 * 1000,
+      expiry: Date.now() + 5 * 60 * 1000, // hết hạn sau 5 phút
     };
 
     try {
-      // Gửi mail bằng transporter thay vì resend
-      await transporter.sendMail({
-        from: `"Hệ thống" <${process.env.GMAIL_USER}>`,
-        to: email,
+      // Cấu hình email gửi đi theo định dạng Brevo
+      // GIỮ NGUYÊN 100% TEMPLATE HTML CŨ ĐỂ KHÔNG ĐỔI UI/UX
+      const sendSmtpEmail = {
         subject: 'Mã OTP xác nhận',
-        html: `
+        htmlContent: `
             <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; text-align: center; border: 1px solid #eee; padding: 20px; border-radius: 10px;">
             <h2 style="color: #333;">Xác thực tài khoản của bạn</h2>
             <p style="color: #666;">Sử dụng mã OTP dưới đây để hoàn tất quá trình đăng ký:</p>
@@ -154,6 +154,7 @@ export const otpService = {
           
             <p style="font-size: 14px; color: #888;">Mã có hiệu lực trong <b style="color: #333;">5 phút</b>.</p>
           
+            <!-- Khối cảnh báo bảo mật -->
             <div style="background-color: #fff4f4; padding: 15px; border-radius: 8px; border-left: 4px solid #ff4d4d; text-align: left; margin-top: 25px;">
               <p style="margin: 0; font-size: 13px; color: #d93025; line-height: 1.5;">
                 <b>⚠️ CẢNH BÁO BẢO MẬT:</b><br>
@@ -166,15 +167,27 @@ export const otpService = {
             <p style="margin-top: 25px; font-size: 12px; color: #aaa;">Đây là email tự động, vui lòng không phản hồi email này.</p>
           </div>
         `,
-      });
-      console.log('✅ Gửi mail thành công tới:', email);
-    } catch (mailErr: any) {
-      console.error('❌ Lỗi Nodemailer:', mailErr.message);
-      throw new Error('Không thể gửi email: ' + mailErr.message);
+        sender: {
+          name: process.env.BREVO_SENDER_NAME || 'Badafuta Support',
+          email: process.env.BREVO_SENDER_EMAIL || 'baotruong.190404@gmail.com',
+        },
+        to: [{ email: normalizedEmail }],
+      };
+
+      // Thực hiện gửi qua Brevo SDK
+      await apiInstance.sendTransacEmail(sendSmtpEmail);
+      console.log('✅ Gửi mail qua Brevo thành công tới:', email);
+    } catch (error: any) {
+      console.error('❌ Lỗi Brevo:', error.message);
+      // Giữ nguyên kiểu throw lỗi để Frontend bắt được
+      throw new Error('Không thể gửi email: ' + error.message);
     }
+
+    // GIỮ NGUYÊN RETURN FORMAT CŨ
     return { success: true, message: `OTP đã gửi tới ${email}` };
   },
 
+  // GIỮ NGUYÊN 100% LOGIC VERIFY CŨ
   async verifyOtp(email: string, otp: number) {
     if (!email || !otp) throw new Error('Thiếu thông tin!');
 
@@ -191,6 +204,7 @@ export const otpService = {
     }
 
     if (Number(otp) !== record.code) {
+      // Giữ nguyên format phản hồi thất bại để FE hiện đúng UI chữ đỏ
       return { success: false, message: 'Mã OTP không chính xác!' };
     }
 

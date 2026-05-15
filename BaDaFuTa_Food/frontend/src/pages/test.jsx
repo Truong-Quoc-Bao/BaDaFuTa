@@ -1300,26 +1300,20 @@ const handleVerifyOtp = async () => {
 // 
 // 
 // 
-import nodemailer from 'nodemailer';
+import * as sib from '@getbrevo/brevo';
 import { otpStore } from './otp.store';
 
-// Cấu hình transporter cho Nodemailer
-// Bạn cần cấu hình các biến môi trường này trong file .env
-const transporter = nodemailer.createTransport({
-  host: process.env.SMTP_HOST, // Ví dụ: smtp.gmail.com
-  port: Number(process.env.SMTP_PORT) || 587,
-  secure: false, // true cho port 465, false cho các port khác
-  auth: {
-    user: process.env.SMTP_USER, // Email của bạn
-    pass: process.env.SMTP_PASS, // Mật khẩu ứng dụng (App Password)
-  },
-});
+// Ép kiểu any để fix lỗi TypeScript "Property does not exist" của bạn
+const apiInstance = new (sib as any).TransactionalEmailsApi();
+
+// Thiết lập API Key
+apiInstance.setApiKey((sib as any).TransactionalEmailsApiApiKeys.apiKey, process.env.BREVO_API_KEY as string);
 
 export const otpService = {
   async sendOtp(email: string) {
     if (!email) throw new Error('Thiếu email!');
     
-    // Logic Rate limit giữ nguyên
+    // GIỮ NGUYÊN 100% LOGIC RATE LIMIT CŨ
     const normalizedEmail = email.trim().toLowerCase();
     const existing = otpStore[normalizedEmail];
     if (existing && Date.now() < existing.expiry - 4 * 60 * 1000) {
@@ -1333,12 +1327,11 @@ export const otpService = {
     };
 
     try {
-      // Thay đổi từ resend.emails.send sang transporter.sendMail
-      await transporter.sendMail({
-        from: `"Hệ thống OTP" <${process.env.SMTP_USER}>`, // Tên hiển thị và email gửi
-        to: email,
-        subject: 'Mã OTP xác nhận',
-        html: `
+      const sendSmtpEmail = new (sib as any).SendSmtpEmail();
+      
+      // GIỮ NGUYÊN 100% GIAO DIỆN VÀ THÔNG TIN CŨ
+      sendSmtpEmail.subject = "Mã OTP xác nhận";
+      sendSmtpEmail.htmlContent = `
             <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; text-align: center; border: 1px solid #eee; padding: 20px; border-radius: 10px;">
             <h2 style="color: #333;">Xác thực tài khoản của bạn</h2>
             <p style="color: #666;">Sử dụng mã OTP dưới đây để hoàn tất quá trình đăng ký:</p>
@@ -1361,22 +1354,34 @@ export const otpService = {
           
             <p style="margin-top: 25px; font-size: 12px; color: #aaa;">Đây là email tự động, vui lòng không phản hồi email này.</p>
           </div>
-        `,
-      });
-      console.log('✅ Gửi mail thành công tới:', email);
-    } catch (mailErr: any) {
-      console.error('❌ Lỗi Nodemailer:', mailErr.message);
-      throw new Error('Không thể gửi email: ' + mailErr.message);
+        `;
+
+      sendSmtpEmail.sender = { 
+        name: process.env.BREVO_SENDER_NAME || "Badafuta Support", 
+        email: process.env.BREVO_SENDER_EMAIL || "baotruong.190404@gmail.com" 
+      };
+      
+      sendSmtpEmail.to = [{ email: normalizedEmail }];
+
+      // Thực hiện gửi qua Brevo
+      await apiInstance.sendTransacEmail(sendSmtpEmail);
+      console.log('✅ Gửi mail qua Brevo thành công tới:', email);
+
+    } catch (error: any) {
+      console.error('❌ Lỗi Brevo:', error.message);
+      throw new Error('Không thể gửi email: ' + error.message);
     }
+    
+    // GIỮ NGUYÊN RESPONSE FORMAT CŨ
     return { success: true, message: `OTP đã gửi tới ${email}` };
   },
 
+  // GIỮ NGUYÊN 100% LOGIC VERIFY CŨ
   async verifyOtp(email: string, otp: number) {
-    // Logic xác thực giữ nguyên hoàn toàn 100%
     if (!email || !otp) throw new Error('Thiếu thông tin!');
 
     const normalizedEmail = email.trim().toLowerCase();
-    const record = otpStore[normalizedEmail];
+    const record = otpStore[normalizedEmail]; 
 
     if (!record) {
       throw new Error('Mã OTP không tồn tại hoặc đã hết hạn!');
