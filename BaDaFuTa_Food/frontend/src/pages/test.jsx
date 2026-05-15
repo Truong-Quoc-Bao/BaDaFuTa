@@ -572,27 +572,3 @@ useEffect(() => {
 const data = await res.json();
 console.log('Response status:', res.status);
 console.log('Response data:', data); // 👈 thêm dòng này
-
-if (field === 'password') {
-  if (!value) {
-    setPasswordError('');
-  } else if (value.length < 6) {
-    setPasswordError('Mật khẩu phải có ít nhất 6 ký tự.');
-  } else if (!/[a-zA-Z]/.test(value)) {
-    setPasswordError('Mật khẩu phải chứa ít nhất 1 chữ cái.');
-  } else if (!/\d/.test(value)) {
-    setPasswordError('Mật khẩu phải chứa ít nhất 1 chữ số.');
-  } else {
-    // Hợp lệ — tính độ mạnh
-    let score = 0;
-    if (/[A-Z]/.test(value)) score++;
-    if (/[a-z]/.test(value)) score++;
-    if (/[!@#$%^&*()_\-+=./?\\|]/.test(value)) score++;
-    if (value.length >= 12) score++;
-
-    if (score <= 1) setPasswordError('Mật khẩu yếu');
-    else if (score === 2) setPasswordError('Mật khẩu trung bình');
-    else if (score === 3) setPasswordError('Mật khẩu khá');
-    else setPasswordError('Mật khẩu mạnh - tốt');
-  }
-}
