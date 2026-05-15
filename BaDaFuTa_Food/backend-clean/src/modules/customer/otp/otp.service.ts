@@ -24,63 +24,46 @@
 //   },
 // };
 
-import nodemailer from 'nodemailer';
+import { Resend } from 'resend';
 import { otpStore } from './otp.store';
 
-const transporter = nodemailer.createTransport({
-  host: 'smtp.gmail.com',
-  port: 587,
-  secure: false,
-  auth: {
-    user: process.env.GMAIL_USER,
-    pass: process.env.GMAIL_APP_PASS,
-  },
-});
+const resend = new Resend(process.env.RESEND_API_KEY);
 
 export const otpService = {
   async sendOtp(email: string) {
     if (!email) throw new Error('Thiếu email!');
-
     // Rate limit: không gửi lại nếu chưa đến 1 phút
     const existing = otpStore[email];
     if (existing && Date.now() < existing.expiry - 4 * 60 * 1000) {
       throw new Error('Vui lòng chờ 1 phút trước khi gửi lại!');
     }
-
     const otp = Math.floor(100000 + Math.random() * 900000);
     otpStore[email] = {
       code: otp,
       expiry: Date.now() + 5 * 60 * 1000, // hết hạn sau 5 phút
     };
-
     try {
-      // 👈
-
-      await transporter.sendMail({
-        from: `"App của bạn" <${process.env.GMAIL_USER}>`,
+      await resend.emails.send({
+        from: 'onboarding@resend.dev',
         to: email,
         subject: 'Mã OTP xác nhận',
         html: `
-        <h2>Mã OTP của bạn</h2>
-        <p style="font-size:32px;font-weight:bold;letter-spacing:8px">${otp}</p>
-        <p>Mã có hiệu lực trong <b>5 phút</b>.</p>
-        <p>Nếu bạn không yêu cầu, hãy bỏ qua email này.</p>
-      `,
+          <h2>Mã OTP của bạn</h2>
+          <p style="font-size:32px;font-weight:bold;letter-spacing:8px">${otp}</p>
+          <p>Mã có hiệu lực trong <b>5 phút</b>.</p>
+          <p>Nếu bạn không yêu cầu, hãy bỏ qua email này.</p>
+        `,
       });
-
-      console.log('✅ Gửi mail thành công tới:', email); // 👈
+      console.log('✅ Gửi mail thành công tới:', email);
     } catch (mailErr: any) {
-      // 👈
-      console.error('❌ Lỗi nodemailer:', mailErr.message); // 👈
-      throw new Error('Không thể gửi email: ' + mailErr.message); // 👈
+      console.error('❌ Lỗi resend:', mailErr.message);
+      throw new Error('Không thể gửi email: ' + mailErr.message);
     }
-
     return { success: true, message: `OTP đã gửi tới ${email}` };
   },
 
   async verifyOtp(email: string, otp: number) {
     if (!email || !otp) throw new Error('Thiếu thông tin!');
-
     const record = otpStore[email];
     if (!record) throw new Error('OTP chưa được gửi!');
     if (Date.now() > record.expiry) {
@@ -90,7 +73,6 @@ export const otpService = {
     if (parseInt(otp.toString()) !== record.code) {
       return { success: false, message: 'OTP không đúng!' };
     }
-
     delete otpStore[email];
     return { success: true, message: 'Xác minh thành công!' };
   },
