@@ -108,7 +108,7 @@
 //   },
 // };
 
-import Brevo from '@getbrevo/brevo';
+import * as Brevo from '@getbrevo/brevo';
 import { otpStore } from './otp.store';
 
 const apiInstance = new Brevo.TransactionalEmailsApi();
@@ -117,6 +117,7 @@ apiInstance.setApiKey(
   Brevo.TransactionalEmailsApiApiKeys.apiKey,
   process.env.BREVO_API_KEY as string,
 );
+
 export const otpService = {
   async sendOtp(email: string) {
     if (!email) throw new Error('Thiếu email!');
