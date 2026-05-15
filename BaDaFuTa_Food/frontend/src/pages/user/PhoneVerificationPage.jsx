@@ -380,17 +380,23 @@ export default function EmailVerification() {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(payload),
         },
-        5000,
+        8000,
       )
         .then(async (res) => {
           // Đọc nội dung JSON từ server trước
           const data = await res.json();
+
+          if (data.success) {
+            return { data, host };
+          }
+
           if (res.status >= 500) {
             throw new Error(`Server ${host} gặp lỗi hệ thống`);
           }
 
           if (!res.ok) throw new Error(`Server ${host} trả lỗi`);
           return res.json().then((data) => ({ data, host }));
+          throw new Error(data.message || 'Lỗi logic');
         })
         .catch((err) => {
           console.warn(err.message);

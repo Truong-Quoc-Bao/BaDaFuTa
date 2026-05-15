@@ -83,21 +83,25 @@ export const otpService = {
   async verifyOtp(email: string, otp: number) {
     if (!email || !otp) throw new Error('Thiếu thông tin!');
 
-    const record = otpStore[email];
+    const normalizedEmail = email.trim().toLowerCase();
+
+    // const record = otpStore[email];
+    const record = otpStore[normalizedEmail]; // Tìm bằng email đã chuẩn hóa
 
     if (!record) {
       throw new Error('Mã OTP đã hết hạn hoặc chưa được gửi!');
     }
 
     if (Date.now() > record.expiry) {
-      delete otpStore[email];
-      throw new Error('OTP đã hết hạn!');
+      delete otpStore[normalizedEmail];
+      throw new Error('Mã OTP đã hết hạn!');
     }
-    
+
     if (parseInt(otp.toString()) !== record.code) {
-      return { success: false, message: 'OTP không đúng!' };
+      return { success: false, message: 'Mã OTP không chính xác!' };
     }
-    delete otpStore[email];
+
+    delete otpStore[normalizedEmail];
     return { success: true, message: 'Xác minh thành công!' };
   },
 };
