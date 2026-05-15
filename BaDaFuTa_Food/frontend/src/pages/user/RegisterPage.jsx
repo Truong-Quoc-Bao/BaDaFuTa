@@ -47,10 +47,13 @@ export default function RegisterPage() {
 
   const location = useLocation();
   const phoneFromVerification = location.state?.phone || '';
+  const emailFromVerification = location.state?.email || '';
+
   const [formData, setFormData] = useState({
     full_name: '',
-    phone: phoneFromVerification,
-    email: '',
+    // phone: phoneFromVerification,
+    phone: '',
+    email: emailFromVerification,
     password: '',
     confirmPassword: '',
   });
@@ -240,7 +243,8 @@ export default function RegisterPage() {
         });
 
         const data = await res.json(); // đây sẽ là { success: true, user: {...} }
-
+        console.log('Response status:', res.status);
+        console.log('Response data:', data); // 👈 thêm dòng này
         // if (!res.ok) {
         //   if (data.sdt) {
         //     // Nếu số điện thoại đã có → điều hướng sang login
@@ -282,7 +286,7 @@ export default function RegisterPage() {
         });
         // Thành công
         alert('Đăng ký thành công!');
-        navigate('/login');
+        navigate('/login', { state: { email: formData.email }, replace: true });
         setShowSuccessDialog(true);
         console.log('Đăng ký thành công từ host:', url);
         return; // thoát loop nếu thành công
@@ -379,9 +383,11 @@ export default function RegisterPage() {
                           placeholder="Nhập số điện thoại"
                           value={formData.phone}
                           onChange={(e) => handleChange('phone', e.target.value)}
-                          disabled={true}
+                          // disabled={true}
+                          disabled={isLoading}
                           className={cn(
-                            'pl-10 pr-10 bg-gray-100 cursor-not-allowed',
+                            // 'pl-10 pr-10 bg-gray-100 cursor-not-allowed',
+                            'pl-10 pr-10',
                             !formData.phone && error?.includes('số điện thoại')
                               ? 'border-red-500 focus:border-red-500'
                               : phoneError
@@ -403,6 +409,11 @@ export default function RegisterPage() {
                         )}
                       </div>
                       {phoneError && <p className="text-xs text-red-500 text-left">{phoneError}</p>}
+                      {!formData.phone && error?.includes('số điện thoại') && (
+                        <p className="text-xs text-red-500 text-left">
+                          Vui lòng nhập số điện thoại
+                        </p>
+                      )}
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="email">Email *</Label>
@@ -414,8 +425,13 @@ export default function RegisterPage() {
                           placeholder="Nhập địa chỉ email"
                           value={formData.email}
                           onChange={(e) => handleChange('email', e.target.value)}
+                          disabled={!!emailFromVerification || isLoading} // 👈 lock nếu có email từ OTP
                           className={cn(
                             'pl-10 pr-10',
+                            !!emailFromVerification || isLoading
+                              ? 'bg-gray-100 cursor-not-allowed'
+                              : '',
+
                             !formData.email && error?.includes('email')
                               ? 'border-red-500 focus:border-red-500'
                               : emailError
@@ -424,7 +440,7 @@ export default function RegisterPage() {
                               ? 'border-green-500 hover:border-green-500 focus:border-green-500'
                               : ' ',
                           )}
-                          disabled={isLoading}
+                          // disabled={isLoading}
                         />
 
                         {/* ❌ Icon lỗi */}
@@ -551,7 +567,6 @@ export default function RegisterPage() {
                           onClick={() => setShowConfirmPassword(!showConfirmPassword)}
                           className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
                           disabled={isLoading}
-                          F
                         >
                           {showConfirmPassword ? (
                             <EyeOff className="w-4 h-4" />

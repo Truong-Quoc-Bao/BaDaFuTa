@@ -40,6 +40,10 @@ export default function LoginPage() {
     }
   }, [state.isAuthenticated, navigate]);
 
+  const location = useLocation();
+  const phoneFromVerification = location.state?.phone || '';
+  const emailFromVerification = location.state?.email || '';
+
   // // 🔹 Dán useEffect kiểm tra login ở đây
   // useEffect(() => {
   //   if (state.isAuthenticated) {
@@ -54,6 +58,12 @@ export default function LoginPage() {
       [e.target.name]: e.target.value,
     });
   };
+
+  useEffect(() => {
+    if (location.state?.email) {
+      setIdentifier(location.state.email);
+    }
+  }, []);
 
   const handleSubmit = async (e) => {
     e.preventDefault();

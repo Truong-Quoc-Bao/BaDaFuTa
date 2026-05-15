@@ -512,55 +512,87 @@ export const RestaurantPage = () => {
 
 
 
-import { Resend } from 'resend';
-import { otpStore } from './otp.store';
+npm install resend
+git add .
+git commit -m "fix: add resend package"
+git push
 
-const resend = new Resend(process.env.RESEND_API_KEY); // 👈 không hardcode key
+// Cũ
+setTimeout(() => navigate('/register', { state: { email } }), 500);
 
-export const otpService = {
-  async sendOtp(email: string) {
-    if (!email) throw new Error('Thiếu email!');
-    const existing = otpStore[email];
-    if (existing && Date.now() < existing.expiry - 4 * 60 * 1000) {
-      throw new Error('Vui lòng chờ 1 phút trước khi gửi lại!');
-    }
-    const otp = Math.floor(100000 + Math.random() * 900000);
-    otpStore[email] = {
-      code: otp,
-      expiry: Date.now() + 5 * 60 * 1000,
-    };
-    try {
-      await resend.emails.send({
-        from: 'onboarding@resend.dev',
-        to: email,
-        subject: 'Mã OTP xác nhận',
-        html: `
-          <h2>Mã OTP của bạn</h2>
-          <p style="font-size:32px;font-weight:bold;letter-spacing:8px">${otp}</p>
-          <p>Mã có hiệu lực trong <b>5 phút</b>.</p>
-          <p>Nếu bạn không yêu cầu, hãy bỏ qua email này.</p>
-        `,
-      });
-      console.log('✅ Gửi mail thành công tới:', email);
-    } catch (mailErr: any) {
-      console.error('❌ Lỗi resend:', mailErr.message);
-      throw new Error('Không thể gửi email: ' + mailErr.message);
-    }
-    return { success: true, message: `OTP đã gửi tới ${email}` };
-  },
+// Mới — nếu muốn chuyển sang login
+setTimeout(() => navigate('/login', { state: { email } }), 500);
 
-  async verifyOtp(email: string, otp: number) {
-    if (!email || !otp) throw new Error('Thiếu thông tin!');
-    const record = otpStore[email];
-    if (!record) throw new Error('OTP chưa được gửi!');
-    if (Date.now() > record.expiry) {
-      delete otpStore[email];
-      throw new Error('OTP đã hết hạn!');
-    }
-    if (parseInt(otp.toString()) !== record.code) {
-      return { success: false, message: 'OTP không đúng!' };
-    }
-    delete otpStore[email];
-    return { success: true, message: 'Xác minh thành công!' };
-  },
+const phoneFromVerification = location.state?.phone || '';
+const emailFromVerification = location.state?.email || ''; // 👈 thêm dòng này
+
+
+const [formData, setFormData] = useState({
+  full_name: '',
+  phone: phoneFromVerification,
+  email: emailFromVerification, // 👈 thay '' bằng đây
+  password: '',
+  confirmPassword: '',
+});
+
+<Input
+  id="email"
+  type="email"
+  ...
+  disabled={!!emailFromVerification || isLoading} // 👈 lock nếu có email từ OTP
+  className={cn(
+    'pl-10 pr-10',
+    emailFromVerification ? 'bg-gray-100 cursor-not-allowed' : '', // 👈 style giống phone
+    ...
+  )}
+/>
+
+// Cũ
+disabled={true}
+className={cn('pl-10 pr-10 bg-gray-100 cursor-not-allowed', ...)}
+
+// Mới
+disabled={isLoading}
+className={cn('pl-10 pr-10', ...)}
+
+
+
+
+const handleSuccessDialogClose = () => {
+  setShowSuccessDialog(false);
+  navigate('/login', { state: { email: formData.email }, replace: true }); // 👈 truyền email sang login
 };
+
+useEffect(() => {
+  if (location.state?.email) {
+    setIdentifier(location.state.email);
+  }
+}, []);
+
+const data = await res.json();
+console.log('Response status:', res.status);
+console.log('Response data:', data); // 👈 thêm dòng này
+
+if (field === 'password') {
+  if (!value) {
+    setPasswordError('');
+  } else if (value.length < 6) {
+    setPasswordError('Mật khẩu phải có ít nhất 6 ký tự.');
+  } else if (!/[a-zA-Z]/.test(value)) {
+    setPasswordError('Mật khẩu phải chứa ít nhất 1 chữ cái.');
+  } else if (!/\d/.test(value)) {
+    setPasswordError('Mật khẩu phải chứa ít nhất 1 chữ số.');
+  } else {
+    // Hợp lệ — tính độ mạnh
+    let score = 0;
+    if (/[A-Z]/.test(value)) score++;
+    if (/[a-z]/.test(value)) score++;
+    if (/[!@#$%^&*()_\-+=./?\\|]/.test(value)) score++;
+    if (value.length >= 12) score++;
+
+    if (score <= 1) setPasswordError('Mật khẩu yếu');
+    else if (score === 2) setPasswordError('Mật khẩu trung bình');
+    else if (score === 3) setPasswordError('Mật khẩu khá');
+    else setPasswordError('Mật khẩu mạnh - tốt');
+  }
+}
