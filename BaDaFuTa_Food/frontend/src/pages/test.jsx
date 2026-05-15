@@ -1294,3 +1294,104 @@ const handleVerifyOtp = async () => {
     setLoading(false);
   }
 };
+
+
+
+// 
+// 
+// 
+import nodemailer from 'nodemailer';
+import { otpStore } from './otp.store';
+
+// Cấu hình transporter cho Nodemailer
+// Bạn cần cấu hình các biến môi trường này trong file .env
+const transporter = nodemailer.createTransport({
+  host: process.env.SMTP_HOST, // Ví dụ: smtp.gmail.com
+  port: Number(process.env.SMTP_PORT) || 587,
+  secure: false, // true cho port 465, false cho các port khác
+  auth: {
+    user: process.env.SMTP_USER, // Email của bạn
+    pass: process.env.SMTP_PASS, // Mật khẩu ứng dụng (App Password)
+  },
+});
+
+export const otpService = {
+  async sendOtp(email: string) {
+    if (!email) throw new Error('Thiếu email!');
+    
+    // Logic Rate limit giữ nguyên
+    const normalizedEmail = email.trim().toLowerCase();
+    const existing = otpStore[normalizedEmail];
+    if (existing && Date.now() < existing.expiry - 4 * 60 * 1000) {
+      throw new Error('Vui lòng chờ 1 phút trước khi gửi lại!');
+    }
+
+    const otp = Math.floor(100000 + Math.random() * 900000);
+    otpStore[normalizedEmail] = {
+      code: otp,
+      expiry: Date.now() + 5 * 60 * 1000, // hết hạn sau 5 phút
+    };
+
+    try {
+      // Thay đổi từ resend.emails.send sang transporter.sendMail
+      await transporter.sendMail({
+        from: `"Hệ thống OTP" <${process.env.SMTP_USER}>`, // Tên hiển thị và email gửi
+        to: email,
+        subject: 'Mã OTP xác nhận',
+        html: `
+            <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; text-align: center; border: 1px solid #eee; padding: 20px; border-radius: 10px;">
+            <h2 style="color: #333;">Xác thực tài khoản của bạn</h2>
+            <p style="color: #666;">Sử dụng mã OTP dưới đây để hoàn tất quá trình đăng ký:</p>
+            
+            <div style="background-color: #f9f9f9; padding: 20px; margin: 20px 0; border-radius: 8px; border: 1px dashed #ddd;">
+              <p style="font-size: 36px; font-weight: bold; letter-spacing: 10px; color: #ff6600; margin: 0;">${otp}</p>
+            </div>
+          
+            <p style="font-size: 14px; color: #888;">Mã có hiệu lực trong <b style="color: #333;">5 phút</b>.</p>
+          
+            <!-- Khối cảnh báo bảo mật -->
+            <div style="background-color: #fff4f4; padding: 15px; border-radius: 8px; border-left: 4px solid #ff4d4d; text-align: left; margin-top: 25px;">
+              <p style="margin: 0; font-size: 13px; color: #d93025; line-height: 1.5;">
+                <b>⚠️ CẢNH BÁO BẢO MẬT:</b><br>
+                • <b>TUYỆT ĐỐI KHÔNG</b> cung cấp mã này cho bất kỳ ai, kể cả nhân viên hỗ trợ khách hàng.<br>
+                • Mã này chỉ dành riêng cho bạn để xác thực tài khoản trên hệ thống của chúng tôi.<br>
+                • Nếu bạn không yêu cầu mã này, vui lòng bỏ qua email này hoặc liên hệ hỗ trợ nếu thấy dấu hiệu bất thường.
+              </p>
+            </div>
+          
+            <p style="margin-top: 25px; font-size: 12px; color: #aaa;">Đây là email tự động, vui lòng không phản hồi email này.</p>
+          </div>
+        `,
+      });
+      console.log('✅ Gửi mail thành công tới:', email);
+    } catch (mailErr: any) {
+      console.error('❌ Lỗi Nodemailer:', mailErr.message);
+      throw new Error('Không thể gửi email: ' + mailErr.message);
+    }
+    return { success: true, message: `OTP đã gửi tới ${email}` };
+  },
+
+  async verifyOtp(email: string, otp: number) {
+    // Logic xác thực giữ nguyên hoàn toàn 100%
+    if (!email || !otp) throw new Error('Thiếu thông tin!');
+
+    const normalizedEmail = email.trim().toLowerCase();
+    const record = otpStore[normalizedEmail];
+
+    if (!record) {
+      throw new Error('Mã OTP không tồn tại hoặc đã hết hạn!');
+    }
+
+    if (Date.now() > record.expiry) {
+      delete otpStore[normalizedEmail];
+      throw new Error('Mã OTP đã hết hạn!');
+    }
+
+    if (Number(otp) !== record.code) {
+      return { success: false, message: 'Mã OTP không chính xác!' };
+    }
+
+    delete otpStore[normalizedEmail];
+    return { success: true, message: 'Xác minh thành công!' };
+  },
+};
