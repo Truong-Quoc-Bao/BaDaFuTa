@@ -82,7 +82,8 @@ export default function HomePage() {
 
   useEffect(() => {
     const fetchRestaurants = async () => {
-      const host = 'https://badafuta-production.up.railway.app/api/restaurants';
+      // const host = 'https://badafuta-production.up.railway.app/api/restaurants';
+      const host = ' https://badafuta.onrender.com/api/restaurants';
 
       const params = new URLSearchParams();
 
@@ -125,7 +126,8 @@ export default function HomePage() {
   useEffect(() => {
     async function loadVouchers() {
       try {
-        const res = await fetch('https://badafuta-production.up.railway.app/api/voucher/getAll', {
+        // const res = await fetch('https://badafuta-production.up.railway.app/api/voucher/getAll', {
+        const res = await fetch('https://badafuta.onrender.com /api/voucher/getAll', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({}),
@@ -154,12 +156,10 @@ export default function HomePage() {
   useEffect(() => {
     async function fetchFeaturedRestaurants() {
       try {
-        const res = await fetch(
-          'https://badafuta-production.up.railway.app/api/restaurants/future',
-        );
         // const res = await fetch(
-        //   " http://localhost:3000/api/restaurants/future"
+        //   'https://badafuta-production.up.railway.app/api/restaurants/future',
         // );
+        const res = await fetch('https://badafuta.onrender.com/api/restaurants/future');
 
         if (!res.ok) throw new Error('Lỗi khi gọi API');
 

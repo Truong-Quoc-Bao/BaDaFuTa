@@ -101,7 +101,8 @@ export default function CheckOutPage() {
   useEffect(() => {
     if (!merchant?.id) return;
 
-    socketRef.current = io('https://badafuta-production.up.railway.app', {
+    // socketRef.current = io('https://badafuta-production.up.railway.app', {
+    socketRef.current = io('https://badafuta.onrender.com', {
       transports: ['websocket'],
       path: '/socket.io',
       reconnection: true,
@@ -433,8 +434,8 @@ export default function CheckOutPage() {
     else if (method === 'VNPAY') {
       try {
         console.log('📤 Sending body to VNPay:', orderBody);
-        const res = await fetch('https://badafuta-production.up.railway.app/api/payment/initiate', {
-          // const res = await fetch("http://localhost:3000/api/payment/initiate", {
+        // const res = await fetch('https://badafuta-production.up.railway.app/api/payment/initiate', {
+        const res = await fetch('https://badafuta.onrender.com/api/payment/initiate', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(orderBody),
@@ -456,8 +457,8 @@ export default function CheckOutPage() {
     } else if (method === 'MOMO') {
       try {
         console.log('📤 Sending body to MoMo:', orderBody);
-        const res = await fetch('https://badafuta-production.up.railway.app/api/momo/create', {
-          // const res = await fetch("http://localhost:3000/api/momo/create", {
+        // const res = await fetch('https://badafuta-production.up.railway.app/api/momo/create', {
+        const res = await fetch('https://badafuta.onrender.com/api/momo/create', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(orderBody),
@@ -550,8 +551,8 @@ export default function CheckOutPage() {
 
       console.log('ORDER SEND VOUCHER:', selectedVoucher);
       console.log('📤 Gửi order tới backend:', orderBody);
-      const res = await fetch('https://badafuta-production.up.railway.app/api/order', {
-        // const res = await fetch('http://localhost:3000/api/order', {
+      // const res = await fetch('https://badafuta-production.up.railway.app/api/order', {
+      const res = await fetch('https://badafuta.onrender.com/api/order', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(orderBody),
@@ -798,8 +799,8 @@ export default function CheckOutPage() {
 
   async function loadVouchers() {
     try {
-      const res = await fetch('https://badafuta-production.up.railway.app/api/voucher/getAll', {
-        // const res = await fetch('http://localhost:3000/api/voucher/getAll', {
+      // const res = await fetch('https://badafuta-production.up.railway.app/api/voucher/getAll', {
+      const res = await fetch('https://badafuta.onrender.com/api/voucher/getAll', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -1133,7 +1134,6 @@ export default function CheckOutPage() {
                                 ? 'border-orange-500 bg-orange-50'
                                 : 'border-gray-200'
                             }`}
-   
                             onClick={async () => {
                               let finalAddr = { ...addr };
 

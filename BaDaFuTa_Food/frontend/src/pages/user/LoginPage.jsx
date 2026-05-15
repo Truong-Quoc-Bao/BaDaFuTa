@@ -75,12 +75,8 @@ export default function LoginPage() {
     }
 
     try {
-      // const res = await fetch("http://localhost:3000/api/login", {
-      // const res = await fetch("http://172.20.10.3:3000/api/login", {
-      // const res = await fetch("http://192.168.100.124:3000/api/login", {
-
-      // const res = await fetch("/apiLocal/login", {
-      const res = await fetch('https://badafuta-production.up.railway.app/api/login', {
+      // const res = await fetch('https://badafuta-production.up.railway.app/api/login', {
+      const res = await fetch('https://badafuta.onrender.com/api/login', {
         method: 'POST',
         credentials: 'include', // ✅ gửi cookie
         headers: { 'Content-Type': 'application/json' },
@@ -299,7 +295,8 @@ export default function LoginPage() {
                         )}
                       </button>
                     </div>
-                    {error.toLowerCase().includes('mật khẩu') || error.toLowerCase().includes('password') ? (
+                    {error.toLowerCase().includes('mật khẩu') ||
+                    error.toLowerCase().includes('password') ? (
                       <p className="text-red-500 text-sm">{error}</p>
                     ) : null}
                   </div>

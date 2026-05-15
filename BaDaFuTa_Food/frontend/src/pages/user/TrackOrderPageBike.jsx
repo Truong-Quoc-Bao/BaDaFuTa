@@ -142,8 +142,8 @@ export const TrackOrderPage = () => {
 
     // else try fetch by route param id (most cases)
     if (id) {
-      fetch(`https://badafuta-production.up.railway.app/api/order/getOrder/${id}`) 
-      // fetch(`/apiLocal/order/getOrder/${id}`)
+      // fetch(`https://badafuta-production.up.railway.app/api/order/getOrder/${id}`)
+      fetch(`https://badafuta.onrender.com/api/order/getOrder/${id}`)
         .then((res) => {
           if (!res.ok) throw new Error('Fetch order failed');
           return res.json();
@@ -230,16 +230,20 @@ export const TrackOrderPage = () => {
             console.error('No order id available for update');
             return;
           }
-          const res = await fetch(`https://badafuta-production.up.railway.app/api/order/${apiId}/updateBody`, {
-          // const res = await fetch(`/apiLocal/order/${apiId}/updateBody`, {
-            method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              status: 'COMPLETED',
-              status_payment: 'SUCCESS',
-              delivered_at: new Date().toISOString(),
-            }),
-          });
+          const res = await fetch(
+            // `https://badafuta-production.up.railway.app/api/order/${apiId}/updateBody`,
+            `https://badafuta.onrender.com/api/order/${apiId}/updateBody`,
+
+            {
+              method: 'PUT',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                status: 'COMPLETED',
+                status_payment: 'SUCCESS',
+                delivered_at: new Date().toISOString(),
+              }),
+            },
+          );
 
           if (!res.ok) throw new Error('Update failed');
           const data = await res.json();

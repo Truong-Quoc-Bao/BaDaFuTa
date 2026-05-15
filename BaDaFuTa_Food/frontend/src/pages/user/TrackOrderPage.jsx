@@ -241,7 +241,8 @@ export const TrackOrderPage = () => {
 
   useEffect(() => {
     if (!orderFromState && id) {
-      fetch(`https://badafuta-production.up.railway.app/api/order/getOrder/${id}`)
+      // fetch(`https://badafuta-production.up.railway.app/api/order/getOrder/${id}`)
+      fetch(`https://badafuta.onrender.com/api/order/getOrder/${id}`)
         .then((res) => (res.ok ? res.json() : Promise.reject('Failed')))
         .then((data) => setOrder(data))
         .catch((err) => console.error(err));
@@ -928,7 +929,8 @@ export const TrackOrderPage = () => {
                       if (!apiId) return;
 
                       const res = await fetch(
-                        `https://badafuta-production.up.railway.app/api/order/${apiId}/updateBody`,
+                        `https://badafuta.onrender.com/api/order/${apiId}/updateBody`,
+                        // `https://badafuta-production.up.railway.app/api/order/${apiId}/updateBody`,
                         {
                           method: 'PUT',
                           headers: { 'Content-Type': 'application/json' },

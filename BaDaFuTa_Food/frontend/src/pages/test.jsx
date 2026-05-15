@@ -28,7 +28,7 @@ export const RestaurantPage = () => {
   const [menu, setMenu] = useState([]);
   const [loading, setLoading] = useState(true);
   const [errMsg, setErrMsg] = useState('');
-  
+
   // --- 2. STATE CHO BỘ LỌC ---
   const [priceFilter, setPriceFilter] = useState('ALL');
 
@@ -38,7 +38,7 @@ export const RestaurantPage = () => {
 
   // ... (Giữ nguyên các useEffect load data và handleToggleFavorite cũ của bạn) ...
   // Để code gọn, mình ẩn phần logic fetch API và Favorite cũ đi vì nó không đổi
-  
+
   useEffect(() => {
     if (!id) return;
     const favorites = JSON.parse(localStorage.getItem(FAVORITE_KEY) || '{}');
@@ -46,27 +46,27 @@ export const RestaurantPage = () => {
   }, [id]);
 
   const handleToggleFavorite = (e) => {
-     // ... (Logic cũ giữ nguyên)
-     e.stopPropagation();
-     e.preventDefault();
-     const newState = !isFavorite;
-     setIsFavorite(newState);
-     setIsAnimating(true);
-     const favorites = JSON.parse(localStorage.getItem(FAVORITE_KEY) || '{}');
-     if (newState) {
-       favorites[id] = {
-         restaurantId: id,
-         name: restaurant?.merchant_name || 'Nhà hàng',
-         coverImage: restaurant?.cover_image?.url,
-         savedAt: new Date().toISOString(),
-       };
-       toast.success('Đã thêm vào yêu thích ❤️');
-     } else {
-       delete favorites[id];
-       toast.success('Đã huỷ yêu thích 💔');
-     }
-     localStorage.setItem(FAVORITE_KEY, JSON.stringify(favorites));
-     setTimeout(() => setIsAnimating(false), 300);
+    // ... (Logic cũ giữ nguyên)
+    e.stopPropagation();
+    e.preventDefault();
+    const newState = !isFavorite;
+    setIsFavorite(newState);
+    setIsAnimating(true);
+    const favorites = JSON.parse(localStorage.getItem(FAVORITE_KEY) || '{}');
+    if (newState) {
+      favorites[id] = {
+        restaurantId: id,
+        name: restaurant?.merchant_name || 'Nhà hàng',
+        coverImage: restaurant?.cover_image?.url,
+        savedAt: new Date().toISOString(),
+      };
+      toast.success('Đã thêm vào yêu thích ❤️');
+    } else {
+      delete favorites[id];
+      toast.success('Đã huỷ yêu thích 💔');
+    }
+    localStorage.setItem(FAVORITE_KEY, JSON.stringify(favorites));
+    setTimeout(() => setIsAnimating(false), 300);
   };
 
   useEffect(() => {
@@ -74,7 +74,10 @@ export const RestaurantPage = () => {
     if (!id) return;
     const ac = new AbortController();
     async function fetchMenu() {
-      const hosts = [`https://badafuta-production.up.railway.app/api/restaurants/${encodeURIComponent(id)}/menu`];
+      const hosts = [
+        `https://badafuta.onrender.com/api/restaurants/${encodeURIComponent(id)}/menu`,
+      ];
+      // const hosts = [`https://badafuta-production.up.railway.app/api/restaurants/${encodeURIComponent(id)}/menu`];
       setLoading(true);
       setErrMsg('');
       for (const url of hosts) {
@@ -99,7 +102,7 @@ export const RestaurantPage = () => {
     // Lưu ý: addItem cần đúng tham số, ở đây mình giả định bạn xử lý logic option bên trong MenuItemCard
     // hoặc bạn truyền item trực tiếp nếu MenuItemCard đã xử lý việc chọn option.
     // Nếu MenuItemCard trả về item đã chọn option, thì code này ok.
-    toast.success(`Đã thêm món vào giỏ hàng`); 
+    toast.success(`Đã thêm món vào giỏ hàng`);
   };
 
   // --- 3. LOGIC LỌC MENU (QUAN TRỌNG) ---
@@ -378,7 +381,6 @@ export const RestaurantPage = () => {
       </div>
       {/* ... (Kết thúc phần Header) ... */}
 
-
       {/* --- 4. GIAO DIỆN BỘ LỌC (THAY THẾ div "Bộ lọc") --- */}
       <div className="sticky top-0 z-20 bg-gray-50/95 backdrop-blur-sm py-4 -mx-4 px-4 sm:mx-0 sm:px-0 mb-6 border-b border-gray-200">
         <div className="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-hide">
@@ -386,7 +388,7 @@ export const RestaurantPage = () => {
             <Filter className="w-4 h-4" />
             <span className="text-sm font-semibold">Lọc giá:</span>
           </div>
-          
+
           {PRICE_RANGES.map((range) => (
             <button
               key={range.id}
@@ -422,9 +424,9 @@ export const RestaurantPage = () => {
         filteredMenu.map((category) => (
           <section key={category.category_id ?? category.id} className="mb-8">
             <div className="flex items-center gap-3 mb-4">
-               <h2 className="text-2xl font-bold text-gray-800">{category.category_name}</h2>
-               <div className="h-1 flex-1 bg-gray-100 rounded-full"></div>
-               <span className="text-sm text-gray-400 font-medium">{category.items.length} món</span>
+              <h2 className="text-2xl font-bold text-gray-800">{category.category_name}</h2>
+              <div className="h-1 flex-1 bg-gray-100 rounded-full"></div>
+              <span className="text-sm text-gray-400 font-medium">{category.items.length} món</span>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
@@ -461,20 +463,29 @@ export const RestaurantPage = () => {
                   );
                 })
               ) : (
-                <p className="text-gray-500 italic col-span-full">Không tìm thấy món nào trong khoảng giá này.</p>
+                <p className="text-gray-500 italic col-span-full">
+                  Không tìm thấy món nào trong khoảng giá này.
+                </p>
               )}
             </div>
           </section>
         ))
       ) : (
         <div className="text-center py-12">
-            <div className="inline-flex bg-gray-100 p-4 rounded-full mb-4">
-                <Filter className="w-8 h-8 text-gray-400" />
-            </div>
-            <p className="text-gray-500 text-lg">Không có món ăn nào trong khoảng giá <strong>{PRICE_RANGES.find(r => r.id === priceFilter)?.label}</strong>.</p>
-            <Button variant="link" onClick={() => setPriceFilter('ALL')} className="text-orange-500 mt-2">
-                Xem tất cả món
-            </Button>
+          <div className="inline-flex bg-gray-100 p-4 rounded-full mb-4">
+            <Filter className="w-8 h-8 text-gray-400" />
+          </div>
+          <p className="text-gray-500 text-lg">
+            Không có món ăn nào trong khoảng giá{' '}
+            <strong>{PRICE_RANGES.find((r) => r.id === priceFilter)?.label}</strong>.
+          </p>
+          <Button
+            variant="link"
+            onClick={() => setPriceFilter('ALL')}
+            className="text-orange-500 mt-2"
+          >
+            Xem tất cả món
+          </Button>
         </div>
       )}
 

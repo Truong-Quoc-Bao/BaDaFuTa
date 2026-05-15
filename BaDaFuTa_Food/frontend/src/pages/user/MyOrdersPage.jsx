@@ -50,8 +50,9 @@ export const MyOrdersPage = () => {
     };
 
     const fetchOrders = async () => {
-      // const hosts = ['/apiLocal/order/getOrder'];
-      const hosts = ['https://badafuta-production.up.railway.app/api/order/getOrder'];
+      // const hosts = ['https://badafuta-production.up.railway.app/api/order/getOrder'];
+      const hosts = ['https://badafuta.onrender.com/api/order/getOrder'];
+
       for (const host of hosts) {
         try {
           setLoading(true);
@@ -124,9 +125,10 @@ export const MyOrdersPage = () => {
 
     try {
       const token = localStorage.getItem('accessToken');
-      // const res = await fetch(`/apiLocal/order/${order_id}/cancel`, {
+
       const res = await fetch(
-        `https://badafuta-production.up.railway.app/api/order/${order_id}/cancel`,
+        // `https://badafuta-production.up.railway.app/api/order/${order_id}/cancel`,
+        `https://badafuta.onrender.com/api/order/${order_id}/cancel`,
         {
           method: 'PUT',
           headers: {
@@ -158,7 +160,8 @@ export const MyOrdersPage = () => {
         const updatedOrders = await Promise.all(
           orders.map(async (order) => {
             const res = await fetch(
-              `https://badafuta-production.up.railway.app/api/order/${order.order_id}/getRating`,
+              ` https://badafuta.onrender.com/api/order/${order.order_id}/getRating`,
+              // `https://badafuta-production.up.railway.app/api/order/${order.order_id}/getRating`,
               {
                 // const res = await fetch(`/apiLocal/order/${order.order_id}/getRating`, {
                 headers: {
@@ -201,7 +204,8 @@ export const MyOrdersPage = () => {
       const token = localStorage.getItem('accessToken');
       // const res = await fetch(`/apiLocal/order/${orderId}/createRating`, {
       const res = await fetch(
-        `https://badafuta-production.up.railway.app/api/order/${orderId}/createRating`,
+        ` https://badafuta.onrender.com/api/order/${orderId}/createRating`,
+        // `https://badafuta-production.up.railway.app/api/order/${orderId}/createRating`,
         {
           method: 'POST',
           headers: {

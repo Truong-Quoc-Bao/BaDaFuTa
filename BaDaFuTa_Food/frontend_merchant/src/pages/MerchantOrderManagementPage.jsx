@@ -44,7 +44,8 @@ export function MerchantOrderManagementPage() {
   useEffect(() => {
     const merchantId = '00ea6129-7f16-4376-925f-d1eab34037fa'; // hardcode tạm
 
-    const socket = io('https://badafuta-production.up.railway.app', {
+    // const socket = io('https://badafuta-production.up.railway.app', {
+    const socket = io(' https://badafuta.onrender.com', {
       path: '/socket.io',
       transports: ['websocket'],
       reconnection: true,
@@ -135,12 +136,11 @@ export function MerchantOrderManagementPage() {
 
       // Tự động chuyển về tab chờ xác nhận + focus vào đơn mới nhất
       setActiveTab('PENDING');
-
     });
 
     return () => socket.disconnect();
   }, [setOrders]);
-  window.speechSynthesis.speak(new SpeechSynthesisUtterance("Test"))
+  window.speechSynthesis.speak(new SpeechSynthesisUtterance('Test'));
   console.log('Merchant Auth:', merchantAuth);
   console.log('Dashboard Data:', dashboardData);
   console.log('dashboardData hiện tại:', dashboardData);

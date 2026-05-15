@@ -223,24 +223,11 @@ export default function RegisterPage() {
     setError('');
     setShowPhoneExists(false);
 
-    // const hosts = [
-    //   "/apiLocal/register",
-    //   // "/api192/register",
-    //   // "/api172/register",
-    //   // "/api/register", // fallback
-    // ];
-    const hosts = [
-      'https://badafuta-production.up.railway.app/api/register',
-      // "/api192/register",
-      // "/api172/register",
-      // "/api/register", // fallback
-    ];
+    // const hosts = ['https://badafuta-production.up.railway.app/api/register'];
+    const hosts = ['https://badafuta.onrender.com/api/register'];
 
     for (const url of hosts) {
       try {
-        // const res = await fetch("http://localhost:3000/api/register", {
-        // const res = await fetch("http://172.20.10.3:3000/api/register", {
-        // const res = await fetch("http://192.168.100.124:3000/api/register", {
         const res = await fetch(url, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
