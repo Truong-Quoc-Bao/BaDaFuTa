@@ -1,12 +1,13 @@
-import { otpService } from "./otp.service";
-import { Request, Response } from "express";
+import { otpService } from './otp.service';
+import { Request, Response } from 'express';
 
 export const otpController = {
   async sendOtp(req: Request, res: Response) {
-    const { phone } = req.body;
+    // const { phone } = req.body;
+    const { email } = req.body;
 
     try {
-      const result = await otpService.sendOtp(phone);
+      const result = await otpService.sendOtp(email);
       return res.json(result);
     } catch (err: any) {
       return res.status(400).json({ success: false, message: err.message });
@@ -14,10 +15,11 @@ export const otpController = {
   },
 
   async verifyOtp(req: Request, res: Response) {
-    const { phone, otp } = req.body;
+    // const { phone, otp } = req.body;
+    const { email, otp } = req.body;
 
     try {
-      const result = await otpService.verifyOtp(phone, otp);
+      const result = await otpService.verifyOtp(email, otp);
       return res.json(result);
     } catch (err: any) {
       return res.status(400).json({ success: false, message: err.message });
