@@ -512,27 +512,19 @@ export const RestaurantPage = () => {
 
 
 
-import { otpService } from "./otp.service";
-import { Request, Response } from "express";
-
-export const otpController = {
-  async sendOtp(req: Request, res: Response) {
-    const { email } = req.body; // 👈 phone → email
-    try {
-      const result = await otpService.sendOtp(email);
-      return res.json(result);
-    } catch (err: any) {
-      return res.status(400).json({ success: false, message: err.message });
-    }
-  },
-
-  async verifyOtp(req: Request, res: Response) {
-    const { email, otp } = req.body; // 👈 phone → email
-    try {
-      const result = await otpService.verifyOtp(email, otp);
-      return res.json(result);
-    } catch (err: any) {
-      return res.status(400).json({ success: false, message: err.message });
-    }
-  },
-};
+{countdown > 0 && (
+  <p className="text-xs text-gray-500 mt-1">
+                      Bạn có thể gửi lại OTP sau {countdown}s
+  </p>
+                  )}
+  {/* 👇 thêm nút này */}
+  {countdown === 0 && otpSent && (
+  <button
+  type="button"
+  onClick={handleSendOtp}
+  className="text-xs text-orange-500 hover:text-orange-600 underline mt-1"
+  disabled={loading}
+  >
+                    Gửi lại OTP
+  </button>
+                )}

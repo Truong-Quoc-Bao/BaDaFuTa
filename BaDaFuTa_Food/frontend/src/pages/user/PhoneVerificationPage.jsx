@@ -328,7 +328,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Loader2, Mail, ArrowLeft, Check, XCircle, ShieldCheck } from 'lucide-react'; // 👈 Phone → Mail
+import { Loader2, Mail, ArrowLeft, Check, XCircle, ShieldCheck } from 'lucide-react';
 import {
   Card,
   CardContent,
@@ -344,11 +344,9 @@ import { Separator } from '../../components/ui/separator';
 import { cn } from '../../components/ui/utils';
 import { Logo } from '../../components/Logo';
 import { useAuth } from '../../contexts/AuthContext';
-
-export default function PhoneVerification() {
+export default function EmailVerification() {
   const navigate = useNavigate();
   const { state } = useAuth();
-
   useEffect(() => {
     if (state.isAuthenticated) {
       const redirectPath = localStorage.getItem('redirectAfterLogin') || '/';
@@ -356,27 +354,23 @@ export default function PhoneVerification() {
       navigate(redirectPath, { replace: true });
     }
   }, [state.isAuthenticated, navigate]);
-
-  const [phone, setPhone] = useState(''); // 👈 giữ tên phone để không đổi state khác
-  const [phoneError, setPhoneError] = useState('');
+  const [email, setEmail] = useState('');
+  const [emailError, setEmailError] = useState('');
   const [otp, setOtp] = useState('');
   const [otpSent, setOtpSent] = useState(false);
   const [loading, setLoading] = useState(false);
   const [countdown, setCountdown] = useState(0);
   const [otpError, setOtpError] = useState('');
   const [otpMessage, setOtpMessage] = useState('');
-  const phoneRef = useRef(null);
-
+  const emailRef = useRef(null); // 👈 thêm ref
   // const hosts = ['https://badafuta-production.up.railway.app/api'];
   const hosts = ['https://badafuta.onrender.com/api'];
-
   const fetchWithTimeout = (url, options, timeout = 5000) => {
     return Promise.race([
       fetch(url, options),
       new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout')), timeout)),
     ]);
   };
-
   const tryHosts = async (path, payload) => {
     const promises = hosts.map((host) =>
       fetchWithTimeout(
@@ -397,47 +391,48 @@ export default function PhoneVerification() {
           return Promise.reject();
         }),
     );
-    return Promise.any(promises);
+    return Promise.any(promises); // trả về host thành công đầu tiên
   };
-
-  // 👇 đổi validation sang email
-  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-
-  const handleChange = (value) => {
-    setPhone(value);
-    if (!value) setPhoneError('');
-    else if (!emailRegex.test(value)) setPhoneError('Email không hợp lệ!');
-    else setPhoneError('');
+  const handleEmailChange = (value) => {
+    setEmail(value);
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!value) setEmailError('');
+    else if (!emailRegex.test(value)) setEmailError('Email không hợp lệ!');
+    else setEmailError('');
   };
-
   const startCountdown = () => setCountdown(60);
-
+  // Đếm ngược
   useEffect(() => {
     if (countdown <= 0) return;
     const timer = setTimeout(() => setCountdown(countdown - 1), 1000);
     return () => clearTimeout(timer);
   }, [countdown]);
-
   const handleSendOtp = async (e) => {
     e.preventDefault();
-    const normalizedPhone = phone.trim();
-    if (!normalizedPhone || phoneError || !emailRegex.test(normalizedPhone)) {
-      // 👈
-      setPhoneError('Vui lòng nhập email hợp lệ!');
-      phoneRef.current?.focus();
+    const normalizedEmail = email.trim();
+    // ✅ Fix: set emailError thay vì otpError
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!normalizedEmail || emailError || !emailRegex.test(normalizedEmail)) {
+      setEmailError('Vui lòng nhập email hợp lệ!'); // 👈 đây
+      emailRef.current?.focus(); // 🔴 focus input
       return;
     }
     setLoading(true);
-    setPhoneError('');
+    setEmailError(''); // clear lỗi trước khi gửi
     setOtpError('');
     setOtpMessage('');
     try {
+      // const res = await fetch("/api192/otp/send", {
+      //   method: "POST",
+      //   headers: { "Content-Type": "application/json" },
+      //   body: JSON.stringify({ email: normalizedEmail }),
+      // });
       const { data, host } = await tryHosts('/otp/send', {
-        email: normalizedPhone, // 👈 đổi key thành email
+        email: normalizedEmail,
       });
       if (data.success) {
         setOtpSent(true);
-        setOtpMessage(`Đã gửi mã OTP thành công đến email ${phone}!`); // 👈
+        setOtpMessage(`Đã gửi mã OTP thành công đến email ${email}!`);
         startCountdown();
       } else {
         setOtpError(data.message || 'Không thể gửi OTP!');
@@ -445,12 +440,11 @@ export default function PhoneVerification() {
     } catch (err) {
       console.error('Lỗi fetch:', err);
       setOtpError('Không thể kết nối server!');
-      phoneRef.current?.focus();
+      emailRef.current?.focus(); // 👈 focus nếu lỗi mạng
     } finally {
       setLoading(false);
     }
   };
-
   const handleVerifyOtp = async () => {
     if (!otp.trim()) {
       setOtpError('Vui lòng nhập mã OTP!');
@@ -460,11 +454,16 @@ export default function PhoneVerification() {
     setOtpError('');
     setOtpMessage('');
     try {
-      const { data } = await tryHosts('/otp/verify', { email: phone, otp }); // 👈 đổi key thành email
+      // const res = await fetch("/api192/otp/verify", {
+      //   method: "POST",
+      //   headers: { "Content-Type": "application/json" },
+      //   body: JSON.stringify({ email, otp }),
+      // });
+      const { data } = await tryHosts('/otp/verify', { email, otp });
       if (data.success) {
         setOtpError('');
         setOtpMessage('Xác minh thành công!');
-        setTimeout(() => navigate('/register', { state: { phone } }), 500);
+        setTimeout(() => navigate('/register', { state: { email } }), 500);
       } else {
         setOtpError(data.message || 'OTP không đúng!');
       }
@@ -475,7 +474,6 @@ export default function PhoneVerification() {
       setLoading(false);
     }
   };
-
   return (
     <div className="min-h-screen bg-gradient-to-br from-orange-50 to-red-50 flex items-center justify-center p-4">
       <div className="w-full max-w-md">
@@ -493,45 +491,45 @@ export default function PhoneVerification() {
                 <Logo size="lg" className="text-white" />
               </div>
             </div>
-            <CardTitle className="text-2xl text-center">Xác minh email</CardTitle> {/* 👈 */}
+            <CardTitle className="text-2xl text-center">Xác minh email</CardTitle>
             <CardDescription className="text-center">
-              Vui lòng xác nhận email để tiếp tục đăng ký tài khoản {/* 👈 */}
+              Vui lòng xác nhận email để tiếp tục đăng ký tài khoản
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
+            {/* Email input */}
             <div className="space-y-2">
-              <Label htmlFor="phone">Email *</Label> {/* 👈 */}
+              <Label htmlFor="email">Email *</Label>
               <div className="relative">
-                <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />{' '}
-                {/* 👈 */}
+                <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
                 <Input
-                  id="phone"
-                  type="email" // 👈
-                  placeholder="Nhập email (VD: abc@gmail.com)" // 👈
-                  value={phone}
-                  onChange={(e) => handleChange(e.target.value)}
-                  ref={phoneRef}
+                  id="email"
+                  type="email"
+                  placeholder="Nhập email (VD: abc@gmail.com)"
+                  value={email}
+                  onChange={(e) => handleEmailChange(e.target.value)}
+                  ref={emailRef} // 👈 gắn ref
                   disabled={otpSent}
                   className={cn(
                     'pl-10 pr-10',
-                    phoneError
+                    emailError
                       ? 'border-red-500 hover:border-red-500 focus:border-red-500'
-                      : emailRegex.test(phone) // 👈
+                      : /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
                       ? 'border-green-500 hover:border-green-500 focus:border-green-500'
                       : 'border-gray-300',
                   )}
                 />
-                {phoneError && (
+                {emailError && (
                   <XCircle className="absolute right-3 top-1/2 transform -translate-y-1/2 text-red-500 w-4 h-4" />
                 )}
-                {!phoneError && emailRegex.test(phone) && (
+                {!emailError && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) && (
                   <Check className="absolute right-3 top-1/2 transform -translate-y-1/2 text-green-500 w-4 h-4" />
-                )}{' '}
-                {/* 👈 */}
+                )}
               </div>
-              {phoneError && <p className="text-xs text-red-500 text-left">{phoneError}</p>}
+              {emailError && <p className="text-xs text-red-500 text-left">{emailError}</p>}
             </div>
-
+            {/* OTP input */}
+            {/* OTP input */}
             {otpSent && (
               <div className="space-y-2">
                 <Label htmlFor="otp">Mã OTP</Label>
@@ -559,6 +557,7 @@ export default function PhoneVerification() {
                     <XCircle className="absolute right-3 top-1/2 transform -translate-y-1/2 text-red-500 w-4 h-4" />
                   )}
                 </div>
+                {/* Hiển thị thông báo OTP */}
                 {otpError && <p className="text-xs text-red-500">{otpError}</p>}
                 {otpMessage && !otpError && <p className="text-xs text-green-500">{otpMessage}</p>}
                 {countdown > 0 && (
@@ -566,9 +565,19 @@ export default function PhoneVerification() {
                     Bạn có thể gửi lại OTP sau {countdown}s
                   </p>
                 )}
+                {countdown === 0 && otpSent && (
+                  <button
+                    type="button"
+                    onClick={handleSendOtp}
+                    className="text-xs text-orange-500 hover:text-orange-600 underline mt-1"
+                    disabled={loading}
+                  >
+                    Gửi lại OTP
+                  </button>
+                )}
               </div>
             )}
-
+            {/* Button */}
             {!otpSent ? (
               <Button
                 onClick={handleSendOtp}
