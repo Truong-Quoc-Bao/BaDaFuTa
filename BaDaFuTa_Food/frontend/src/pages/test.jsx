@@ -899,3 +899,260 @@ const handleSendOtp = async (e) => {
 
 
   `Email này vừa được gửi OTP, vui lòng chờ ${currentCountdown}s trước khi gửi lại hoặc dùng email khác!`,
+
+
+
+
+  if (data.error_code === 'AUTH_EMAIL_EXISTS') {
+    setShowEmailExists(true); // 👈 thay vì setEmailError
+    setIsLoading(false);
+    return;
+  }
+
+
+  {showEmailExists && (
+    <div className="text-center space-y-4">
+      <p className="text-red-600 font-medium">
+        ⚠️ Email này đã được đăng ký.
+      </p>
+      <div className="flex gap-3 justify-center">
+        <Button
+          type="button"
+          variant="default"
+          onClick={() => navigate('/login', { state: { email: formData.email } })}
+          className="px-4 py-2 w-[115px] h-[40px] rounded transition"
+        >
+          Đăng nhập
+        </Button>
+        <Button
+          variant="outline"
+          type="button"
+          onClick={() => navigate('/phone-otp')}
+          className="w-[130px] h-[40px] px-4 py-2 rounded transition"
+        >
+          Dùng email khác
+        </Button>
+      </div>
+    </div>
+  )}
+
+  {!showPhoneExists && !showEmailExists && (
+    <div className="space-y-4">
+      ...
+    </div>
+  )}
+
+
+
+  //
+  // BƯỚC 1: Kiểm tra Email
+const existingEmail = await userRepo.findByEmail(email);
+if (existingEmail)
+  throw withCode(new Error("Email đã tồn tại"), "AUTH_EMAIL_EXISTS"); 
+  // 🛑 DỪNG LẠI TẠI ĐÂY! Khi lệnh throw chạy, hàm sẽ thoát ngay lập tức.
+
+// BƯỚC 2: Kiểm tra Phone (Code không bao giờ chạy đến đây nếu Bước 1 dính lỗi)
+const existingPhone = await userRepo.findByPhone(phone);
+if (existingPhone)
+  throw withCode(new Error("Số điện thoại đã tồn tại"), "AUTH_PHONE_EXISTS"); 
+// 
+
+  export const register = async (data: RegisterInput) => {
+    const email = (data.email || "").trim().toLowerCase();
+    const phone = (data.phone || "").trim();
+  
+    // Chạy cả 2 câu lệnh tìm kiếm cùng lúc để tiết kiệm thời gian
+    const [existingEmail, existingPhone] = await Promise.all([
+      userRepo.findByEmail(email),
+      userRepo.findByPhone(phone)
+    ]);
+  
+    // Kiểm tra và throw lỗi theo ưu tiên hoặc gộp lỗi
+    if (existingEmail && existingPhone) {
+      // Nếu bạn muốn báo cả hai, nhưng thông thường ta vẫn chọn 1 cái để báo trước
+      // Hoặc tạo một error_code đặc biệt
+      throw withCode(new Error("Email và Số điện thoại đều đã tồn tại"), "AUTH_BOTH_EXISTS");
+    }
+  
+    if (existingEmail)
+      throw withCode(new Error("Email đã tồn tại"), "AUTH_EMAIL_EXISTS");
+  
+    if (existingPhone)
+      throw withCode(new Error("Số điện thoại đã tồn tại"), "AUTH_PHONE_EXISTS");
+  
+    // ... các bước hash pass và create
+  };
+
+
+
+
+
+  // Trong Register.jsx -> handleSubmit
+if (!res.ok) {
+  if (data.error_code === 'AUTH_BOTH_EXISTS') {
+    setShowPhoneExists(true);
+    setShowEmailExists(true); // Bật cả 2 để UI hiển thị thông báo gộp
+    setIsLoading(false);
+    return;
+  }
+  if (data.error_code === 'AUTH_PHONE_EXISTS') {
+    setShowPhoneExists(true);
+    setIsLoading(false);
+    return;
+  }
+  if (data.error_code === 'AUTH_EMAIL_EXISTS') {
+    setShowEmailExists(true);
+    setIsLoading(false);
+    return;
+  }
+  // ...
+}
+
+{countdown > 0 ? (
+  <p className="text-xs text-gray-500 text-center mt-2">
+    Bạn có thể gửi lại mã sau <span className="font-bold text-orange-500">{countdown}s</span>
+  </p>
+) : (
+  <div className="text-center mt-2">
+    <button
+      type="button"
+      onClick={handleSendOtp}
+      disabled={loading}
+      className="text-xs text-orange-600 hover:text-orange-700 font-semibold underline disabled:opacity-50"
+    >
+      Tôi chưa nhận được mã? Gửi lại ngay
+    </button>
+  </div>
+)}
+
+{/* Button chính */}
+{!otpSent ? (
+  // Trường hợp 1: Chưa gửi OTP lần nào
+  <Button
+    onClick={handleSendOtp}
+    className="w-full bg-orange-500 hover:bg-orange-600 h-11 text-base font-bold transition-all shadow-md active:scale-[0.98]"
+    disabled={loading}
+  >
+    {loading ? (
+      <>
+        <Loader2 className="w-4 h-4 mr-2 animate-spin" /> Đang gửi OTP...
+      </>
+    ) : (
+      'Gửi mã xác thực'
+    )}
+  </Button>
+) : (
+  // Trường hợp 2: Đã gửi OTP -> Nút này LUÔN LUÔN là "Xác minh"
+  <Button
+    onClick={handleVerifyOtp}
+    className="w-full bg-green-600 hover:bg-green-700 h-11 text-base font-bold transition-all shadow-md active:scale-[0.98]"
+    disabled={loading || otp.length < 6}
+  >
+    {loading ? (
+      <>
+        <Loader2 className="w-4 h-4 mr-2 animate-spin" /> Đang xác minh...
+      </>
+    ) : (
+      'Xác minh tài khoản'
+    )}
+  </Button>
+)}
+
+
+const handleVerifyOtp = async () => {
+  if (!otp.trim() || otp.length < 6) {
+    setOtpError('Vui lòng nhập đủ 6 số!');
+    return;
+  }
+
+  if (loading) return;
+  setLoading(true);
+  setOtpError('');
+  setOtpMessage('');
+
+  try {
+    const { data } = await tryHosts('/otp/verify', { email, otp });
+
+    if (data.success) {
+      setOtpError('');
+      setOtpMessage('Xác minh thành công!');
+      sessionStorage.removeItem('otpEmail');
+      sessionStorage.removeItem('otpSentAt');
+      setTimeout(() => navigate('/register', { state: { email } }), 500);
+    } else {
+      // 🚩 KIỂM TRA LỖI HẾT HẠN Ở ĐÂY
+      // Giả sử Backend trả về message có chữ "hết hạn" hoặc một error_code cụ thể
+      if (data.message?.toLowerCase().includes('hết hạn') || data.error_code === 'OTP_EXPIRED') {
+        setOtpError('⚠️ Mã OTP đã hết hạn. Vui lòng nhấn "Gửi lại" để nhận mã mới.');
+      } else {
+        setOtpError(data.message || 'Mã OTP không đúng, vui lòng thử lại!');
+      }
+    }
+  } catch (err) {
+    console.error('Lỗi fetch:', err);
+    setOtpError('Không thể kết nối máy chủ. Vui lòng thử lại!');
+  } finally {
+    setLoading(false);
+  }
+};
+
+{otpError && (
+  <div className={cn(
+    "text-xs text-center p-2 rounded-lg mt-2 animate-in fade-in slide-in-from-top-1",
+    otpError.includes('hết hạn') 
+      ? "bg-red-50 text-red-600 border border-red-100 font-medium" 
+      : "text-red-500"
+  )}>
+    {otpError}
+  </div>
+)}
+
+{/* ... phía trên là 6 ô input OTP ... */}
+</div> 
+
+{/* DÁN ĐOẠN NÀY VÀO ĐÂY */}
+{otpError && (
+  <div className={cn(
+    "text-xs text-center p-2.5 rounded-xl mt-4 animate-in fade-in slide-in-from-top-1 duration-300",
+    otpError.includes('hết hạn') 
+      ? "bg-red-50 text-red-600 border border-red-100 font-semibold shadow-sm" 
+      : "text-red-500 font-medium"
+  )}>
+    {otpError}
+  </div>
+)}
+
+{otpMessage && !otpError && (
+  <p className="text-xs text-green-500 text-center mt-4 font-medium animate-in fade-in">
+    {otpMessage}
+  </p>
+)}
+
+{countdown > 0 && (
+{/* ... phía dưới là phần countdown và nút bấm ... */}
+
+
+
+
+<div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; text-align: center; border: 1px solid #eee; padding: 20px; border-radius: 10px;">
+  <h2 style="color: #333;">Xác thực tài khoản của bạn</h2>
+  <p style="color: #666;">Sử dụng mã OTP dưới đây để hoàn tất quá trình đăng ký:</p>
+  
+  <div style="background-color: #f9f9f9; padding: 20px; margin: 20px 0; border-radius: 8px; border: 1px dashed #ddd;">
+    <p style="font-size: 36px; font-weight: bold; letter-spacing: 10px; color: #ff6600; margin: 0;">${otp}</p>
+  </div>
+
+  <p style="font-size: 14px; color: #888;">Mã có hiệu lực trong <b style="color: #333;">5 phút</b>.</p>
+
+  <!-- Khối cảnh báo bảo mật -->
+  <div style="background-color: #fff4f4; padding: 15px; border-radius: 8px; border-left: 4px solid #ff4d4d; text-align: left; margin-top: 25px;">
+    <p style="margin: 0; font-size: 13px; color: #d93025; line-height: 1.5;">
+      <b>⚠️ CẢNH BÁO BẢO MẬT:</b><br>
+      • <b>TUYỆT ĐỐI KHÔNG</b> cung cấp mã này cho bất kỳ ai, kể cả nhân viên hỗ trợ khách hàng.<br>
+      • Mã này chỉ dành riêng cho bạn để xác thực tài khoản trên hệ thống của chúng tôi.<br>
+      • Nếu bạn không yêu cầu mã này, vui lòng bỏ qua email này hoặc liên hệ hỗ trợ nếu thấy dấu hiệu bất thường.
+    </p>
+  </div>
+
+  <p style="margin-top: 25px; font-size: 12px; color: #aaa;">Đây là email tự động, vui lòng không phản hồi email này.</p>
+</div>

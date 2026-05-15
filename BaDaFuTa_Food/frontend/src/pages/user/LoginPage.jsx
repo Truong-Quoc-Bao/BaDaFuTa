@@ -264,7 +264,8 @@ export default function LoginPage() {
                         }`}
                         value={identifier}
                         onChange={(e) => setIdentifier(e.target.value)}
-                        disabled={isLoading}
+                        // disabled={isLoading}
+                        disabled={!!emailFromVerification || isLoading}
                         autoFocus={error.includes('Email')}
                       />
                     </div>

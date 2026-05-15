@@ -23,6 +23,7 @@ import {
   CardHeader,
   CardTitle,
 } from '../../components/ui/card';
+import { AlertCircle, LogIn, ArrowRight } from 'lucide-react';
 import { Logo } from '../../components/Logo';
 import { Button } from '../../components/ui/button';
 import { Alert, AlertDescription } from '../../components/ui/alert';
@@ -68,6 +69,7 @@ export default function RegisterPage() {
   const [showSuccessDialog, setShowSuccessDialog] = useState(false);
   const [showPhoneExists, setShowPhoneExists] = useState(false); // Thông báo trùng SĐT
   //const [showEmailExists, setShowEmailExistss] = useStates(false);
+  const [showEmailExists, setShowEmailExists] = useState(false);
   const [newUserUNFID, setNewUserUNFID] = useState('');
 
   // const { register, state } = {
@@ -224,7 +226,9 @@ export default function RegisterPage() {
 
     setIsLoading(true);
     setError('');
+
     setShowPhoneExists(false);
+    setShowEmailExists(false);
 
     // const hosts = ['https://badafuta-production.up.railway.app/api/register'];
     const hosts = ['https://badafuta.onrender.com/api/register'];
@@ -260,14 +264,21 @@ export default function RegisterPage() {
         //   return;
         // }
         if (!res.ok) {
+          if (data.error_code === 'AUTH_BOTH_EXISTS') {
+            setShowPhoneExists(true);
+            setShowEmailExists(true); // Bật cả 2 để UI hiển thị thông báo gộp
+            setIsLoading(false);
+            return;
+          }
           if (data.error_code === 'AUTH_PHONE_EXISTS') {
             setShowPhoneExists(true);
             setIsLoading(false);
             return;
           }
           if (data.error_code === 'AUTH_EMAIL_EXISTS') {
-            setEmailError(data.error);
-            document.getElementById('email').focus();
+            // setEmailError(data.error);
+            // document.getElementById('email').focus();
+            setShowEmailExists(true);
             setIsLoading(false);
             return;
           }
@@ -599,7 +610,7 @@ export default function RegisterPage() {
                   </div>
                 )}
                 {/* Hiện khung khi SĐT đã đăng ký */}
-                {showPhoneExists && (
+                {/* {showPhoneExists && (
                   <div className="text-center space-y-4">
                     <p className="text-red-600 font-medium">
                       ⚠️ Số điện thoại này đã được đăng ký.
@@ -624,6 +635,127 @@ export default function RegisterPage() {
                       >
                         Nhập số khác
                       </Button>
+                    </div>
+                  </div>
+                )}
+                {showEmailExists && (
+                  <div className="text-center space-y-4">
+                    <p className="text-red-600 font-medium">⚠️ Email này đã được đăng ký.</p>
+                    <div className="flex gap-3 justify-center">
+                      <Button
+                        type="button"
+                        variant="default"
+                        onClick={() => navigate('/login', { state: { email: formData.email } })}
+                        className="px-4 py-2 w-[115px] h-[40px] rounded transition"
+                      >
+                        Đăng nhập
+                      </Button>
+                      <Button
+                        variant="outline"
+                        type="button"
+                        onClick={() => navigate('/phone-otp')}
+                        className="w-[130px] h-[40px] px-4 py-2 rounded transition"
+                      >
+                        Dùng email khác
+                      </Button>
+                    </div>
+                  </div>
+                )} */}
+                {/* Popup thông báo khi trùng SĐT hoặc Email */}
+                {/* Popup thông báo trùng SĐT hoặc Email (Modern UI) */}
+                {/* Popup thông báo trùng SĐT hoặc Email (Modern UI - Updated) */}
+                {(showPhoneExists || showEmailExists) && (
+                  <div className="fixed inset-0 z-[999] flex items-center justify-center p-4">
+                    {/* Lớp nền mờ ảo xịn xò */}
+                    <div
+                      className="absolute inset-0 bg-black/40 backdrop-blur-md transition-opacity duration-300"
+                      onClick={() => {
+                        setShowPhoneExists(false);
+                        setShowEmailExists(false);
+                      }}
+                    />
+
+                    {/* Khung nội dung trắng tinh tế */}
+                    <div className="relative bg-white rounded-[2.5rem] shadow-[0_20px_50px_rgba(0,0,0,0.2)] w-full max-w-sm overflow-hidden transform transition-all animate-in zoom-in-95 duration-300">
+                      {/* Thanh màu gradient trên đỉnh */}
+                      <div className="h-2 bg-gradient-to-r from-orange-400 to-red-500" />
+
+                      <div className="p-10 text-center">
+                        {/* Icon cảnh báo chuyển động nhẹ */}
+                        <div className="mx-auto w-20 h-20 bg-orange-50 rounded-full flex items-center justify-center mb-6 relative">
+                          <div className="absolute inset-0 bg-orange-200 rounded-full animate-ping opacity-20"></div>
+                          <div className="relative bg-gradient-to-br from-orange-500 to-red-500 w-14 h-14 rounded-full flex items-center justify-center shadow-lg">
+                            <AlertCircle className="w-8 h-8 text-white" />
+                          </div>
+                        </div>
+
+                        {/* Tiêu đề thay đổi linh hoạt theo 3 trường hợp */}
+                        <h3 className="text-2xl font-bold text-gray-900 mb-3 tracking-tight">
+                          {showPhoneExists && showEmailExists
+                            ? 'Thông tin đã tồn tại'
+                            : showPhoneExists
+                            ? 'Số điện thoại đã có chủ'
+                            : 'Email đã được dùng'}
+                        </h3>
+
+                        {/* Nội dung chi tiết in đậm đúng chỗ */}
+                        <p className="text-gray-500 leading-relaxed mb-8 px-2 text-sm">
+                          {showPhoneExists && showEmailExists ? (
+                            <>
+                              Cả số điện thoại{' '}
+                              <span className="font-bold text-gray-800">{formData.phone}</span> và
+                              email{' '}
+                              <span className="font-bold text-gray-800">{formData.email}</span> đều
+                              đã được đăng ký. Bạn có muốn đăng nhập ngay?
+                            </>
+                          ) : showPhoneExists ? (
+                            <>
+                              Số điện thoại{' '}
+                              <span className="font-bold text-gray-800">{formData.phone}</span> đã
+                              được đăng ký trước đó. Bạn có muốn đăng nhập không?
+                            </>
+                          ) : (
+                            <>
+                              Email{' '}
+                              <span className="font-bold text-gray-800">{formData.email}</span> đã
+                              tồn tại trên hệ thống. Vui lòng kiểm tra lại thông tin.
+                            </>
+                          )}
+                        </p>
+
+                        {/* Nhóm nút bấm */}
+                        <div className="flex flex-col gap-3">
+                          <Button
+                            type="button"
+                            className="w-full bg-gradient-to-r from-orange-500 to-red-600 hover:shadow-orange-200 hover:shadow-lg text-white font-bold py-7 rounded-2xl transition-all active:scale-95 flex items-center justify-center gap-2"
+                            onClick={() =>
+                              navigate('/login', {
+                                state: {
+                                  // Truyền cái nào bị trùng thì truyền cái đó qua trang Login để autofill
+                                  email: showEmailExists ? formData.email : '',
+                                  phone: showPhoneExists ? formData.phone : '',
+                                },
+                              })
+                            }
+                          >
+                            <LogIn className="w-5 h-5" />
+                            Đăng nhập ngay
+                          </Button>
+
+                          <Button
+                            variant="ghost"
+                            type="button"
+                            className="w-full text-gray-400 hover:text-orange-500 hover:bg-orange-50 py-4 rounded-xl transition-all font-medium"
+                            onClick={() => {
+                              setShowPhoneExists(false);
+                              setShowEmailExists(false);
+                              navigate('/phone-otp');
+                            }}
+                          >
+                            Sử dụng thông tin khác
+                          </Button>
+                        </div>
+                      </div>
                     </div>
                   </div>
                 )}

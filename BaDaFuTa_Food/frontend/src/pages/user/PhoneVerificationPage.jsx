@@ -512,13 +512,18 @@ export default function EmailVerification() {
         sessionStorage.removeItem('otpSentAt'); // 👈
         setTimeout(() => navigate('/register', { state: { email } }), 500);
       } else {
-        setOtpError(data.message || 'OTP không đúng!');
+        if (data.message?.toLowerCase().includes('hết hạn') || data.error_code === 'OTP_EXPIRED') {
+          setOtpError('⚠️ Mã OTP đã hết hạn. Vui lòng nhấn "Gửi lại" để nhận mã mới.');
+        } else {
+          setOtpError(data.message || 'Mã OTP không đúng, vui lòng thử lại!');
+        }
+        // setOtpError(data.message || 'OTP không đúng!');
       }
     } catch (err) {
       console.error('Lỗi fetch:', err);
       // setOtpError('Không thể kết nối server!');
       if (currentCountdown === 0) {
-        setOtpError('Không thể kết nối server!');
+        setOtpError('Không thể kết nối máy chủ. Vui lòng thử lại!');
       }
     } finally {
       setLoading(false);
@@ -708,15 +713,43 @@ export default function EmailVerification() {
                   ))}
                 </div>
 
+                {/* otp hết hạn  */}
+                {otpError && (
+                  <div
+                    className={cn(
+                      'text-xs text-center p-2.5 rounded-xl mt-4 animate-in fade-in slide-in-from-top-1 duration-300',
+                      otpError.includes('hết hạn')
+                        ? 'bg-red-50 text-red-600 border border-red-100 font-semibold shadow-sm'
+                        : 'text-red-500 font-medium',
+                    )}
+                  >
+                    {otpError}
+                  </div>
+                )}
+
                 {otpError && <p className="text-xs text-red-500 text-center">{otpError}</p>}
                 {otpMessage && !otpError && (
                   <p className="text-xs text-green-500 text-center">{otpMessage}</p>
                 )}
-                {countdown > 0 && (
-                  <p className="text-xs text-gray-500 text-center">
+
+                {countdown > 0 ? (
+                  <p className="text-xs text-gray-500 text-center mt-2">
                     {' '}
-                    Bạn có thể gửi lại OTP sau {countdown}s · OTP có hiệu lực trong 5 phút
+                    Bạn có thể gửi lại OTP sau{' '}
+                    <span className="font-bold text-orange-500">{countdown}s</span> · OTP có hiệu
+                    lực trong 5 phút
                   </p>
+                ) : (
+                  <div className="text-center mt-2">
+                    <button
+                      type="button"
+                      onClick={handleSendOtp}
+                      disabled={loading}
+                      className="text-xs text-orange-600 hover:text-orange-700 font-semibold underline disabled:opacity-50"
+                    >
+                      Tôi chưa nhận được mã? Gửi lại ngay
+                    </button>
+                  </div>
                 )}
                 {/* {countdown === 0 && otpSent && (
                   <button
@@ -746,7 +779,7 @@ export default function EmailVerification() {
             {!otpSent ? (
               <Button
                 onClick={handleSendOtp}
-                className="w-full bg-orange-500 hover:bg-orange-600"
+                className="w-full bg-orange-500 hover:bg-orange-600 h-11 text-base font-bold transition-all shadow-md active:scale-[0.98]"
                 disabled={loading}
               >
                 {loading ? (
@@ -754,28 +787,43 @@ export default function EmailVerification() {
                     <Loader2 className="w-4 h-4 mr-2 animate-spin" /> Đang gửi OTP...
                   </>
                 ) : (
-                  'Gửi OTP'
+                  'Gửi mã xác thực'
                 )}
               </Button>
             ) : (
+              //   <Button
+              //     onClick={countdown === 0 ? handleSendOtp : handleVerifyOtp}
+              //     className={`w-full ${
+              //       countdown === 0
+              //         ? 'bg-orange-500 hover:bg-orange-600'
+              //         : 'bg-green-600 hover:bg-green-700'
+              //     }`}
+              //     disabled={loading}
+              //   >
+              //     {loading ? (
+              //       <>
+              //         <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+              //         {countdown === 0 ? 'Đang gửi OTP...' : 'Đang xác minh...'}
+              //       </>
+              //     ) : countdown === 0 ? (
+              //       'Gửi lại OTP'
+              //     ) : (
+              //       'Xác minh OTP'
+              //     )}
+              //   </Button>
+
+              // Trường hợp 2: Đã gửi OTP -> Nút này LUÔN LUÔN là "Xác minh"
               <Button
-                onClick={countdown === 0 ? handleSendOtp : handleVerifyOtp}
-                className={`w-full ${
-                  countdown === 0
-                    ? 'bg-orange-500 hover:bg-orange-600'
-                    : 'bg-green-600 hover:bg-green-700'
-                }`}
-                disabled={loading}
+                onClick={handleVerifyOtp}
+                className="w-full bg-green-600 hover:bg-green-700 h-11 text-base font-bold transition-all shadow-md active:scale-[0.98]"
+                disabled={loading || otp.length < 6}
               >
                 {loading ? (
                   <>
-                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                    {countdown === 0 ? 'Đang gửi OTP...' : 'Đang xác minh...'}
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" /> Đang xác minh...
                   </>
-                ) : countdown === 0 ? (
-                  'Gửi lại OTP'
                 ) : (
-                  'Xác minh OTP'
+                  'Xác minh tài khoản'
                 )}
               </Button>
             )}
