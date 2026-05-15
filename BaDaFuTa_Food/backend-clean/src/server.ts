@@ -57,6 +57,7 @@ const io = new IOServer(httpServer, {
       'http://localhost:5174', // Merchant dev
       'https://ba-da-fu-ta-partner.vercel.app', // Prod
       'https://badafuta-production.up.railway.app',
+      'https://badafuta.onrender.com',
       'https://ba-da-fu-ta-partner.vercel.app',
     ],
     methods: ['GET', 'POST'],
