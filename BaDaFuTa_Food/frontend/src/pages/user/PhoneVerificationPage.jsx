@@ -508,16 +508,12 @@ export default function EmailVerification() {
         setTimeout(() => navigate('/register', { state: { email } }), 500);
       } else {
         const msg = data.message || '';
-        if (
-          msg.includes('hết hạn') ||
-          msg.includes('chưa được gửi') || // <--- Thêm cái này
-          data.error_code === 'OTP_EXPIRED'
-        ) {
+        if (msg.includes('hết hạn') || msg.includes('chưa được gửi')) {
           setOtpError(
             '⚠️ Mã OTP đã hết hạn hoặc không tồn tại. Vui lòng nhấn "Gửi lại ngay" để nhận mã mới.',
           );
         } else {
-          setOtpError(msg || 'Mã OTP không đúng, vui lòng thử lại!');
+          setOtpError(msg || 'Mã OTP không đúng!');
         }
         // setOtpError(data.message || 'OTP không đúng!');
       }
