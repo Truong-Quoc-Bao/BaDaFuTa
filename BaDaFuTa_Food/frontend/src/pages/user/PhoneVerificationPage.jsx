@@ -382,7 +382,13 @@ export default function EmailVerification() {
         },
         5000,
       )
-        .then((res) => {
+        .then(async (res) => {
+          // Đọc nội dung JSON từ server trước
+          const data = await res.json();
+          if (res.status >= 500) {
+            throw new Error(`Server ${host} gặp lỗi hệ thống`);
+          }
+
           if (!res.ok) throw new Error(`Server ${host} trả lỗi`);
           return res.json().then((data) => ({ data, host }));
         })
