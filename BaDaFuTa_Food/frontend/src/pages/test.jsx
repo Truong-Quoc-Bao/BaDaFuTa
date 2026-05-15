@@ -1,484 +1,533 @@
-import { useNavigate, useParams, Link } from 'react-router-dom';
-import { useEffect, useState, useMemo } from 'react'; // ✅ Đảm bảo có useMemo
-import OpeningStatus from '../../components/OpeningStatus';
-import { useCart } from '../../contexts/CartContext';
-import toast, { Toaster } from 'react-hot-toast';
-import { ArrowLeft, Star, Clock, Truck, MapPin, Award, Users, Filter, X } from 'lucide-react'; // ✅ Thêm icon Filter, X
-import { Button } from '../../components/ui/button';
-import { Badge } from '../../components/ui/badge';
-import { MenuItemCard } from '../../components/MenuItemCard';
-import { ImageWithFallback } from '../../components/figma/ImageWithFallback';
-import { motion } from 'framer-motion';
+// import React, { useState, useEffect } from 'react';
+// import { useLocation, useNavigate, useParams } from 'react-router-dom';
+// import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
+// import { Button } from '../../components/ui/button';
+// import L from 'leaflet';
+// import {
+//   MapPin,
+//   MessageCircle,
+//   Phone,
+//   Package,
+//   Truck,
+//   Bike,
+//   Check,
+//   Home,
+//   Star,
+//   ArrowLeft,
+// } from 'lucide-react';
+// import 'leaflet/dist/leaflet.css';
+// import { motion } from 'framer-motion';
+// import TruckAnimated from '../../components/TruckAnimated'; // đường dẫn tùy dự án
 
-// --- 1. CẤU HÌNH CÁC MỐC GIÁ ---
-const PRICE_RANGES = [
-  { id: 'ALL', label: 'Tất cả', min: 0, max: Infinity },
-  { id: '0-100', label: '0 - 100k', min: 0, max: 100000 },
-  { id: '100-200', label: '100k - 200k', min: 100001, max: 200000 },
-  { id: '200-300', label: '200k - 300k', min: 200001, max: 300000 },
-  { id: '300-400', label: '300k - 400k', min: 300001, max: 400000 },
-  { id: '400+', label: 'Trên 400k', min: 400001, max: Infinity },
-];
+// // Fix icon mặc định Leaflet
+// delete L.Icon.Default.prototype._getIconUrl;
+// L.Icon.Default.mergeOptions({
+//   iconRetinaUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon-2x.png',
+//   iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon.png',
+//   shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
+// });
 
-export const RestaurantPage = () => {
-  const navigate = useNavigate();
-  const { id } = useParams();
-  const { addItem } = useCart();
-  const [restaurant, setRestaurant] = useState(null);
-  const [menu, setMenu] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [errMsg, setErrMsg] = useState('');
+// const timelineSteps = [
+//   { id: 1, label: 'Đã đặt đơn', icon: Check },
+//   { id: 2, label: 'Tài xế nhận đơn', icon: Truck },
+//   { id: 3, label: 'Tới quán', icon: MapPin },
+//   { id: 4, label: 'Đã lấy đơn', icon: Package },
+//   { id: 5, label: 'Giao thành công', icon: Home },
+// ];
+
+// export const TrackOrderPage = () => {
+//   const location = useLocation();
+//   const navigate = useNavigate(); // ✅ thêm dòng này
+//   const { id } = useParams();
   
-  // --- 2. STATE CHO BỘ LỌC ---
-  const [priceFilter, setPriceFilter] = useState('ALL');
+//   const { orderId } = location.state || {}; // nhận orderId từ state
+//   // ✅ Lấy order từ state
+//   const orderFromState = location.state?.order;
+//   const [order, setOrder] = useState(orderFromState || null);
+//   const [isDelivered, setIsDelivered] = useState(false);
 
-  const [isFavorite, setIsFavorite] = useState(false);
-  const [isAnimating, setIsAnimating] = useState(false);
-  const FAVORITE_KEY = 'favoriteRestaurants';
+//   console.log('Received Order ID:', orderId); // kiểm tra
 
-  // ... (Giữ nguyên các useEffect load data và handleToggleFavorite cũ của bạn) ...
-  // Để code gọn, mình ẩn phần logic fetch API và Favorite cũ đi vì nó không đổi
-  
-  useEffect(() => {
-    if (!id) return;
-    const favorites = JSON.parse(localStorage.getItem(FAVORITE_KEY) || '{}');
-    setIsFavorite(!!favorites[id]);
-  }, [id]);
+//   // ✅ Lưu step & thời gian bắt đầu
+//   const [currentStep, setCurrentStep] = useState(() => {
+//     const savedStep = localStorage.getItem(`order_${id}_step`);
+//     return savedStep ? Number(savedStep) : orderFromState?.currentStep || 1;
+//   });
 
-  const handleToggleFavorite = (e) => {
-     // ... (Logic cũ giữ nguyên)
-     e.stopPropagation();
-     e.preventDefault();
-     const newState = !isFavorite;
-     setIsFavorite(newState);
-     setIsAnimating(true);
-     const favorites = JSON.parse(localStorage.getItem(FAVORITE_KEY) || '{}');
-     if (newState) {
-       favorites[id] = {
-         restaurantId: id,
-         name: restaurant?.merchant_name || 'Nhà hàng',
-         coverImage: restaurant?.cover_image?.url,
-         savedAt: new Date().toISOString(),
-       };
-       toast.success('Đã thêm vào yêu thích ❤️');
-     } else {
-       delete favorites[id];
-       toast.success('Đã huỷ yêu thích 💔');
-     }
-     localStorage.setItem(FAVORITE_KEY, JSON.stringify(favorites));
-     setTimeout(() => setIsAnimating(false), 300);
-  };
+//   const [stepStartTime, setStepStartTime] = useState(() => {
+//     const savedTime = localStorage.getItem(`order_${id}_step_start`);
+//     return savedTime ? Number(savedTime) : Date.now();
+//   });
+//   // const [isAutoTracking, setIsAutoTracking] = useState(true);
 
-  useEffect(() => {
-    // ... (Logic fetch menu cũ giữ nguyên)
-    if (!id) return;
-    const ac = new AbortController();
-    async function fetchMenu() {
-      const hosts = [`https://badafuta-production.up.railway.app/api/restaurants/${encodeURIComponent(id)}/menu`];
-      setLoading(true);
-      setErrMsg('');
-      for (const url of hosts) {
-        try {
-          const res = await fetch(url, { signal: ac.signal });
-          if (!res.ok) throw new Error();
-          const data = await res.json();
-          setRestaurant(data.merchant ?? null);
-          setMenu(Array.isArray(data.menu) ? data.menu : []);
-          return;
-        } catch (e) {}
-      }
-      setErrMsg('Lỗi tải dữ liệu');
-      setRestaurant(null);
-      setMenu([]);
+//   const [isAutoTracking, setIsAutoTracking] = useState(() => {
+//     const fromSuccess = location.state?.from === 'OrderSuccess';
+//     return fromSuccess || !!orderFromState; // ✅ Cho phép auto nếu có order hoặc từ OrderSuccess
+//   });
+
+//   // const [isAutoTracking, setIsAutoTracking] = useState(false);
+
+//   // Tạm set currentStep = 2 để test thấy tài xế luôn
+//   // const order = {
+//   // id: 'dummy-123',
+//   // status: 'DELIVERING',
+//   // merchant: {
+//   // merchant_name: 'Nhà hàng Bảo Bến Cảng', // },
+//   // driver: {
+//   // name: 'Trương Quốc Bảo',
+//   // BS: '79-Z1 51770',
+//   // SĐT: '0399503025', // },
+//   // created_at: new Date(), // };
+
+//   // Fetch order khi reload F5
+//   useEffect(() => {
+//     if (!orderFromState && id) {
+//       fetch(`/apiLocal/order/getOrder/${id}`)
+//         .then((res) => res.json())
+//         .then((data) => {
+//           console.log('✅ Fetched order:', data);
+//           setOrder(data);
+
+//           // ⚠️ Nếu reload từ OrderSuccess → khôi phục step đã lưu
+//           const savedStep = localStorage.getItem(`order_${data.id}_step`);
+//           if (savedStep) setCurrentStep(Number(savedStep));
+//         })
+//         .catch((err) => console.error(err));
+//     } else if (orderFromState) {
+//       setOrder(orderFromState);
+//     }
+//   }, [id, orderFromState]);
+
+//   // Lưu step & stepStartTime
+//   useEffect(() => {
+//     if (!order) return;
+//     localStorage.setItem(`order_${order.id}_step`, currentStep);
+//     localStorage.setItem(`order_${order.id}_step_start`, stepStartTime);
+//   }, [currentStep, stepStartTime, order?.id]);
+
+//   // Auto increment step
+//   useEffect(() => {
+//     if (!order || !isAutoTracking) return;
+
+//     const stepDuration = 20000; // 20s
+//     const elapsed = Date.now() - stepStartTime;
+//     const remaining = Math.max(stepDuration - elapsed, 0);
+
+//     if (currentStep < timelineSteps.length) {
+//       const timer = setTimeout(() => {
+//         setCurrentStep((prev) => prev + 1);
+//         setStepStartTime(Date.now());
+//       }, remaining);
+//       return () => clearTimeout(timer);
+//     } else {
+//       // ✅ Giao hàng xong → gọi API updateBody
+//       fetch(`/apiLocal/order/${order.id}/updateBody`, {
+//         method: 'PUT',
+//         headers: { 'Content-Type': 'application/json' },
+//         body: JSON.stringify({
+//           status: 'COMPLETED',
+//           status_payment: 'SUCCESS',
+//           delivered_at: new Date().toISOString(),
+//         }),
+//       })
+//         .then((res) => {
+//           if (!res.ok) throw new Error('Lỗi khi update');
+//           return res.json();
+//         })
+//         .then((data) => {
+//           console.log('✅ Update xong, chuyển sang Order Success');
+//           setIsAutoTracking(false);
+//           setIsDelivered(true);
+//           localStorage.removeItem(`order_${order.id}_step`);
+//           localStorage.removeItem(`order_${order.id}_step_start`);
+
+//           // 🔥 Chuyển về MyOrdersPage + active tab COMPLETED
+//           navigate('/my-orders', {
+//             state: { activeTab: 'COMPLETED', updatedOrder: data },
+//           });
+//         })
+//         .catch((err) => console.error('❌ Lỗi updateBody:', err));
+//     }
+//   }, [currentStep, stepStartTime, order, isAutoTracking]);
+
+//   if (!order) return <p className="text-center mt-10">Đang tải đơn hàng...</p>;
+
+//   const createdAt = new Date(order.created_at);
+//   const estimatedDelivery = new Date(createdAt.getTime() + 40 * 60 * 1000);
+//   console.log('👉 order.driver:', order.driver);
+//   console.log('👉 currentStep:', currentStep);
+
+//   const handleBack = () => {
+//     navigate('/my-orders');
+//   };
+
+//   console.log('Order object received:', order);
+//   console.log('Order ID:', order?.order_id);
+
+//   return (
+//     <div className="max-w-6xl mx-auto p-4 space-y-6">
+//       {/* Tiêu đề */}
+//       {/* Nút back  */}
+//       <Button onClick={handleBack} variant="outline" className="mb-6 mt-4">
+//         <ArrowLeft className="w-4 h-4 mr-2" />
+//         Quay lại Đơn hàng của tôi
+//       </Button>
+//       <div className="text-center space-y-1">
+//         <h2 className="text-2xl md:text-3xl font-bold">Theo dõi đơn hàng</h2>
+//         {/* <p>
+//           Mã đơn hàng: <strong>{order?.order_id}</strong>
+//         </p> */}
+//         <p className="text-gray-600 text-sm md:text-base">
+//           Dự kiến giao hàng:{' '}
+//           <span className="font-semibold text-orange-500">
+//             {estimatedDelivery.toLocaleTimeString('vi-VN', {
+//               hour: '2-digit',
+//               minute: '2-digit',
+//             })}
+//           </span>
+//         </p>
+//       </div>
+
+//       {/* Timeline responsive */}
+//       <div className="flex flex-col md:flex-row md:justify-between items-center gap-6 relative">
+//         {timelineSteps.map((step, index) => {
+//           const StepIcon = step.icon;
+//           const isCompleted = index + 1 < currentStep;
+//           const isActive = index + 1 === currentStep;
+
+//           // Tính progress cho step hiện tại
+//           const stepProgress = isActive
+//             ? Math.min((Date.now() - stepStartTime) / 20000, 1)
+//             : isCompleted
+//             ? 1
+//             : 0;
+
+//           return (
+//             <div
+//               key={step.id}
+//               className="flex md:flex-1 flex-col items-center text-center relative"
+//             >
+//               {/* Line between steps */}
+//               {index < timelineSteps.length - 1 && (
+//                 <div
+//                   className="hidden md:block absolute top-5 left-2/2 transform -translate-x-1/2 h-1 z-0 bg-gray-300 overflow-visible"
+//                   style={{ width: '100%' }}
+//                 >
+//                   {/* Thanh màu cam tải dần */}
+//                   <motion.div
+//                     className="h-full bg-orange-500 origin-left"
+//                     initial={{ scaleX: isCompleted ? 1 : stepProgress }}
+//                     animate={{ scaleX: isCompleted ? 1 : isActive ? 1 : 0 }}
+//                     transition={{
+//                       duration: isActive ? (1 - stepProgress) * 20 : 0,
+//                       ease: 'linear',
+//                     }}
+//                   />
+
+//                   {/* 🚚 Xe chạy trên line */}
+//                   {isActive && (
+//                     <motion.div
+//                       className="absolute top-[-20px] z-10"
+//                       initial={{ left: `${stepProgress * 100}%` }}
+//                       animate={{ left: '100%' }}
+//                       transition={{ duration: (1 - stepProgress) * 20, ease: 'linear' }}
+//                     >
+//                       <TruckAnimated />
+//                     </motion.div>
+//                   )}
+//                 </div>
+//               )}
+
+//               {/* Icon */}
+//               <motion.div
+//                 className="w-10 h-10 md:w-12 md:h-12 flex items-center justify-center rounded-full border-2 mb-2 z-10"
+//                 initial={{
+//                   backgroundColor: '#f3f3f3', // gray ban đầu
+//                   borderColor: '#d1d5db',
+//                   color: '#9ca3af',
+//                 }}
+//                 animate={{
+//                   backgroundColor: isCompleted
+//                     ? '#f97316' // bg-orange-500 hoàn thành
+//                     : isActive
+//                     ? ['#f3f3f3', '#f97316'] // từ gray → cam dần
+//                     : '#f3f3f3', // chưa tới: gray
+//                   borderColor: isCompleted
+//                     ? '#f97316'
+//                     : isActive
+//                     ? ['#d1d5db', '#fb923c'] // từ gray → border-orange-400
+//                     : '#d1d5db',
+//                   color: isCompleted
+//                     ? '#ffffff'
+//                     : isActive
+//                     ? ['#9ca3af', '#f97316'] // text từ gray → cam
+//                     : '#9ca3af',
+//                 }}
+//                 transition={{
+//                   duration: isActive ? 3 : 0, // chạy từ từ trong 3 giây khi active
+//                   ease: 'easeInOut',
+//                 }}
+//               >
+//                 <StepIcon
+//                   className="w-5 h-5 md:w-6 md:h-6"
+//                   style={{
+//                     stroke: isCompleted || isActive ? '#ffffff' : '#9ca3af',
+//                   }}
+//                 />
+//               </motion.div>
+
+//               {/* Label */}
+//               <motion.span
+//                 className="text-xs md:text-sm font-medium"
+//                 initial={{ color: '#9ca3af' }} // xám ban đầu
+//                 animate={{
+//                   color: isCompleted
+//                     ? '#f97316' // cam full nếu đã hoàn thành
+//                     : isActive
+//                     ? ['#9ca3af', '#f97316'] // chuyển từ xám → cam mượt
+//                     : '#9ca3af', // chưa tới step
+//                 }}
+//                 transition={{ duration: isActive ? 3 : 0, ease: 'easeInOut' }}
+//               >
+//                 {step.label}
+//               </motion.span>
+//             </div>
+//           );
+//         })}
+//       </div>
+//       {/* ✅ Driver Info chỉ hiện khi currentStep ≥ 2 */}
+//       {order.driver && currentStep >= 2 && (
+//         <div className="mt-4 text-sm text-gray-700 flex items-center space-x-2 bg-gray-50 p-3 rounded-xl shadow-sm">
+//           <span className="font-medium">Tài xế:</span>
+//           {/* Ảnh tài xế */}
+//           <img
+//             src={
+//               order.driver?.avatar ||
+//               'https://scontent.fsgn2-10.fna.fbcdn.net/v/t39.30808-6/487326873_1887063878796318_9080709797256676382_n.jpg?_nc_cat=109&ccb=1-7&_nc_sid=94e2a3&_nc_ohc=treCi7K2T6YQ7kNvwFF10Nh&_nc_oc=AdlUuTytQt-R2TK52H5r46SC9Nau9ZJ6fyIbujyuF5NoIxATLgChqysYBgd7qvsKSrUhietYcqIt_5zpoKol9Mwv&_nc_zt=23&_nc_ht=scontent.fsgn2-10.fna&_nc_gid=exNZjuM-vVhrNERk1uvp-w&oh=00_AfhqOXRDKIUgDydZ8TKCkLNEEfkX0S1GZT9HnZrpt1q0rQ&oe=69137A79'
+//             }
+//             alt="Driver avatar"
+//             className="w-8 h-8 rounded-full border border-gray-300"
+//           />
+//           {/* Tên tài xế */}
+//           <span>{order.driver?.name} | </span>
+//           {/* Biển số xe */}
+//           <Bike className="w-4 h-4 mr-1 text-orange-500" />{' '}
+//           <span className="text-gray-500">Biển số: {order.driver?.BS} | </span>
+//           {/* Rating */}
+//           <span className="flex items-center text-yellow-500">
+//             <Star className="w-4 h-4" />
+//             <Star className="w-4 h-4" />
+//             <Star className="w-4 h-4" />
+//             <Star className="w-4 h-4" />
+//             <Star className="w-4 h-4" />
+//           </span>
+//           {/* SĐT */}
+//           {order.driver?.SĐT && (
+//             <span className="flex items-center text-gray-500">
+//               | <Phone className="w-4 h-4 mx-1 text-orange-500" /> {order.driver.SĐT}
+//             </span>
+//           )}
+//           {/* Icon tin nhắn */}
+//           {/* 💬 Icon tin nhắn */}
+//           <button
+//             onClick={() => navigate(`/chat-driver/${order.driver?.id}`)}
+//             className="ml-auto flex items-center gap-1 text-orange-500 hover:text-orange-600 transition"
+//           >
+//             <MessageCircle className="w-5 h-5" />
+//             <span>Nhắn tin</span>
+//           </button>
+//         </div>
+//       )}
+
+//       {/* Order info responsive */}
+//       <div className="bg-white p-4 md:p-6 rounded-lg shadow-sm space-y-2 text-sm md:text-base">
+//         <p className="text-lg font-semibold text-orange-600">Thông tin đơn hàng</p>
+//         <p>
+//           <strong>Thanh toán:</strong> {order.payment_method}
+//         </p>
+//         <p>
+//           <strong>Tổng tiền:</strong> {Number(order.total_amount).toLocaleString('vi-VN')}đ
+//         </p>
+//         {order.note && (
+//           <p>
+//             <strong>Ghi chú:</strong> {order.note}
+//           </p>
+//         )}
+//       </div>
+//     </div>
+//   );
+// };
+
+
+//
+app
+// import { Layout } from "./components/Layout";
+// import { Routes, Route, Navigate, useLocation } from "react-router-dom";
+// import ProtectedRoute from "./components/ProtectedRoute";
+// import { CartProvider, useCart } from "./contexts/CartContext";
+// import { AuthProvider } from "./contexts/AuthContext";
+// import MerchantLogin from "./pages/MerchantLoginPage";
+// import PhoneVerification from "./pages/PhoneVerification";
+// import { Header } from "./components/Header";
+// import { Footer } from "./components/Footer";
+// import LoginPage from "./pages/LoginPage";
+// import RegisterPage from "./pages/RegisterPage";
+// import HomePage from "./pages/HomePage";
+// import { AboutPage } from "./pages/AboutPage";
+// import { SupportPage } from "./pages/SupportPage";
+// import { ProfilePage } from "./pages/ProfilePage";
+// import { SettingsPage } from "./pages/SettingsPage";
+// import { RestaurantPage } from "./pages/RestaurantPage";
+// import MenuItemDetailPage from "./pages/MenuItemDetailPage";
+// import CartPage from "./pages/CartPage";
+// import CheckOutPage from "./pages/CheckOutPage";
+// import { Toaster } from "react-hot-toast";
+// import OrderSuccess from "./pages/OrderSuccess";
+// import "./index.css";
+
+
+// // --------- Protected route wrapper sử dụng CartProvider ---------
+
+// // Protected route wrapper dùng CartProvider
+// function ProtectedRouteWrapper({ children }) {
+//   const { state, isInitialized } = useCart();
+//   if (!isInitialized) {
+//     return (
+//       <div className="flex items-center justify-center min-h-screen text-gray-500">
+//         Đang tải giỏ hàng...
+//       </div>
+//     );
+//   }
+
+//   const cart = state.items || [];
+//   return cart.length > 0 ? children : <Navigate to="/cart" />;
+// }
+
+// function AppRoutes() {
+
+//   return (
+//     <Routes>
+//       <Route path="/" element={<HomePage />} />
+//       <Route path="/phone-otp" element={<PhoneVerification />} />
+//       <Route path="/login" element={<LoginPage />} />
+//       <Route path="/register" element={<RegisterPage />} />
+//       <Route path="/merchantlogin" element={<MerchantLogin />} />
+//       <Route path="/about" element={<AboutPage />} />
+//       <Route path="/support" element={<SupportPage />} />
+//       <Route path="/profile" element={<ProfilePage />} />
+//       <Route path="/settings" element={<SettingsPage />} />
+//       <Route path="/restaurant/:id" element={<RestaurantPage />} />
+//       <Route
+//         path="/restaurant/:id/menu/:itemId"
+//         element={<MenuItemDetailPage />}
+//       />
+//       <Route path="/cart" element={<CartPage />} />
+     
+//       <Route
+//         path="/cart/checkout"
+//         element={
+//           <ProtectedRouteWrapper>
+//             <CheckOutPage />
+//           </ProtectedRouteWrapper>
+//         }
+//       />
+
+//       <Route
+//         path="/cart/checkout/ordersuccess"
+//         element={
+//           <ProtectedRoute
+//             condition={localStorage.getItem("orderConfirmed") === "true"}
+//             redirectTo="/cart"
+//           >
+//             <OrderSuccess />
+//           </ProtectedRoute>
+//         }
+//       />
+//       <Route path="*" element={<Navigate to="/" replace />} />
+//     </Routes>
+//   );
+// }
+
+// // --------- AppInner: gọi useLocation() sau khi providers mount ---------
+// function AppInner() {
+//   const location = useLocation(); // ✅ giờ gọi safe
+//   const hideHeaderFooter = [
+//     "/login",
+//     "/register",
+//     "/merchantlogin",
+//     "/phone-otp",
+//   ].includes(location.pathname);
+
+//   return (
+//     <>
+//       <Toaster
+//         position="top-right"
+//         toastOptions={{
+//           duration: 3000,
+//           style: { pointerEvents: "none" },
+//           pauseOnFocusLoss: false,
+//           pauseOnHover: false,
+//         }}
+//       />
+
+//       <CartProvider>
+//         {hideHeaderFooter ? (
+//           <AppRoutes />
+//         ) : (
+//           <Layout>
+//             <AppRoutes />
+//           </Layout>
+//         )}
+//       </CartProvider>
+//     </>
+//   );
+// }
+
+// // --------- App chính ---------
+// function App() {
+//   return (
+//     <AuthProvider>
+//       <CartProvider>
+//         <AppInner />
+//       </CartProvider>
+//     </AuthProvider>
+//   );
+// }
+
+// export default App;
+
+
+
+
+
+//
+
+//
+//
+//
+//
+//
+//Mới nhất
+if (!res.ok) {
+  console.log(data);
+  let message = 'Đăng nhập thất bại! Vui lòng thử lại.';
+
+  // parse lỗi server
+  try {
+    const errorDetail = JSON.parse(data.error);
+    if (Array.isArray(errorDetail) && errorDetail[0]?.message) {
+      message = errorDetail[0].message; // lấy thông điệp chính xác
     }
-    fetchMenu();
-    return () => ac.abort();
-  }, [id]);
+  } catch (e) {
+    // nếu parse thất bại thì giữ message mặc định
+  }
 
-  const handleAddToCart = (item) => {
-    // Lưu ý: addItem cần đúng tham số, ở đây mình giả định bạn xử lý logic option bên trong MenuItemCard
-    // hoặc bạn truyền item trực tiếp nếu MenuItemCard đã xử lý việc chọn option.
-    // Nếu MenuItemCard trả về item đã chọn option, thì code này ok.
-    toast.success(`Đã thêm món vào giỏ hàng`); 
-  };
+  setError(message);
 
-  // --- 3. LOGIC LỌC MENU (QUAN TRỌNG) ---
-  const filteredMenu = useMemo(() => {
-    // Nếu chọn "Tất cả" thì trả về menu gốc
-    if (priceFilter === 'ALL') return menu;
-
-    // Tìm khoảng giá đang chọn
-    const range = PRICE_RANGES.find((r) => r.id === priceFilter);
-    if (!range) return menu;
-
-    return menu
-      .map((category) => {
-        // Lọc các món trong từng category
-        const filteredItems = (category.items || []).filter((item) => {
-          const price = Number(item.price) || 0;
-          return price >= range.min && price <= range.max;
-        });
-
-        // Trả về category mới với danh sách items đã lọc
-        return { ...category, items: filteredItems };
-      })
-      .filter((category) => category.items.length > 0); // Loại bỏ category trống (không có món nào khớp giá)
-  }, [menu, priceFilter]);
-
-  return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-      {/* Back Button */}
-      <Button variant="outline" onClick={() => navigate('/')} className="mb-6">
-        <ArrowLeft className="w-4 h-4 mr-2" />
-        Quay lại
-      </Button>
-
-      {/* Restaurant Header Section */}
-      <div className="grid grid-cols-1 lg:grid-cols-10 gap-0 rounded-2xl overflow-hidden bg-gray-900 my-8 shadow-lg max-w-7xl mx-auto">
-        {/* LEFT: 4/10 - Restaurant Cover Image */}
-        <div className="relative lg:col-span-4 h-[28vh] lg:h-[300px] overflow-hidden w-full flex items-center justify-center">
-          <ImageWithFallback
-            src={restaurant?.cover_image?.url}
-            alt={restaurant?.merchant_name || 'Restaurant cover'}
-            className="w-full h-full object-cover"
-          />
-          {/* Overlay gradient (nhẹ) để ảnh hòa với nền đen */}
-          <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent" />
-        </div>
-
-        {/* RIGHT: 6/10 - Black Banner (căn top) */}
-        <div className="relative lg:col-span-6 bg-gray-800 px-6 md:px-8 lg:px-10 py-6 md:py-8">
-          {/* Floating Action Button (góc phải trên) */}
-          <div className="absolute top-16 right-4 z-30 sm:top-4 h-5">
-            <motion.button
-              whileTap={{ scale: 0.9 }} // Hiệu ứng lún xuống khi bấm
-              onClick={handleToggleFavorite}
-              className={`
-                  relative overflow-hidden group flex items-center  gap-2 px-4 py-2 rounded-full border shadow-lg transition-all duration-300
-                  ${
-                    isFavorite
-                      ? 'bg-white border-white text-orange-500' // Style khi ĐÃ thích: Nền trắng, chữ cam
-                      : 'bg-black/30 backdrop-blur-md border-white/30 text-white hover:bg-black/40' // Style khi CHƯA thích: Nền kính mờ
-                  }
-                `}
-            >
-              {/* Icon Ngôi sao */}
-              <motion.div
-                animate={isAnimating ? { scale: [1, 1.5, 1], rotate: [0, 15, -15, 0] } : {}}
-                transition={{ duration: 0.4 }}
-              >
-                <Star
-                  className={`w-4 h-4 transition-colors duration-300 ${
-                    isFavorite ? 'fill-orange-500 text-orange-500' : 'text-white'
-                  }`}
-                />
-              </motion.div>
-
-              {/* Text */}
-              <span className="text-sm font-semibold tracking-wide">
-                {isFavorite ? 'Đã thích' : 'Yêu thích'}
-              </span>
-
-              {/* Hiệu ứng bóng sáng khi hover (Chỉ hiện khi chưa thích) */}
-              {!isFavorite && (
-                <div className="absolute inset-0 rounded-full ring-2 ring-white/0 group-hover:ring-white/20 transition-all duration-500" />
-              )}
-            </motion.button>
-          </div>
-
-          {/* Restaurant Name & Cuisine (căn top) */}
-          <div className="mb-6">
-            <div className="flex items-center gap-3 mb-3">
-              <h1 className="text-3xl md:text-4xl font-bold text-white">
-                {restaurant?.merchant_name}
-              </h1>
-              <Award className="w-6 h-6 text-yellow-400" />
-            </div>
-            <div className="flex items-center gap-3">
-              <Badge className="bg-orange-500 text-white border-0 px-3 py-1">
-                {restaurant?.cuisine}
-              </Badge>
-              <Badge variant="outline" className="bg-gray-600 border-gray-500 text-white px-3 py-1">
-                Cao cấp
-              </Badge>
-            </div>
-          </div>
-
-          {/* Stats Grid - giữ gọn */}
-          <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
-            <div className="bg-gray-700/80 rounded-lg px-3 py-2.5 border border-gray-600/50">
-              <div className="flex items-center gap-2">
-                <div className="bg-yellow-500 rounded-full p-1.5">
-                  <Star className="w-3 h-3 text-white fill-current" />
-                </div>
-                <div>
-                  <div className="text-white font-bold text-sm flex items-center gap-1">
-                    {restaurant?.rating != null ? (
-                      <>
-                        {restaurant.rating} <Star className="w-4 h-4 text-yellow-400" />
-                      </>
-                    ) : (
-                      'Chưa có đánh giá nhà hàng'
-                    )}
-                  </div>
-                  <div className="text-xs text-gray-300">Đánh giá</div>
-                </div>
-              </div>
-            </div>
-
-            <div className="bg-gray-700/80 rounded-lg px-3 py-2.5 border border-gray-600/50">
-              <div className="flex items-center gap-2">
-                <div className="bg-blue-500 rounded-full p-1.5">
-                  <Clock className="w-3 h-3 text-white" />
-                </div>
-                <div>
-                  <div className="text-white font-bold text-sm">
-                    {restaurant?.deliveryTime ?? '30-40 phút'}
-                  </div>
-                  <div className="text-xs text-gray-300">Giao hàng</div>
-                </div>
-              </div>
-            </div>
-
-            <div className="bg-gray-700/80 rounded-lg px-3 py-2.5 border border-gray-600/50">
-              <div className="flex items-center gap-2">
-                <div className="bg-green-500 rounded-full p-1.5">
-                  <Truck className="w-3 h-3 text-white" />
-                </div>
-                <div>
-                  <div className="text-white font-bold text-sm">
-                    {restaurant?.delivery_fee
-                      ? `${restaurant.deliveryFee.toLocaleString('vi-VN')}đ`
-                      : 'Thu theo App'}
-                  </div>
-                  <div className="text-xs text-gray-300">Phí ship</div>
-                </div>
-              </div>
-            </div>
-
-            <div className="bg-gray-700/80 rounded-lg px-3 py-2.5 border border-gray-600/50">
-              <div className="flex items-center gap-2">
-                <div className="bg-purple-500 rounded-full p-1.5">
-                  <Users className="w-3 h-3 text-white" />
-                </div>
-                <div>
-                  <div className="text-white font-bold text-sm">
-                    {restaurant?.customers ?? '1000+'}
-                  </div>
-                  <div className="text-xs text-gray-300">Khách hàng</div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Restaurant Info Section */}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-100 mb-8 overflow-hidden">
-        <div className="p-6">
-          {/* Restaurant Description */}
-          <div className="mb-6 bg-white p-5 rounded-2xl shadow-sm border border-gray-100">
-            {/* Tiêu đề có điểm nhấn màu cam */}
-            <h3 className="text-lg font-bold text-gray-800 mb-4 flex items-center gap-2">
-              <span className="w-1 h-5 bg-orange-500 rounded-full block"></span>
-              Về nhà hàng
-            </h3>
-
-            {/* Phần mô tả: canh đều 2 bên, giãn dòng dễ đọc */}
-            <p className="text-gray-600 text-sm leading-7 mb-6 text-justify">
-              {restaurant?.description || 'Chưa có mô tả cho nhà hàng này.'}
-            </p>
-
-            {/* Phần địa chỉ: Đóng khung nổi bật */}
-            <div className="flex items-start gap-3 bg-orange-50/50 p-4 rounded-xl border border-orange-100/50 hover:border-orange-200 transition-colors">
-              <div className="bg-white p-2 rounded-full shadow-sm shrink-0 text-orange-500">
-                <MapPin className="w-5 h-5" />
-              </div>
-              <div className="flex-1">
-                <p className="text-xs text-orange-600/70 font-semibold uppercase tracking-wider mb-1">
-                  Địa chỉ quán
-                </p>
-                <span className="text-sm font-medium text-gray-800 leading-snug block">
-                  {restaurant?.location.address || 'Đang cập nhật địa chỉ...'}
-                </span>
-              </div>
-            </div>
-          </div>
-
-          {/* Ưu đãi hôm nay - 4 cards nằm ngang */}
-          <div className="border-t border-gray-100 pt-6">
-            <h4 className="font-bold text-gray-900 mb-4">Ưu đãi hôm nay</h4>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-              <div className="bg-gradient-to-r from-orange-400 to-red-500 rounded-lg p-4 text-white relative overflow-hidden">
-                <div className="absolute top-2 right-2 bg-white/20 rounded px-2 py-1 text-xs font-medium">
-                  WELCOME50
-                </div>
-                <div className="font-bold text-sm mb-1">Giảm 50% đơn đầu tiên</div>
-                <div className="text-xs opacity-90">
-                  Áp dụng cho khách hàng mới, tối đa 100.000đ
-                </div>
-              </div>
-
-              <div className="bg-gradient-to-r from-orange-400 to-red-500 rounded-lg p-4 text-white relative overflow-hidden">
-                <div className="absolute top-2 right-2 bg-white/20 rounded px-2 py-1 text-xs font-medium">
-                  FREESHIP
-                </div>
-                <div className="font-bold text-sm mb-1">Miễn phí giao hàng</div>
-                <div className="text-xs opacity-90">Đơn từ 200.000đ trở lên</div>
-              </div>
-
-              <div className="bg-gradient-to-r from-orange-400 to-red-500 rounded-lg p-4 text-white relative overflow-hidden">
-                <div className="absolute top-2 right-2 bg-white/20 rounded px-2 py-1 text-xs font-medium">
-                  WEEKEND30
-                </div>
-                <div className="font-bold text-sm mb-1">Combo ưu đãi cuối tuần</div>
-                <div className="text-xs opacity-90">Giảm 30% các combo, chỉ áp dụng T7-CN</div>
-              </div>
-
-              <div className="bg-gradient-to-r from-orange-400 to-red-500 rounded-lg p-4 text-white relative overflow-hidden">
-                <div className="absolute top-2 right-2 bg-white/20 rounded px-2 py-1 text-xs font-medium">
-                  COFFEE25
-                </div>
-                <div className="font-bold text-sm mb-1">Happy Hour Coffee</div>
-                <div className="text-xs opacity-90">Giảm 25% đồ uống từ 14h-16h</div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Quick Info Footer */}
-        <div className="bg-gray-50 px-6 py-4 border-t border-gray-100">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
-            <div className="flex items-center gap-3">
-              <OpeningStatus time_open={restaurant?.time_open}>
-                <div className="flex items-center space-x-2">
-                  <OpeningStatus.Clock />
-                  <OpeningStatus.Text />
-                </div>
-              </OpeningStatus>
-            </div>
-
-            <div className="flex items-center gap-3">
-              <Truck className="w-4 h-4 text-gray-500" />
-              <div>
-                <div className="font-semibold text-gray-900">Thanh toán</div>
-                <div className="text-gray-600">Tiền mặt, Thẻ, Ví điện tử</div>
-              </div>
-            </div>
-
-            <div className="flex items-center gap-3">
-              <Users className="w-4 h-4 text-gray-500" />
-              <div>
-                <div className="font-semibold text-gray-900">Đánh giá</div>
-                <div className="text-gray-600">1000+ khách hàng hài lòng</div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-      {/* ... (Kết thúc phần Header) ... */}
-
-
-      {/* --- 4. GIAO DIỆN BỘ LỌC (THAY THẾ div "Bộ lọc") --- */}
-      <div className="sticky top-0 z-20 bg-gray-50/95 backdrop-blur-sm py-4 -mx-4 px-4 sm:mx-0 sm:px-0 mb-6 border-b border-gray-200">
-        <div className="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-hide">
-          <div className="flex items-center gap-2 pr-4 border-r border-gray-300 mr-2 shrink-0 text-gray-500">
-            <Filter className="w-4 h-4" />
-            <span className="text-sm font-semibold">Lọc giá:</span>
-          </div>
-          
-          {PRICE_RANGES.map((range) => (
-            <button
-              key={range.id}
-              onClick={() => setPriceFilter(range.id)}
-              className={`
-                whitespace-nowrap px-4 py-1.5 rounded-full text-sm font-medium transition-all duration-200 border
-                ${
-                  priceFilter === range.id
-                    ? 'bg-orange-500 text-white border-orange-500 shadow-md transform scale-105'
-                    : 'bg-white text-gray-600 border-gray-200 hover:border-orange-300 hover:text-orange-500'
-                }
-              `}
-            >
-              {range.label}
-            </button>
-          ))}
-
-          {/* Nút Reset nếu đang lọc */}
-          {priceFilter !== 'ALL' && (
-            <button
-              onClick={() => setPriceFilter('ALL')}
-              className="ml-auto shrink-0 p-1.5 rounded-full bg-gray-200 hover:bg-gray-300 text-gray-600"
-              title="Xóa bộ lọc"
-            >
-              <X className="w-4 h-4" />
-            </button>
-          )}
-        </div>
-      </div>
-
-      {/* --- 5. HIỂN THỊ MENU ĐÃ LỌC (Dùng filteredMenu thay vì menu) --- */}
-      {Array.isArray(filteredMenu) && filteredMenu.length > 0 ? (
-        filteredMenu.map((category) => (
-          <section key={category.category_id ?? category.id} className="mb-8">
-            <div className="flex items-center gap-3 mb-4">
-               <h2 className="text-2xl font-bold text-gray-800">{category.category_name}</h2>
-               <div className="h-1 flex-1 bg-gray-100 rounded-full"></div>
-               <span className="text-sm text-gray-400 font-medium">{category.items.length} món</span>
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-              {Array.isArray(category.items) && category.items.length > 0 ? (
-                category.items.map((rawItem) => {
-                  const item = {
-                    id: rawItem.id ?? rawItem.item_id,
-                    name: rawItem.name ?? rawItem.name_item,
-                    description: rawItem.description ?? '',
-                    price: Number(rawItem.price) || 0,
-                    image: rawItem.image ?? rawItem.image_item?.url ?? null,
-                    options: rawItem.options ?? [],
-                    isAvailable: rawItem.isAvailable !== false,
-                    originalPrice: rawItem.originalPrice ?? rawItem.price,
-                    categoryId: category.id ?? category.category_id,
-                    categoryName: category.category_name,
-                    restaurantId: restaurant?.id,
-                    sku: rawItem.sku ?? null,
-                    tags: rawItem.tags ?? [],
-                    nutrition: rawItem.nutrition ?? {},
-                    extraInfo: rawItem.extraInfo ?? {},
-                  };
-
-                  return (
-                    <div key={item.id} className="h-full">
-                      <MenuItemCard
-                        menuItem={item}
-                        restaurant={restaurant}
-                        layout="vertical"
-                        className="h-full"
-                        onAddToCart={() => handleAddToCart(item)}
-                      />
-                    </div>
-                  );
-                })
-              ) : (
-                <p className="text-gray-500 italic col-span-full">Không tìm thấy món nào trong khoảng giá này.</p>
-              )}
-            </div>
-          </section>
-        ))
-      ) : (
-        <div className="text-center py-12">
-            <div className="inline-flex bg-gray-100 p-4 rounded-full mb-4">
-                <Filter className="w-8 h-8 text-gray-400" />
-            </div>
-            <p className="text-gray-500 text-lg">Không có món ăn nào trong khoảng giá <strong>{PRICE_RANGES.find(r => r.id === priceFilter)?.label}</strong>.</p>
-            <Button variant="link" onClick={() => setPriceFilter('ALL')} className="text-orange-500 mt-2">
-                Xem tất cả món
-            </Button>
-        </div>
-      )}
-
-      <Toaster position="top-right" toastOptions={{ duration: 1000 }} />
-    </div>
-  );
-};
+  // focus input theo lỗi
+  if (message.toLowerCase().includes('số điện thoại') || message.toLowerCase().includes('email')) {
+    document.getElementById('email').focus();
+  } else if (message.toLowerCase().includes('mật khẩu')) {
+    document.getElementById('password').focus();
+  }
+}

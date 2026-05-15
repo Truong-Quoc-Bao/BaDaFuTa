@@ -125,16 +125,13 @@ export const MyOrdersPage = () => {
     try {
       const token = localStorage.getItem('accessToken');
       // const res = await fetch(`/apiLocal/order/${order_id}/cancel`, {
-      const res = await fetch(
-        `https://badafuta-production.up.railway.app/api/order/${order_id}/cancel`,
-        {
-          method: 'PUT',
-          headers: {
-            'Content-Type': 'application/json',
-            ...(token ? { Authorization: `Bearer ${token}` } : {}),
-          },
+        const res = await fetch(`https://badafuta-production.up.railway.app/api/order/${order_id}/cancel`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
         },
-      );
+      });
 
       if (!res.ok) throw new Error('❌ Hủy đơn thất bại');
 
@@ -157,15 +154,10 @@ export const MyOrdersPage = () => {
         const token = localStorage.getItem('accessToken');
         const updatedOrders = await Promise.all(
           orders.map(async (order) => {
-            const res = await fetch(
-              `https://badafuta-production.up.railway.app/api/order/${order.order_id}/getRating`,
-              {
-                // const res = await fetch(`/apiLocal/order/${order.order_id}/getRating`, {
-                headers: {
-                  ...(token ? { Authorization: `Bearer ${token}` } : {}),
-                },
-              },
-            );
+            const res = await fetch(`https://badafuta-production.up.railway.app/api/order/${order.order_id}/getRating`, { 
+            // const res = await fetch(`/apiLocal/order/${order.order_id}/getRating`, {
+              headers: { ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+            });
             if (!res.ok) return order; // không có đánh giá thì giữ nguyên
             const data = await res.json();
 
@@ -191,8 +183,8 @@ export const MyOrdersPage = () => {
     };
 
     if (!ratingsLoaded && orders.length > 0) {
-      fetchRatings();
-    }
+    fetchRatings();
+  }
   }, [orders, ratingsLoaded]);
 
   //API Create Rating
@@ -200,17 +192,14 @@ export const MyOrdersPage = () => {
     try {
       const token = localStorage.getItem('accessToken');
       // const res = await fetch(`/apiLocal/order/${orderId}/createRating`, {
-      const res = await fetch(
-        `https://badafuta-production.up.railway.app/api/order/${orderId}/createRating`,
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            ...(token ? { Authorization: `Bearer ${token}` } : {}),
-          },
-          body: JSON.stringify({ rating: ratingValue, review: reviewText }),
+        const res = await fetch(`https://badafuta-production.up.railway.app/api/order/${orderId}/createRating`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
         },
-      );
+        body: JSON.stringify({ rating: ratingValue, review: reviewText }),
+      });
       if (!res.ok) throw new Error('❌ Tạo đánh giá thất bại');
 
       const data = await res.json();
@@ -220,12 +209,7 @@ export const MyOrdersPage = () => {
       setOrders((prevOrders) =>
         prevOrders.map((order) =>
           order.order_id === orderId
-            ? {
-                ...order,
-                rating: ratingValue,
-                review: reviewText,
-                canRate: false,
-              }
+            ? { ...order, rating: ratingValue, review: reviewText, canRate: false }
             : order,
         ),
       );
@@ -240,12 +224,7 @@ export const MyOrdersPage = () => {
     setOrders((prevOrders) =>
       prevOrders.map((order) =>
         order.id === newRating.orderId
-          ? {
-              ...order,
-              rating: newRating.rating,
-              review: newRating.review,
-              canRate: false,
-            }
+          ? { ...order, rating: newRating.rating, review: newRating.review, canRate: false }
           : order,
       ),
     );

@@ -66,7 +66,6 @@ export async function findMany(args: MerchantFindArgs) {
       cuisine: true,
       rating: true,
       rating_count: true,
-      description: true,
 
       ...(include && {
         categories: { select: { id: true, category_name: true } },
@@ -124,15 +123,4 @@ export async function count(args: MerchantFindArgs) {
       }),
     },
   });
-}
-
-export async function OutStandingMerchant() {
-  const merchants = await prisma.merchant.findMany({
-    orderBy: {
-      rating: "desc",
-    },
-    take: 4,
-  });
-
-  return merchants;
 }

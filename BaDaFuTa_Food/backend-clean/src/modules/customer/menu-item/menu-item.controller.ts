@@ -1,4 +1,3 @@
-// @ts-nocheck
 // src/modules/menu-item/menu-item.controller.ts
 import { Request, Response } from "express";
 import { MenuItemListQuery } from "./menu-item.validation";

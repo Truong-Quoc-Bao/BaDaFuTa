@@ -33,39 +33,24 @@ export const paymentController = {
   },
   async callback(req: Request, res: Response) {
     try {
-      console.log("🔔 [VNPay Redirect] query:", req.query);
+      const result = await paymentService.handleVnpayCallback(req.query);
 
-      // Gọi service callback (trả về giống MoMo)
-      const callbackData = await paymentService.handleVnpayCallback(req.query);
-      console.log("📦 VNPay callback full data:", callbackData);
-
-      // ❌ THẤT BẠI
-      if (!callbackData || callbackData.status !== "success") {
+      if (result.status === "success") {
+        // ✅ Redirect về trang thông báo thành công
         return res.redirect(
-          `${
-            process.env.FRONTEND_URL || "https://ba-da-fu-ta-food.vercel.app"
-          }/cart/checkout/orderfailed?status=failed&code=${callbackData?.code}`
+          `http://localhost:5173/cart/checkout/ordersuccess?status=success&code=${result.code}`
+        );
+      } else {
+        // ❌ Redirect về trang thất bại
+        return res.redirect(
+          `http://localhost:5173/cart/checkout/orderfailed?status=failed&code=${result.code}`
         );
       }
-
-      // ⭐ Encode full order JSON giống MoMo
-      const base64 = encodeURIComponent(
-        Buffer.from(JSON.stringify(callbackData), "utf8").toString("base64")
-      );
-
-      // ⭐ Redirect về FE giống MoMo
-      return res.redirect(
-        `${
-          process.env.FRONTEND_URL || "https://ba-da-fu-ta-food.vercel.app"
-        }/cart/checkout/ordersuccess?status=success&data=${base64}`
-      );
     } catch (err: any) {
-      console.error("❌ [VNPay Redirect Error]:", err);
-
+      console.error("callback error:", err);
+      // ⚠️ Redirect về trang lỗi chung
       return res.redirect(
-        `${
-          process.env.FRONTEND_URL || "https://ba-da-fu-ta-food.vercel.app"
-        }/cart/checkout/orderfailed?status=error&message=${encodeURIComponent(
+        `http://localhost:5173/cart/checkout/orderfailed?status=error&message=${encodeURIComponent(
           err.message
         )}`
       );

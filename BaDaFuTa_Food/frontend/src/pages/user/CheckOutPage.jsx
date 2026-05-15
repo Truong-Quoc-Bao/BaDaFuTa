@@ -12,8 +12,6 @@ import {
   Plus,
   Edit3,
   FileText,
-  Ticket,
-  X,
 } from 'lucide-react';
 import { ImageWithFallback } from '../../components/figma/ImageWithFallback';
 import { Textarea } from '../../components/ui/textarea';
@@ -32,13 +30,8 @@ import {
 import { Clock } from 'lucide-react';
 import { getDistanceKm, calculateDeliveryFee } from '../../utils/distanceUtils';
 import { Badge } from '../../components/ui/badge';
-import PopupVoucher from '@/components/VoucherDialog';
-import { CashIcon, VnPayIcon, MomoIcon } from '../../components/PaymentIcons';
-import { io } from 'socket.io-client/dist/socket.io.js';
-import { LocateFixed } from 'lucide-react';
+
 export default function CheckOutPage() {
-  // 🟢 Khai báo socketRef
-  const socketRef = useRef(null);
   // 🧩 Lấy user từ AuthContext
   const { state: authState } = useAuth();
   const user = authState.user;
@@ -54,79 +47,28 @@ export default function CheckOutPage() {
   const [isEditing, setIsEditing] = useState(false);
   const [isAdding, setIsAdding] = useState(false);
   const [error, setError] = useState(null);
-  const [voucherPopup, setVoucherPopup] = useState(false);
-  const [vouchers, setVouchers] = useState([]);
-  const [selectedVoucher, setSelectedVoucher] = useState(null);
-
-  console.log('ORDER SEND VOUCHER:', selectedVoucher || null);
-  console.log('TYPE:', typeof selectedVoucher);
-  console.log('TYPE:', user.full_name || null);
-
-  // Lấy merchant (restaurant hoặc merchant)
+  // merchant
   const merchant =
     state.items.length > 0 ? state.items[0].restaurant || state.items[0].merchant : null;
+  // Lấy lat/lon nhà hàng và địa chỉ
+  const restaurantLat = merchant?.lat;
+  const restaurantLon = merchant?.lng;
+  //Tính khoảng cách
+  const deliveryLat = selectedAddress?.lat;
+  const deliveryLon = selectedAddress?.lng;
 
-  // Lấy tọa độ nhà hàng chính xác
-  const merchantLat = merchant?.location?.lat ?? merchant?.raw?.coordinates?.lat ?? 0;
-  const merchantLng = merchant?.location?.lng ?? merchant?.raw?.coordinates?.lng ?? 0;
+  let distanceKm = 0;
+  let deliveryFee = 0;
 
-  // Lấy tọa độ giao hàng
-  const deliveryLat = selectedAddress?.lat ?? 0;
-  const deliveryLng = selectedAddress?.lng ?? 0;
-  // 🛠️ FIX: Kiểm tra xem đã có địa chỉ VÀ có tọa độ hợp lệ chưa
-  const hasValidAddress = selectedAddress && deliveryLat !== 0 && deliveryLng !== 0;
-
-  // Tính khoảng cách (km) -> Nếu chưa có địa chỉ thì là 0
-  const distanceKm = hasValidAddress
-    ? getDistanceKm(merchantLat, merchantLng, deliveryLat, deliveryLng)
-    : 0;
-
-  // Tính phí ship -> Nếu chưa có địa chỉ thì là 0
-  const deliveryFee = hasValidAddress ? calculateDeliveryFee(distanceKm) : 0;
-
-  // Cập nhật item trong state để hiển thị trên checkout
-  if (state.items.length > 0) {
-    state.items[0].deliveryFee = deliveryFee;
-    // state.items[0].deliveryTime = deliveryTime;
+  if (merchant && selectedAddress) {
+    distanceKm = getDistanceKm(
+      merchant.lat,
+      merchant.lng,
+      selectedAddress.lat,
+      selectedAddress.lng,
+    );
+    deliveryFee = calculateDeliveryFee(distanceKm);
   }
-
-  // Log thông tin
-  console.log('Merchant Lat/Lng:', merchantLat, merchantLng);
-  console.log('Delivery Lat/Lng:', deliveryLat, deliveryLng);
-  console.log('Distance (km):', distanceKm);
-  console.log('Delivery Fee (VND):', deliveryFee);
-  // console.log('Estimated Delivery Time (min):', deliveryTime);
-
-  // ================= WebSocket =================
-  useEffect(() => {
-    if (!merchant?.id) return;
-
-    socketRef.current = io('https://badafuta-production.up.railway.app', {
-      transports: ['websocket'],
-      path: '/socket.io',
-      reconnection: true,
-      reconnectionAttempts: Infinity,
-      reconnectionDelay: 1000,
-    });
-
-    socketRef.current.on('connect', () => {
-      console.log('✅ Connected:', socketRef.current.id);
-      socketRef.current.emit('joinMerchant', merchant.id);
-    });
-
-    socketRef.current.on('newOrder', (order) => {
-      console.log('🔥 Nhận đơn mới:', order);
-    });
-
-    socketRef.current.on('disconnect', (reason) => {
-      console.log('⚠️ Disconnected:', reason);
-    });
-
-    return () => {
-      socketRef.current.disconnect();
-    };
-  }, [merchant?.id]);
-
   // 🏦 Handler khi chọn phương thức
   const handlePaymentMethodSelect = (method) => {
     setSelectedPaymentMethod(method);
@@ -136,6 +78,15 @@ export default function CheckOutPage() {
     clearCart();
     navigate('/order-cancelled');
   };
+
+  // merchant
+
+  // const merchant = state.items.length > 0 ? state.items[0].restaurant : null;
+
+  // const deliveryFee =
+  //   state.items.length > 0
+  //     ? state.items[0].restaurant?.deliveryFee ?? state.items[0].restaurant?.delivery_fee ?? 0
+  //     : 0;
 
   const subtotal = state.total;
   const total = subtotal + deliveryFee;
@@ -167,184 +118,62 @@ export default function CheckOutPage() {
     console.log('📝 Ghi chú đã xác nhận:', noteRef.current);
   };
 
-  // useEffect(() => {
-  //   if (!user) return;
+  useEffect(() => {
+    if (!user) return;
 
-  //   // ✅ Lấy danh sách địa chỉ cũ từ localStorage
-  //   const savedAddresses = JSON.parse(localStorage.getItem(`addressList_${user.id}`)) || [];
-  //   setAddressList(savedAddresses);
+    // ✅ Lấy danh sách địa chỉ cũ từ localStorage
+    const savedAddresses = JSON.parse(localStorage.getItem(`addressList_${user.id}`)) || [];
 
-  //   const savedSelected = JSON.parse(localStorage.getItem(`selectedAddress_${user.id}`));
-  //   if (savedSelected) {
-  //     console.log('📦 Dùng địa chỉ đã lưu từ LocalStorage:', savedSelected);
-  //     setSelectedAddress(savedSelected);
-  //     setFormData(savedSelected);
-  //     return; // ⛔ Dừng hàm tại đây, không chạy xuống phần GPS bên dưới
-  //   }
+    setAddressList(savedAddresses);
 
-  //   const defaultAddress = {
-  //     id: Date.now(),
-  //     full_name: user?.full_name ?? 'Người dùng',
-  //     phone: user?.phone ?? '',
-  //     address: '', // để trống nếu GPS bị từ chối
-  //     note: '',
-  //     utensils: '',
-  //   };
-
-  //   // Hàm fetch địa chỉ từ GPS
-  //   const fetchAddress = async (lat, lon) => {
-  //     try {
-  //       const res = await fetch(
-  //         `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lon}&format=json`,
-  //       );
-  //       const data = await res.json();
-  //       const gpsAddress = {
-  //         ...defaultAddress,
-  //         address: data.display_name || '',
-  //         lat,
-  //         lng: lon,
-  //       };
-  //       setFormData(gpsAddress);
-  //       setSelectedAddress(gpsAddress);
-  //     } catch (err) {
-  //       console.log('Reverse geocode error:', err);
-  //       setFormData({
-  //         ...defaultAddress,
-  //         lat,
-  //         lng: lon,
-  //       });
-  //       setSelectedAddress({
-  //         ...defaultAddress,
-  //         lat,
-  //         lng: lon,
-  //       });
-  //     }
-  //   };
-
-  //   // Lấy GPS nếu trình duyệt hỗ trợ
-  //   if ('geolocation' in navigator) {
-  //     navigator.geolocation.getCurrentPosition(
-  //       (pos) => fetchAddress(pos.coords.latitude, pos.coords.longitude),
-  //       (err) => {
-  //         console.warn('GPS bị từ chối:', err.message);
-  //         // hiển thị input trống
-  //         setIsEditing(true);
-  //         setFormData(defaultAddress);
-  //         setSelectedAddress({
-  //           defaultAddress,
-  //         });
-  //       },
-  //       { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 },
-  //     );
-  //   } else {
-  //     console.warn('Geolocation không hỗ trợ');
-  //     setIsEditing(true);
-  //     setFormData(defaultAddress);
-  //     setSelectedAddress({ defaultAddress });
-  //   }
-  // }, [user]);
-
-  // 1️⃣ Hàm xử lý lấy vị trí GPS (Dùng chung cho cả tự động và nút bấm)
-  const handleGetCurrentLocation = () => {
-    // Template địa chỉ mặc định
     const defaultAddress = {
       id: Date.now(),
       full_name: user?.full_name ?? 'Người dùng',
       phone: user?.phone ?? '',
-      address: 'Đang lấy vị trí...', // Hiển thị tạm để user biết đang chạy
+      address: '', // để trống nếu GPS bị từ chối
       note: '',
       utensils: '',
-      lat: 0,
-      lng: 0,
     };
 
-    // Nếu đang ở chế độ sửa, cập nhật UI ngay để user thấy phản hồi
-    if (isEditing) {
-      setFormData((prev) => ({ ...prev, address: 'Đang tìm vị trí...' }));
-    }
-
-    // Hàm gọi API lấy tên đường
-    const fetchAddressName = async (lat, lon) => {
+    // Hàm fetch địa chỉ từ GPS
+    const fetchAddress = async (lat, lon) => {
       try {
         const res = await fetch(
           `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lon}&format=json`,
         );
         const data = await res.json();
-
         const gpsAddress = {
           ...defaultAddress,
-          // Giữ lại tên/sđt nếu người dùng đang nhập dở
-          full_name: formData.full_name || defaultAddress.full_name,
-          phone: formData.phone || defaultAddress.phone,
-          address: data.display_name || 'Vị trí hiện tại',
-          lat,
-          lng: lon,
+          address: data.display_name || '',
         };
-
-        // Cập nhật State
         setFormData(gpsAddress);
         setSelectedAddress(gpsAddress);
-
-        // 🔥 Lưu ngay vào LocalStorage để F5 không mất
-        localStorage.setItem(`selectedAddress_${user?.id}`, JSON.stringify(gpsAddress));
       } catch (err) {
-        console.error('Lỗi lấy tên đường:', err);
-        // Nếu lỗi API thì vẫn lưu tọa độ
-        const fallbackAddr = {
-          ...defaultAddress,
-          lat,
-          lng: lon,
-          address: `Toạ độ: ${lat}, ${lon}`,
-        };
-        setFormData(fallbackAddr);
-        setSelectedAddress(fallbackAddr);
+        console.log('Reverse geocode error:', err);
+        setFormData(defaultAddress);
+        setSelectedAddress(defaultAddress);
       }
     };
 
-    // Gọi trình duyệt lấy GPS
+    // Lấy GPS nếu trình duyệt hỗ trợ
     if ('geolocation' in navigator) {
       navigator.geolocation.getCurrentPosition(
-        (pos) => fetchAddressName(pos.coords.latitude, pos.coords.longitude),
+        (pos) => fetchAddress(pos.coords.latitude, pos.coords.longitude),
         (err) => {
           console.warn('GPS bị từ chối:', err.message);
+          // hiển thị input trống
           setIsEditing(true);
-          const emptyAddr = { ...defaultAddress, address: '' };
-          setFormData(emptyAddr);
-          setSelectedAddress(emptyAddr);
-          alert('Không thể lấy vị trí. Vui lòng kiểm tra quyền GPS hoặc nhập tay.');
+          setFormData(defaultAddress);
+          setSelectedAddress(defaultAddress);
         },
         { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 },
       );
     } else {
       console.warn('Geolocation không hỗ trợ');
       setIsEditing(true);
-      const emptyAddr = { ...defaultAddress, address: '' };
-      setFormData(emptyAddr);
-      setSelectedAddress(emptyAddr);
+      setFormData(defaultAddress);
+      setSelectedAddress(defaultAddress);
     }
-  };
-
-  // 2️⃣ useEffect: Chỉ chạy tự động nếu CHƯA CÓ địa chỉ
-  useEffect(() => {
-    if (!user) return;
-
-    // Load danh sách cũ
-    const savedAddresses = JSON.parse(localStorage.getItem(`addressList_${user.id}`)) || [];
-    setAddressList(savedAddresses);
-
-    // Load địa chỉ đang chọn
-    const savedSelected = JSON.parse(localStorage.getItem(`selectedAddress_${user.id}`));
-
-    if (savedSelected) {
-      console.log('📦 Dùng địa chỉ đã lưu:', savedSelected);
-      setSelectedAddress(savedSelected);
-      setFormData(savedSelected);
-      return; // ⛔ Có rồi thì DỪNG, không tự chạy GPS
-    }
-
-    // ⛔ Nếu chưa có thì mới tự động chạy GPS lần đầu
-    console.log('🌍 Chưa có địa chỉ, tự động lấy GPS...');
-    handleGetCurrentLocation();
   }, [user]);
 
   const [showConfirmPopup, setShowConfirmPopup] = useState(false);
@@ -396,11 +225,9 @@ export default function CheckOutPage() {
     // Tạo body chung cho cả 2 phương thức
     const orderBody = {
       user_id: user.id,
-      full_name: user.full_name,
       merchant_id: merchant.id,
       phone: finalAddress.phone,
       delivery_address: finalAddress.address,
-      voucher: selectedVoucher ? selectedVoucher.code : null,
       delivery_fee: deliveryFee,
       note: note,
       utensils: true,
@@ -434,7 +261,7 @@ export default function CheckOutPage() {
       try {
         console.log('📤 Sending body to VNPay:', orderBody);
         const res = await fetch('https://badafuta-production.up.railway.app/api/payment/initiate', {
-          // const res = await fetch("http://localhost:3000/api/payment/initiate", {
+          // const res = await fetch('http://localhost:3000/api/payment/initiate', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(orderBody),
@@ -457,7 +284,7 @@ export default function CheckOutPage() {
       try {
         console.log('📤 Sending body to MoMo:', orderBody);
         const res = await fetch('https://badafuta-production.up.railway.app/api/momo/create', {
-          // const res = await fetch("http://localhost:3000/api/momo/create", {
+          // const res = await fetch('http://localhost:3000/api/momo/create', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(orderBody),
@@ -525,11 +352,9 @@ export default function CheckOutPage() {
 
       const orderBody = {
         user_id: user.id,
-        full_name: user.full_name,
         merchant_id: merchant.id,
         phone: selectedAddress.phone,
         delivery_address: selectedAddress.address,
-        voucher: selectedVoucher ? selectedVoucher.code : null,
         delivery_fee: deliveryFee,
         payment_method: 'COD', // ✅ đồng bộ với backend
         note: selectedAddress?.note,
@@ -547,29 +372,17 @@ export default function CheckOutPage() {
           })),
         })),
       };
-
-      console.log('ORDER SEND VOUCHER:', selectedVoucher);
-      console.log('📤 Gửi order tới backend:', orderBody);
       const res = await fetch('https://badafuta-production.up.railway.app/api/order', {
         // const res = await fetch('http://localhost:3000/api/order', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(orderBody),
       });
-      console.log('📥 Response:', res.status);
 
       if (!res.ok) throw new Error(await res.text());
       const data = await res.json();
 
       console.log('✅ Đơn hàng tạo thành công:', data);
-      // emit socket để merchant nhận real-time
-      if (socketRef.current && socketRef.current.connected) {
-        socketRef.current.emit('newOrder', {
-          ...orderBody,
-          order_id: data.order_id,
-        });
-      }
-
       localStorage.setItem('orderConfirmed', 'true');
       clearCart();
       // navigate("/cart/checkout/ordersuccess");
@@ -583,48 +396,47 @@ export default function CheckOutPage() {
 
   const [loading, setLoading] = useState(false);
   // ======================
-  // 🧭 VNPay Redirect Handler (giống MoMo)
+  // 🧭 UNIVERSAL PAYMENT CALLBACK (MoMo + VNPay)
   // ======================
   useEffect(() => {
     const params = new URLSearchParams(location.search);
+    const dataEncoded = params.get('data');
     const status = params.get('status');
-    const base64 = params.get('data');
 
-    // Nếu không phải callback VNPay → bỏ qua
-    if (!status || !base64) return;
+    if (!status) return;
 
-    // FAILED → quay về checkout
-    if (status !== 'success') {
-      navigate('/cart/checkout/orderfailed');
-      return;
-    }
-
-    try {
+    const processVNPay = async () => {
       setLoading(true);
+      try {
+        switch (status) {
+          case 'success':
+            if (!dataEncoded) throw new Error('Không có dữ liệu đơn hàng');
 
-      // 🔹 Decode base64 → JSON
-      const jsonString = atob(decodeURIComponent(base64));
-      const fullOrder = JSON.parse(jsonString);
+            localStorage.setItem('orderConfirmed', 'true');
+            clearCart();
+            navigate('/cart/checkout/ordersuccess');
+            break;
 
-      // 🔹 Lấy orderId
-      const orderId = fullOrder?.order_id || fullOrder?.id;
+          case 'canceled':
+            navigate('/cart/pending');
+            break;
 
-      // 🔹 Lưu vào localStorage (giống MoMo)
-      localStorage.setItem('orderConfirmed', 'true');
-      localStorage.setItem('lastOrderId', orderId);
+          default:
+            clearCart();
+            alert('❌ Thanh toán thất bại, vui lòng thử lại!');
+            navigate('/cart/checkout/orderfailed');
+            break;
+        }
+      } catch (err) {
+        console.error(err);
+        alert('❌ Lỗi xử lý VNPay!');
+      } finally {
+        setLoading(false);
+      }
+    };
 
-      // 🔹 Clear cart
-      clearCart();
-
-      setLoading(false);
-
-      // 🔹 Điều hướng sang trang success (gửi full data luôn)
-      navigate(`/cart/checkout/ordersuccess?status=success&data=${encodeURIComponent(base64)}`);
-    } catch (err) {
-      console.error('VNPay callback decode error:', err);
-      navigate('/cart/checkout/orderfailed');
-    }
-  }, [location.search]);
+    processVNPay();
+  }, [location.search, navigate]);
 
   // ======================
   // 🧭 MoMo Redirect Handler
@@ -669,97 +481,42 @@ export default function CheckOutPage() {
     setIsDialogOpen(true); // 👈 mở popup
   };
 
-  // ============================================
-  // 📍 FIX: Hàm lấy tọa độ từ LocationIQ khi nhập tay
-  // ============================================
-  const fetchCoordinates = async (address) => {
-    if (!address) return null;
-
-    const LOCATIONIQ_TOKEN = 'pk.4e0ece0ff0632fae5010642d702d5dfa';
-    const cleanAddress = address.trim();
-
-    // Link API đúng như bạn yêu cầu
-    const url = `https://us1.locationiq.com/v1/search.php?key=${LOCATIONIQ_TOKEN}&q=${encodeURIComponent(
-      cleanAddress,
-    )}&format=json&limit=1&countrycodes=vn&addressdetails=1`;
-
-    try {
-      const res = await fetch(url);
-      const data = await res.json();
-
-      // Kiểm tra nếu có data trả về
-      if (data && data.length > 0) {
-        return {
-          lat: parseFloat(data[0].lat),
-          lng: parseFloat(data[0].lon),
-        };
-      }
-    } catch (err) {
-      console.error('Lỗi lấy tọa độ LocationIQ:', err);
-    }
-    return null;
-  };
-
-  // 💾 Lưu khi chỉnh sửa (Fix: Gọi API LocationIQ để lấy lat/lng mới)
-  const handleSaveEdit = async () => {
-    // Gọi API lấy tọa độ
-    const coords = await fetchCoordinates(formData.address);
+  // 💾 Lưu khi chỉnh sửa
+  const handleSaveEdit = () => {
+    setAddressList((prev) =>
+      prev.map((addr) => (addr.id === selectedAddress.id ? { ...formData, id: addr.id } : addr)),
+    );
 
     const updatedAddress = {
       ...formData,
-      // Nếu có coords mới thì dùng, không thì giữ cái cũ hoặc 0
-      lat: coords ? coords.lat : formData.lat || 0,
-      lng: coords ? coords.lng : formData.lng || 0,
       id: selectedAddress?.id ?? Date.now(),
     };
-
-    setAddressList((prev) =>
-      prev.map((addr) => (addr.id === selectedAddress.id ? updatedAddress : addr)),
-    );
-
     setSelectedAddress(updatedAddress);
+
     localStorage.setItem(`selectedAddress_${user?.id}`, JSON.stringify(updatedAddress));
 
     setIsEditing(false);
-    if (coords) {
-      alert('✅ Đã cập nhật địa chỉ và tính lại phí ship!');
-    } else {
-      alert('✅ Đã cập nhật thông tin giao hàng!');
-    }
+    alert('✅ Đã cập nhật thông tin giao hàng!');
   };
-  // 💾 Lưu khi thêm mới (Fix: Gọi API LocationIQ để lấy lat/lng mới)
-  const handleSaveAdd = async () => {
-    // Gọi API lấy tọa độ
-    const coords = await fetchCoordinates(formData.address);
 
-    const newAddress = {
-      ...formData,
-      id: Date.now(),
-      lat: coords ? coords.lat : 0,
-      lng: coords ? coords.lng : 0,
-    };
-
-    const updatedList = [...addressList, newAddress];
-    setAddressList(updatedList);
+  // 💾 Lưu khi thêm mớ
+  const handleSaveAdd = () => {
+    const newAddress = { ...formData, id: Date.now() };
+    setAddressList((prev) => [...prev, newAddress]);
     setSelectedAddress(newAddress);
-
-    localStorage.setItem(`addressList_${user.id}`, JSON.stringify(updatedList));
     localStorage.setItem(`selectedAddress_${user?.id}`, JSON.stringify(newAddress));
-
     setIsAdding(false);
-    if (coords) {
-      alert('✅ Đã thêm địa chỉ mới và cập nhật phí ship!');
-    } else {
-      alert('✅ Đã thêm địa chỉ mới!');
-    }
+    alert('✅ Đã thêm địa chỉ mới!');
   };
 
   useEffect(() => {
+    // 🔹 Nạp lại user từ localStorage nếu AuthContext chưa có
     if (!user) {
       const savedUser = JSON.parse(localStorage.getItem('auth_user'));
       if (savedUser) authState.user = savedUser;
     }
 
+    // 🔹 Nạp lại địa chỉ đã chọn trước đó
     if (user) {
       const savedSelected = JSON.parse(localStorage.getItem(`selectedAddress_${user.id}`));
       if (savedSelected) {
@@ -795,93 +552,6 @@ export default function CheckOutPage() {
 
   if (!user) return <p>Đang tải thông tin người dùng...</p>;
   if (!selectedAddress) return <p>Đang tải địa chỉ giao hàng...</p>;
-
-  async function loadVouchers() {
-    try {
-      const res = await fetch('https://badafuta-production.up.railway.app/api/voucher/getAll', {
-        // const res = await fetch('http://localhost:3000/api/voucher/getAll', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          user_id: user.id,
-          merchant_id: merchant.id,
-        }),
-      });
-
-      const json = await res.json();
-
-      const list = [
-        ...(json.data?.appVouchers || []),
-        ...(json.data?.merchantVouchers || []),
-        ...(json.data?.userVouchers || []),
-      ];
-
-      setVouchers(list);
-    } catch (error) {
-      console.error('Lỗi load voucher:', error);
-    }
-  }
-  // ---------------------------------------------
-  // TÍNH GIẢM GIÁ VOUCHER (GIỐNG HỆT BACKEND)
-  // ---------------------------------------------
-  const calculateVoucherDiscount = () => {
-    if (!selectedVoucher) return 0;
-
-    const V = selectedVoucher;
-    const totalItems = subtotal;
-    const shipFee = deliveryFee;
-    const total = subtotal + deliveryFee;
-
-    let discount = 0;
-
-    // DELIVERY
-    if (V.apply_type === 'DELIVERY') {
-      if (V.discount_type === 'AMOUNT') {
-        discount = V.discount_value;
-      } else {
-        discount = (shipFee * V.discount_value) / 100;
-      }
-      if (V.max_discount) discount = Math.min(discount, V.max_discount);
-      discount = Math.min(discount, shipFee);
-    }
-
-    // MERCHANT → giảm trên món
-    else if (V.apply_type === 'MERCHANT') {
-      if (V.discount_type === 'AMOUNT') {
-        discount = V.discount_value;
-      } else {
-        discount = (totalItems * V.discount_value) / 100;
-      }
-      if (V.max_discount) discount = Math.min(discount, V.max_discount);
-      discount = Math.min(discount, totalItems);
-    }
-
-    // TOTAL → giảm trên toàn đơn
-    else if (V.apply_type === 'TOTAL') {
-      if (V.discount_type === 'AMOUNT') {
-        discount = V.discount_value;
-      } else {
-        discount = (total * V.discount_value) / 100;
-      }
-      if (V.max_discount) discount = Math.min(discount, V.max_discount);
-      discount = Math.min(discount, total);
-    }
-
-    return Math.floor(discount);
-  };
-
-  const discountAmount = calculateVoucherDiscount();
-  const finalTotal = subtotal + deliveryFee - discountAmount;
-
-  const cartTotal = state.items.reduce((sum, item) => {
-    const basePrice = item.menuItem?.price ?? 0;
-
-    const toppings = (item.selected_option_items ?? []).reduce((t, op) => t + (op.price ?? 0), 0);
-
-    return sum + (basePrice + toppings) * item.quantity;
-  }, 0);
-
-  console.log('Tổng tiền:', cartTotal);
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -928,7 +598,7 @@ export default function CheckOutPage() {
                       </Button>
                     </div>
                   </div>
-
+                  
                   <p className="flex items-center gap-2 text-sm text-gray-500">
                     <User className="w-4 h-4 text-accent" />
                     <span>Tên khách hàng: </span>
@@ -948,38 +618,24 @@ export default function CheckOutPage() {
                   <p className="flex items-start gap-2 text-sm text-gray-500">
                     <MapPin className="w-4 h-4 text-accent mt-0.5 flex-shrink-0" />
                     <span className="flex flex-wrap w-full">
-                      <span className="flex flex-wrap items-center">
-                        <span>Địa chỉ giao hàng: &nbsp;</span>{' '}
-                        {/* Nếu đang edit địa chỉ (GPS bị từ chối) thì hiện input */}
-                        {isEditing || !selectedAddress.address ? (
-                          <Input
-                            name="address"
-                            value={formData.address}
-                            onChange={handleInputChange}
-                            placeholder="Nhập địa chỉ giao hàng"
-                            className="font-semibold text-gray-900 break-words"
-                          />
-                        ) : (
-                          <span className="font-semibold text-gray-900 break-words">
-                            {' '}
-                            {selectedAddress?.address || 'Chưa có địa chỉ'}
-                          </span>
-                        )}
-                      </span>
+                      <span>Địa chỉ giao hàng: &nbsp;</span>{' '}
+                      {/* Nếu đang edit địa chỉ (GPS bị từ chối) thì hiện input */}
+                      {isEditing || !selectedAddress.address ? (
+                        <Input
+                          name="address"
+                          value={formData.address}
+                          onChange={handleInputChange}
+                          placeholder="Nhập địa chỉ giao hàng"
+                          className="font-semibold text-gray-900 break-words"
+                        />
+                      ) : (
+                        <span className="font-semibold text-gray-900 break-words">
+                          {' '}
+                          {selectedAddress?.address || 'Chưa có địa chỉ'}
+                        </span>
+                      )}
                     </span>
                   </p>
-                  <div className="mt-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="text-blue-600 border-blue-200 hover:bg-blue-50 hover:text-blue-700 h-8 px-3 text-xs font-medium flex items-center gap-2 transition-colors"
-                      onClick={handleGetCurrentLocation}
-                      type="button" // Để không bị submit form nếu nằm trong form
-                    >
-                      <LocateFixed className="w-3.5 h-3.5" />
-                      Lấy vị trí hiện tại
-                    </Button>
-                  </div>
 
                   {/* 📝 Ghi chú giao hàng */}
                   <div className="w-full space-y-2">
@@ -1005,20 +661,17 @@ export default function CheckOutPage() {
                   </div>
 
                   {/* ✅ Checkbox utensils */}
-                  {/* <label className="flex items-center gap-2 text-sm mt-1">
+                  <label className="flex items-center gap-2 text-sm mt-1">
                     <input
                       type="checkbox"
                       checked={formData.utensils || false}
                       onChange={(e) => {
-                        setFormData((prev) => ({
-                          ...prev,
-                          utensils: e.target.checked,
-                        }));
+                        setFormData((prev) => ({ ...prev, utensils: e.target.checked }));
                       }}
                       className="w-4 h-4 text-orange-600 border-gray-300 rounded"
                     />
                     Dụng cụ ăn uống
-                  </label> */}
+                  </label>
 
                   {/* <div className="mt-3 flex">
                     <Button className="" onClick={handleConfirmNote}>
@@ -1055,8 +708,8 @@ export default function CheckOutPage() {
                       >
                         <ArrowLeft className="w-4 h-4 mr-2" />
                       </Button>
-                      <div className="space-y-2">
-                        <Label>Họ tên:* </Label>
+                      <div>
+                        <Label>Họ tên</Label>
                         <Input
                           name="full_name"
                           value={formData.full_name}
@@ -1065,8 +718,8 @@ export default function CheckOutPage() {
                         />
                       </div>
 
-                      <div className="space-y-2">
-                        <Label>Số điện thoại:* </Label>
+                      <div>
+                        <Label>Số điện thoại</Label>
                         <Input
                           name="phone"
                           value={formData.phone}
@@ -1075,8 +728,8 @@ export default function CheckOutPage() {
                         />
                       </div>
 
-                      <div className="space-y-2">
-                        <Label>Địa chỉ:* </Label>
+                      <div>
+                        <Label>Địa chỉ</Label>
                         <Input
                           name="address"
                           value={formData.address}
@@ -1085,7 +738,7 @@ export default function CheckOutPage() {
                         />
                       </div>
 
-                      <div className="space-y-2">
+                      <div>
                         <Label>Ghi chú</Label>
                         <Textarea
                           name="note"
@@ -1133,43 +786,23 @@ export default function CheckOutPage() {
                                 ? 'border-orange-500 bg-orange-50'
                                 : 'border-gray-200'
                             }`}
-   
-                            onClick={async () => {
-                              let finalAddr = { ...addr };
+                            onClick={() => {
+                              // 1️⃣ Cập nhật selectedAddress
+                              setSelectedAddress(addr);
 
-                              // Nếu địa chỉ cũ chưa có tọa độ (hoặc = 0), tự động lấy lại
-                              if (!finalAddr.lat || finalAddr.lat === 0) {
-                                const coords = await fetchCoordinates(finalAddr.address);
-                                if (coords) {
-                                  finalAddr.lat = coords.lat;
-                                  finalAddr.lng = coords.lng;
-                                }
-                              }
-
-                              // Cập nhật state
-                              setSelectedAddress(finalAddr);
-                              setFormData(finalAddr); // Sync form
-
-                              // Cập nhật trạng thái "Mặc định" trong list
-                              const updatedList = addressList.map((a) =>
-                                a.id === finalAddr.id
-                                  ? { ...finalAddr, isDefault: true }
-                                  : { ...a, isDefault: false },
+                              // 2️⃣ Đánh dấu cái này là mặc định
+                              setAddressList((prev) =>
+                                prev.map((a) => ({
+                                  ...a,
+                                  isDefault: a.id === addr.id, // ✅ chỉ cái được click là mặc định
+                                })),
                               );
-                              setAddressList(updatedList);
 
-                              // Lưu LocalStorage
+                              // 3️⃣ Lưu vào localStorage
                               localStorage.setItem(
-                                `addressList_${user.id}`,
-                                JSON.stringify(updatedList),
+                                'selectedAddress',
+                                JSON.stringify({ ...addr, isDefault: true }),
                               );
-                              localStorage.setItem(
-                                `selectedAddress_${user?.id}`,
-                                JSON.stringify(finalAddr),
-                              );
-
-                              // Đóng popup
-                              setIsDialogOpen(false);
                             }}
                           >
                             <div>
@@ -1192,12 +825,12 @@ export default function CheckOutPage() {
                               <Button
                                 variant="outline"
                                 size="sm"
-                                onClick={(e) => {
-                                  e.stopPropagation(); // Ngăn sự kiện click cha (chọn địa chỉ)
-                                  setFormData(addr); // Nạp data của địa chỉ này vào form
+                                onClick={() => {
+                                  // setFormData(addr);
+                                  setFormData(selectedAddress); // ✅ nạp dữ liệu đang chọn
                                   setIsEditing(true);
                                   setIsAdding(false);
-                                  setIsDialogOpen(true);
+                                  setIsDialogOpen(true); // ✅ mở popup sửa
                                 }}
                               >
                                 <Edit className="w-4 h-4 mr-1" /> Sửa
@@ -1272,10 +905,7 @@ export default function CheckOutPage() {
                         : 'bg-white border-gray-300 text-gray-700 hover:bg-gray-100'
                     }`}
                 >
-                  <span className="font-medium flex items-center gap-2">
-                    {type === 'COD' && <CashIcon className="w-6 h-6 text-green-500" />}
-                    {type === 'VNPAY' && <VnPayIcon className="w-6 h-6 text-blue-500" />}
-                    {type === 'MOMO' && <MomoIcon className="w-6 h-6 text-pink-500" />}
+                  <span className="font-medium">
                     {type === 'COD' ? 'Tiền mặt' : type === 'VNPAY' ? 'VNPay' : 'Ví Momo'}
                   </span>
                   <input
@@ -1289,51 +919,6 @@ export default function CheckOutPage() {
               ))}
             </div>
           </div>
-          {/* Box áp mã voucher */}
-          <div
-            className="flex flex-col p-4 rounded-xl border border-gray-200 bg-white shadow-md mb-4 cursor-pointer"
-            onClick={async () => {
-              await loadVouchers();
-              setVoucherPopup(true);
-            }}
-          >
-            <p className="font-semibold text-lg inline-flex items-center gap-2">
-              <Ticket className="w-5 h-5 text-orange-500" />
-              Áp Mã Voucher
-            </p>
-
-            {/* Nếu ĐÃ chọn voucher → Hiển thị ngay trong khung */}
-            {selectedVoucher && (
-              <div className="mt-2 p-3 bg-orange-50 border border-orange-300 rounded-lg flex items-center justify-between">
-                <div>
-                  <p className="font-semibold text-orange-700">{selectedVoucher.title}</p>
-                  <p className="text-sm text-orange-600">Mã: {selectedVoucher.code}</p>
-                </div>
-
-                <button
-                  className="text-red-500 font-semibold"
-                  onClick={(e) => {
-                    e.stopPropagation(); // không mở popup
-                    setSelectedVoucher(null);
-                  }}
-                >
-                  <X className="w-5 h-5" />
-                </button>
-              </div>
-            )}
-          </div>
-
-          {/* Popup chọn voucher */}
-          <PopupVoucher
-            open={voucherPopup}
-            onClose={() => setVoucherPopup(false)}
-            vouchers={vouchers}
-            cartTotal={cartTotal}
-            onSelect={(voucherObj) => {
-              setSelectedVoucher(voucherObj);
-              setVoucherPopup(false);
-            }}
-          />
 
           <div className="flex justify-center space-x-3">
             <Button
@@ -1551,36 +1136,23 @@ export default function CheckOutPage() {
               <div className="flex justify-between">
                 <span>Phí giao hàng: </span>
                 <span>
-                  <span>
-                    {/* Trường hợp 1: Có phí ship hợp lệ (> 0) */}
-                    {
-                      deliveryFee > 0
-                        ? deliveryFee.toLocaleString('vi-VN') + 'đ'
-                        : selectedAddress && selectedAddress.address // Trường hợp 2: Có địa chỉ nhưng chưa ra tiền (đang tính/lỗi)
-                        ? 'Đang tính...'
-                        : 'Chưa có địa chỉ' // Trường hợp 3: Chưa có địa chỉ (null hoặc rỗng)
-                    }
-                  </span>
+                  {merchant && selectedAddress
+                    ? deliveryFee.toLocaleString('vi-VN') + 'đ'
+                    : 'Đang tính...'}
                 </span>
               </div>
 
-              {/* Hiển thị giảm giá nếu có voucher */}
-              {discountAmount > 0 && (
-                <>
-                  <hr className="border-gray-200" />
-                  <div className="flex justify-between text-green-600 font-medium">
-                    <span>Giảm giá ({selectedVoucher?.code})</span>
-                    <span>-{discountAmount.toLocaleString('vi-VN')}đ</span>
-                  </div>
-                </>
-              )}
-
               <hr className="border-gray-200" />
 
-              {/* Tổng tiền cuối cùng */}
               <div className="flex justify-between font-bold text-lg">
                 <span>Tổng cộng</span>
-                <span className="text-orange-600">{finalTotal.toLocaleString('vi-VN')}đ</span>
+                <span className="text-orange-600">
+                  {/* {state.items
+                    .reduce((total, i) => total + i.menuItem.price * i.quantity, 0)
+                    .toLocaleString('vi-VN')}
+                  đ */}
+                  {(subtotal + deliveryFee).toLocaleString('vi-VN')}đ
+                </span>
               </div>
             </CardContent>
           </Card>
