@@ -108,18 +108,15 @@
 //   },
 // };
 
-import * as Brevo from '@getbrevo/brevo';
+import Brevo from '@getbrevo/brevo';
 import { otpStore } from './otp.store';
 
-// Khởi tạo instance và fix lỗi TS(2339) bằng cách sử dụng ép kiểu any
-const apiInstance = new (Brevo as any).TransactionalEmailsApi();
+const apiInstance = new Brevo.TransactionalEmailsApi();
 
-// Thiết lập API Key
 apiInstance.setApiKey(
-  (Brevo as any).TransactionalEmailsApiApiKeys.apiKey,
+  Brevo.TransactionalEmailsApiApiKeys.apiKey,
   process.env.BREVO_API_KEY as string,
 );
-
 export const otpService = {
   async sendOtp(email: string) {
     if (!email) throw new Error('Thiếu email!');
