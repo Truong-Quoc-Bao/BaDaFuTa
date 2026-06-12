@@ -14,6 +14,7 @@ import { Input } from '../../components/ui/input';
 import { Label } from '../../components/ui/label';
 import { Separator } from '../../components/ui/separator';
 import { Lock, Eye, EyeOff, Loader2 } from 'lucide-react';
+import { cn } from '../../components/ui/utils'; // Import thêm hàm cn để xử lý màu viền động
 
 export default function ResetPasswordPage() {
   const [password, setPassword] = useState('');
@@ -22,17 +23,80 @@ export default function ResetPasswordPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
   const [successMessage, setSuccessMessage] = useState('');
+
+  // State quản lý lỗi mật khẩu yếu/mạnh và xác nhận mật khẩu giống RegisterPage
+  const [passwordError, setPasswordError] = useState('');
+  const [confirmPasswordError, setConfirmPasswordError] = useState('');
+
   const navigate = useNavigate();
 
   // Lấy mã token từ đường link URL xuống (ví dụ: ?token=abcxyz)
   const [searchParams] = useSearchParams();
   const token = searchParams.get('token');
 
+  // Hàm xử lý đổi mật khẩu và đo độ mạnh yếu động
+  const handlePasswordChange = (value) => {
+    setPassword(value);
+    if (error) setError('');
+
+    const hasUppercase = /[A-Z]/.test(value);
+    const hasNumber = /\d/.test(value);
+    const hasLetter = /[a-zA-Z]/.test(value);
+    const hasSpecial = /[!@#$%^&*()_\-+=\[\]{};:"',.<>/?\\|]/.test(value);
+
+    if (!value) {
+      setPasswordError('');
+    } else if (value.length < 6) {
+      setPasswordError('Mật khẩu phải có ít nhất 6 ký tự.');
+    } else {
+      if (!hasLetter) {
+        setPasswordError('Mật khẩu phải chứa ít nhất 1 chữ cái.');
+      } else {
+        let score = 0;
+        if (hasUppercase) score++;
+        if (hasNumber) score++;
+        if (hasSpecial) score++;
+
+        if (score === 0) {
+          setPasswordError('Mật khẩu yếu');
+        } else if (score === 1) {
+          setPasswordError('Mật khẩu trung bình');
+        } else if (score === 2) {
+          setPasswordError('Mật khẩu khá');
+        } else {
+          setPasswordError('Mật khẩu mạnh - tốt');
+        }
+      }
+    }
+
+    // Kiểm tra lại độ khớp của mật khẩu xác nhận khi mật khẩu chính thay đổi
+    if (confirmPassword) {
+      if (confirmPassword !== value) {
+        setConfirmPasswordError('⚠️ Mật khẩu xác nhận không khớp');
+      } else {
+        setConfirmPasswordError('');
+      }
+    }
+  };
+
+  // Hàm xử lý khi thay đổi mật khẩu nhập lại
+  const handleConfirmPasswordChange = (value) => {
+    setConfirmPassword(value);
+    if (error) setError('');
+
+    if (!password) {
+      setConfirmPasswordError('⚠️ Vui lòng nhập mật khẩu trước');
+    } else if (value !== password) {
+      setConfirmPasswordError('⚠️ Mật khẩu xác nhận không khớp');
+    } else {
+      setConfirmPasswordError('');
+    }
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
     setSuccessMessage('');
-    setIsLoading(false);
 
     if (!token) {
       setError('Liên kết không hợp lệ hoặc thiếu mã xác thực (token)!');
@@ -41,19 +105,29 @@ export default function ResetPasswordPage() {
 
     if (!password.trim()) {
       setError('Vui lòng nhập mật khẩu mới!');
-      document.getElementById('password').focus();
+      document.getElementById('password')?.focus();
       return;
     }
 
-    if (password.length < 6) {
-      setError('Mật khẩu mới phải có tối thiểu 6 ký tự!');
-      document.getElementById('password').focus();
+    // Ngăn chặn submit nếu mật khẩu chính không đạt yêu cầu
+    if (
+      passwordError &&
+      (passwordError.includes('ít nhất') || passwordError.includes('chứa ít nhất'))
+    ) {
+      setError('Mật khẩu mới chưa đạt yêu cầu bảo mật tối thiểu!');
+      document.getElementById('password')?.focus();
       return;
     }
 
-    if (password !== confirmPassword) {
-      setError('Mật khẩu xác nhận không khớp!');
-      document.getElementById('confirmPassword').focus();
+    if (!confirmPassword.trim()) {
+      setError('Vui lòng nhập mật khẩu xác nhận!');
+      document.getElementById('confirmPassword')?.focus();
+      return;
+    }
+
+    if (confirmPasswordError) {
+      setError('Mật khẩu xác nhận chưa chính xác!');
+      document.getElementById('confirmPassword')?.focus();
       return;
     }
 
@@ -118,18 +192,37 @@ export default function ResetPasswordPage() {
                     </div>
                   )}
 
+                  {/* Input Mật khẩu mới */}
                   <div className="space-y-2">
-                    <Label htmlFor="password">Mật khẩu mới</Label>
+                    <Label htmlFor="password">Mật khẩu mới *</Label>
                     <div className="relative">
                       <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
                       <Input
                         id="password"
                         type={showPassword ? 'text' : 'password'}
                         placeholder="Nhập mật khẩu mới từ 6 ký tự"
-                        className="pl-10 pr-10"
                         value={password}
-                        onChange={(e) => setPassword(e.target.value)}
+                        onChange={(e) => handlePasswordChange(e.target.value)}
                         disabled={isLoading || !!successMessage}
+                        className={cn(
+                          'pl-10 pr-10',
+                          !password && error?.includes('mật khẩu mới')
+                            ? 'border-red-500 focus-visible:ring-red-500'
+                            : passwordError
+                            ? passwordError.includes('ít nhất') ||
+                              passwordError.includes('chứa ít nhất')
+                              ? 'border-red-500 hover:border-red-500 focus-visible:ring-red-500'
+                              : passwordError === 'Mật khẩu yếu'
+                              ? 'border-red-500 hover:border-red-500 focus-visible:ring-red-500'
+                              : passwordError === 'Mật khẩu trung bình'
+                              ? 'border-yellow-500 hover:border-yellow-500 focus-visible:ring-yellow-500'
+                              : passwordError === 'Mật khẩu khá'
+                              ? 'border-yellow-300 hover:border-yellow-300 focus-visible:ring-yellow-300'
+                              : passwordError === 'Mật khẩu mạnh - tốt'
+                              ? 'border-green-500 hover:border-green-500 focus-visible:ring-green-500'
+                              : 'border-gray-300 focus-visible:ring-orange-500'
+                            : '',
+                        )}
                       />
                       <button
                         type="button"
@@ -144,22 +237,59 @@ export default function ResetPasswordPage() {
                         )}
                       </button>
                     </div>
+                    {passwordError && (
+                      <p
+                        className={cn(
+                          'text-xs text-left transition-colors duration-200',
+                          passwordError.includes('ít nhất') ||
+                            passwordError.includes('chứa ít nhất')
+                            ? 'text-red-500'
+                            : passwordError === 'Mật khẩu yếu'
+                            ? 'text-red-500'
+                            : passwordError === 'Mật khẩu trung bình'
+                            ? 'text-yellow-500'
+                            : passwordError === 'Mật khẩu khá'
+                            ? 'text-yellow-300'
+                            : passwordError === 'Mật khẩu mạnh - tốt'
+                            ? 'text-green-500'
+                            : 'text-red-500',
+                        )}
+                      >
+                        {passwordError}
+                      </p>
+                    )}
                   </div>
 
+                  {/* Input Xác nhận mật khẩu mới */}
                   <div className="space-y-2">
-                    <Label htmlFor="confirmPassword">Xác nhận mật khẩu</Label>
+                    <Label htmlFor="confirmPassword">Xác nhận mật khẩu *</Label>
                     <div className="relative">
                       <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
                       <Input
                         id="confirmPassword"
                         type={showPassword ? 'text' : 'password'}
                         placeholder="Nhập lại mật khẩu mới"
-                        className="pl-10"
                         value={confirmPassword}
-                        onChange={(e) => setConfirmPassword(e.target.value)}
+                        onChange={(e) => handleConfirmPasswordChange(e.target.value)}
                         disabled={isLoading || !!successMessage}
+                        className={cn(
+                          'pl-10 pr-10',
+                          !confirmPassword && error?.includes('xác nhận')
+                            ? 'border-red-500 focus-visible:ring-red-500'
+                            : confirmPasswordError
+                            ? 'border-red-500 focus-visible:ring-red-500'
+                            : confirmPassword && !confirmPasswordError
+                            ? 'border-green-500 focus-visible:ring-green-500'
+                            : '',
+                        )}
                       />
                     </div>
+                    {confirmPasswordError && (
+                      <p className="text-xs text-red-500 text-left">{confirmPasswordError}</p>
+                    )}
+                    {!confirmPasswordError && confirmPassword && password === confirmPassword && (
+                      <p className="text-xs text-green-500 text-left">✅ Mật khẩu khớp</p>
+                    )}
                   </div>
 
                   <Button
