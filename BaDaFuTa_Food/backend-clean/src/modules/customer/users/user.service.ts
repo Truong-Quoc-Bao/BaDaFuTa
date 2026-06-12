@@ -27,7 +27,7 @@ export const forgotPassword = async (email: string) => {
   await userRepo.saveResetToken(user.id, resetToken, tokenExpireTime);
 
   // 4. Chuẩn bị nội dung gửi mail (Đồng bộ thiết kế với email OTP đăng ký cũ)
-  const resetUrl = `https://ba-da-fu-ta-food.vercel.app/reset-password?token=${resetToken}`;
+  const resetUrl = `https://ba-da-fu-ta-food.vercel.app/resetpass?token=${resetToken}`;
   const htmlContent = `
     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; text-align: center; border: 1px solid #eee; padding: 20px; border-radius: 10px;">
       <h2 style="color: #333;">Yêu cầu đặt lại mật khẩu</h2>
