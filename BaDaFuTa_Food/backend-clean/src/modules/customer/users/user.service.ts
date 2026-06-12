@@ -3,7 +3,7 @@ import bcrypt from 'bcryptjs';
 import crypto from 'crypto';
 import * as userRepo from './user.repository';
 import { RegisterInput, LoginInput } from './user.types';
-import { sendEmail } from '../../../libs/mailer'; 
+import { sendEmail } from '../../../libs/mailer';
 // Hãy import hàm gửi mail (sendEmail) của bạn từ thư mục libs hoặc utils tương ứng
 // import { sendEmail } from '../../libs/mailer';
 
@@ -57,21 +57,50 @@ export const forgotPassword = async (email: string) => {
   await sendEmail(email, 'Yêu cầu đặt lại mật khẩu tài khoản BADAFUTA', htmlContent);
 };
 
+// export const resetPassword = async (token: string, newPassword: string) => {
+//   const user = await userRepo.findByResetToken(token);
+//   if (!user) {
+//     throw new Error('Liên kết không hợp lệ hoặc đã hết hạn.');
+//   }
+
+//   if (user.resetPasswordExpire && new Date() > user.resetPasswordExpire) {
+//     throw new Error('Liên kết đặt lại mật khẩu đã hết hạn.');
+//   }
+
+//   const hashedPassword = await bcrypt.hash(newPassword, 10);
+
+//   await userRepo.updatePasswordAndClearToken(user.id, hashedPassword);
+// };
+//
+//
+// src/modules/users/user.service.ts
+
 export const resetPassword = async (token: string, newPassword: string) => {
-  const user = await userRepo.findByResetToken(token);
-  if (!user) {
+  // LỚP BẢO VỆ 1: Bắt buộc token phải tồn tại, là chuỗi và không được rỗng/undefined
+  if (!token || typeof token !== 'string' || token.trim() === '') {
     throw new Error('Liên kết không hợp lệ hoặc đã hết hạn.');
   }
 
-  if (user.resetPasswordExpire && new Date() > user.resetPasswordExpire) {
+  // 1. Tìm user bằng token
+  const user = await userRepo.findByResetToken(token);
+
+  // LỚP BẢO VỆ 2: Đề phòng Prisma bỏ qua 'undefined' trả về user đầu tiên có token = null
+  // Kiểm tra xem token trong database của user tìm được có khớp chính xác với token gửi lên hay không
+  if (!user || user.resetPasswordToken !== token) {
+    throw new Error('Liên kết không hợp lệ hoặc đã hết hạn.');
+  }
+
+  // LỚP BẢO VỆ 3: Đảm bảo trường thời gian hết hạn bắt buộc phải có và chưa quá hạn
+  if (!user.resetPasswordExpire || new Date() > user.resetPasswordExpire) {
     throw new Error('Liên kết đặt lại mật khẩu đã hết hạn.');
   }
 
+  // 3. Mã hóa mật khẩu mới
   const hashedPassword = await bcrypt.hash(newPassword, 10);
 
+  // 4. Cập nhật mật khẩu mới và xóa sạch các trường token cũ trong database
   await userRepo.updatePasswordAndClearToken(user.id, hashedPassword);
 };
-
 //
 //
 export const register = async (data: RegisterInput) => {

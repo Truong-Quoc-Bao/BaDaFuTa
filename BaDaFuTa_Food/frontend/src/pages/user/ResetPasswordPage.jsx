@@ -13,7 +13,7 @@ import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
 import { Label } from '../../components/ui/label';
 import { Separator } from '../../components/ui/separator';
-import { Lock, Eye, EyeOff, Loader2 } from 'lucide-react';
+import { Lock, Eye, EyeOff, Loader2, XCircle } from 'lucide-react';
 import { cn } from '../../components/ui/utils'; // Import thêm hàm cn để xử lý màu viền động
 
 export default function ResetPasswordPage() {
@@ -160,6 +160,50 @@ export default function ResetPasswordPage() {
     }
   };
 
+  //
+  //
+  // 🔹 CHÈN ĐOẠN NÀY NGAY TRƯỚC HÀM RETURN CHÍNH CỦA COMPONENT:
+  if (!token) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-orange-50 to-red-50 flex items-center justify-center p-4">
+        <div className="w-full max-w-md">
+          <Card className="border-red-200">
+            <CardHeader className="space-y-1 text-center">
+              <div className="flex items-center justify-center mb-4">
+                <div className="w-20 h-20 bg-red-50 rounded-3xl flex items-center justify-center shadow-xl border-4 border-white">
+                  <XCircle className="w-12 h-12 text-red-500" />
+                </div>
+              </div>
+              <CardTitle className="text-2xl text-center text-red-600">
+                Liên kết không hợp lệ
+              </CardTitle>
+              <CardDescription className="text-center text-gray-500">
+                Đường dẫn đặt lại mật khẩu này không hợp lệ hoặc thiếu mã xác thực. Vui lòng yêu cầu
+                liên kết mới.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Button
+                variant="default"
+                onClick={() => navigate('/forgotpass')}
+                className="w-full bg-orange-500 hover:bg-orange-600"
+              >
+                Yêu cầu liên kết khôi phục mới
+              </Button>
+            </CardContent>
+            <CardFooter className="justify-center">
+              <Link to="/login" className="text-sm text-gray-600 hover:underline">
+                Quay lại trang Đăng nhập
+              </Link>
+            </CardFooter>
+          </Card>
+        </div>
+      </div>
+    );
+  }
+
+  //
+  //
   return (
     <>
       <div className="min-h-screen bg-gradient-to-br from-orange-50 to-red-50 flex items-center justify-center p-4">
