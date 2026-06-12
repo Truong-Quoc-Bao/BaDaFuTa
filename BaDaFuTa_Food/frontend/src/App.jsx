@@ -8,6 +8,7 @@ import PhoneVerificationPage from './pages/user/PhoneVerificationPage';
 import { Header } from './components/Header';
 import { Footer } from './components/Footer';
 import LoginPage from './pages/user/LoginPage';
+import ForgotPasswordPage from './pages/user/ForgotPasswordPage'; // Thêm "/user" vào đường dẫn
 import RegisterPage from './pages/user/RegisterPage';
 import HomePage from './pages/user/HomePage';
 import { AboutPage } from './pages/user/AboutPage';
@@ -49,6 +50,7 @@ function AppRoutes() {
       <Route path="/" element={<HomePage />} />
       <Route path="/phone-otp" element={<PhoneVerificationPage />} />
       <Route path="/login" element={<LoginPage />} />
+      <Route path="/forgotpass" element={<ForgotPasswordPage />} />
       <Route path="/register" element={<RegisterPage />} />
       {/* <Route path="/merchantlogin" element={<MerchantLogin />} /> */}
       <Route path="/about" element={<AboutPage />} />
@@ -93,9 +95,13 @@ function AppRoutes() {
 // ----- AppInner: chỉ mount CartProvider sau AuthProvider -----
 function AppInner() {
   const location = useLocation();
-  const hideHeaderFooter = ['/login', '/register', '/merchantlogin', '/phone-otp'].includes(
-    location.pathname,
-  );
+  const hideHeaderFooter = [
+    '/login',
+    '/register',
+    '/merchantlogin',
+    '/phone-otp',
+    '/forgotpass',
+  ].includes(location.pathname);
 
   return (
     <>

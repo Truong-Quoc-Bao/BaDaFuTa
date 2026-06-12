@@ -1,10 +1,16 @@
 // src/modules/users/user.route.ts
-import { Router } from "express";
-import * as userController from "./user.controller";
+import { Router } from 'express';
+import * as userController from './user.controller';
 
 const router = Router();
 
-router.post("/register", userController.register);
-router.post("/login", userController.login);
+router.post('/register', userController.register);
+router.post('/login', userController.login);
+
+// Đường dẫn yêu cầu gửi mail quên mật khẩu
+router.post('/forgot-password', userController.forgotPassword);
+
+// Đường dẫn xác nhận mật khẩu mới
+router.post('/reset-password', userController.resetPassword);
 
 export default router;

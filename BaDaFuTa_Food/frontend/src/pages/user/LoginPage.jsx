@@ -22,6 +22,7 @@ export default function LoginPage() {
     identifier: '',
     password: '',
   });
+  
 
   // usestate
   const [identifier, setIdentifier] = useState('');
@@ -328,12 +329,14 @@ export default function LoginPage() {
                     )}
                     {/* Đăng nhập */}
                   </Button>
-                  <Link
-                    to="/forgotpass"
-                    className="text-orange-600 text-sm hover:text-orange-700 hover:underline  "
-                  >
-                    Quên mật khẩu?
-                  </Link>
+                  <div className="flex justify-end">
+                    <Link
+                      to="/forgotpass"
+                      className="text-orange-600 text-sm hover:text-orange-700 hover:underline  "
+                    >
+                      Quên mật khẩu?
+                    </Link>
+                  </div>
 
                   <div className="my-2">
                     {/* Separator với chữ "Hoặc" */}

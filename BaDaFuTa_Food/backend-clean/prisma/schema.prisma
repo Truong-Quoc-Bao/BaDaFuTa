@@ -24,6 +24,9 @@ model users {
   orders               order[]
   payment_transactions payment_transaction[]
   voucher_user         voucher_user[]
+
+  resetPasswordToken  String?
+  resetPasswordExpire DateTime?
 }
 
 model merchant {

@@ -1,5 +1,6 @@
 // src/modules/users/user.validation.ts
 import { z } from 'zod';
+import Joi from 'joi';
 
 /**
  * Regex họ tên: chỉ chữ (kể cả có dấu), số và khoảng trắng. Không ký tự đặc biệt.
@@ -91,3 +92,22 @@ export const LoginSchema = z
       }
     }
   });
+
+// Schema kiểm tra email khi yêu cầu quên mật khẩu (Joi)
+export const forgotPasswordSchema = Joi.object({
+  email: Joi.string().email().required().messages({
+    'string.email': 'Email không đúng định dạng.',
+    'any.required': 'Email là bắt buộc.',
+  }),
+});
+
+// Schema kiểm tra token và mật khẩu mới (Joi)
+export const resetPasswordSchema = Joi.object({
+  token: Joi.string().required().messages({
+    'any.required': 'Token là bắt buộc.',
+  }),
+  password: Joi.string().min(6).required().messages({
+    'string.min': 'Mật khẩu phải có ít nhất 6 ký tự.',
+    'any.required': 'Mật khẩu là bắt buộc.',
+  }),
+});
