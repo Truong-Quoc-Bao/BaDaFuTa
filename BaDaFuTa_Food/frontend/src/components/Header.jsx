@@ -236,7 +236,8 @@ export const Header = () => {
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={() => window.location.href = 'https://ba-da-fu-ta-partner.vercel.app'}
+                  // onClick={() => window.location.href = 'https://ba-da-fu-ta-partner.vercel.app'}
+                  onClick={() => window.open('https://ba-da-fu-ta-partner.vercel.app', '_blank')}
                   // onClick={() => navigate('/merchantlogin')}
                   className="text-orange-600 border-orange-600 hover:bg-orange-50 hidden md:inline-flex"
                 >
@@ -307,7 +308,8 @@ export const Header = () => {
                         toast.error('Phải đăng xuất mới dùng được Merchant!'); // ✅ dùng toast
                       } else {
                         // navigate('/merchantlogin');
-                        window.location.href = 'https://ba-da-fu-ta-partner.vercel.app';
+                        // window.location.href = 'https://ba-da-fu-ta-partner.vercel.app';
+                        window.open('https://ba-da-fu-ta-partner.vercel.app', '_blank');
                       }
                     }}
                   >
