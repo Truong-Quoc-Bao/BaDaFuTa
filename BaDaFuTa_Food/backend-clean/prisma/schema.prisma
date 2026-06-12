@@ -78,7 +78,7 @@ model menu_item {
   category         category?          @relation(fields: [category_id], references: [id])
   merchant         merchant           @relation(fields: [merchant_id], references: [id], onDelete: Cascade)
   menu_item_option menu_item_option[]
-order_items      order_item[]
+  order_items      order_item[]
 }
 
 model option {
