@@ -236,7 +236,8 @@ export const Header = () => {
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={() => navigate('/https://ba-da-fu-ta-partner.vercel.app')}
+                  onClick={() => window.location.href = 'https://ba-da-fu-ta-partner.vercel.app'}
+                  // onClick={() => navigate('/merchantlogin')}
                   className="text-orange-600 border-orange-600 hover:bg-orange-50 hidden md:inline-flex"
                 >
                   Merchant
@@ -296,7 +297,7 @@ export const Header = () => {
                   </DropdownMenuItem>
                   <DropdownMenuItem
                     className={`text-sm font-medium transition-colors ${
-                      location.pathname === '/https://ba-da-fu-ta-partner.vercel.app'
+                      location.pathname === '/merchantlogin'
                         ? 'text-orange-600'
                         : 'text-gray-600 hover:text-orange-600'
                     }${isLoggedIn ? 'cursor-not-allowed opacity-50' : ''}`}
@@ -305,7 +306,8 @@ export const Header = () => {
                       if (isLoggedIn) {
                         toast.error('Phải đăng xuất mới dùng được Merchant!'); // ✅ dùng toast
                       } else {
-                        navigate('/https://ba-da-fu-ta-partner.vercel.app');
+                        // navigate('/merchantlogin');
+                        window.location.href = 'https://ba-da-fu-ta-partner.vercel.app';
                       }
                     }}
                   >
