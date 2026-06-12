@@ -44,7 +44,7 @@ export default function ForgotPasswordPage() {
 
     try {
       // Gọi API yêu cầu đặt lại mật khẩu ở Backend
-      const res = await fetch('https://badafuta.onrender.com/api/users/forgot-password', {
+      const res = await fetch('https://badafuta.onrender.com/api/forgot-password', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email }),
