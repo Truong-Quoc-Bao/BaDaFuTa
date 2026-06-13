@@ -18,6 +18,7 @@ import { Eye, EyeOff, Loader2, User, Lock, ArrowLeft } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { useEffect } from 'react';
 import { GoogleOAuthProvider, GoogleLogin } from '@react-oauth/google';
+import FacebookLogin from '@greatsumini/react-facebook-login';
 
 export default function LoginPage() {
   const [formData, setFormData] = useState({
@@ -422,7 +423,7 @@ export default function LoginPage() {
                         </GoogleOAuthProvider>
                       </div>
 
-                      <Button
+                      {/* <Button
                         variant="outline"
                         className="flex-grow flex items-center justify-center"
                       >
@@ -432,7 +433,62 @@ export default function LoginPage() {
                           className="w-5 h-5 mr-2"
                         />
                         Facebook
-                      </Button>
+                      </Button> */}
+
+                      {/* Nút đăng nhập Facebook tự động gọi API */}
+                      <FacebookLogin
+                        appId="DÁN_MÃ_FACEBOOK_APP_ID_CỦA_BẠN_VÀO_ĐÂY"
+                        onSuccess={async (response) => {
+                          const accessToken = response.accessToken;
+                          setIsLoading(true);
+                          setError('');
+                          try {
+                            const res = await fetch(
+                              'https://badafuta.onrender.com/api/login-facebook',
+                              {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ token: accessToken }),
+                              },
+                            );
+
+                            const data = await res.json();
+                            if (res.ok) {
+                              localStorage.setItem('token', data.token);
+                              localStorage.setItem('user', JSON.stringify(data.user));
+                              dispatch({ type: 'LOGIN_SUCCESS', payload: data.user }); // Cập nhật context
+
+                              const redirectPath =
+                                localStorage.getItem('redirectAfterLogin') || '/';
+                              localStorage.removeItem('redirectAfterLogin');
+                              navigate(redirectPath, { replace: true });
+                            } else {
+                              setError(data.message || 'Đăng nhập bằng Facebook thất bại.');
+                            }
+                          } catch (err) {
+                            setError('Không thể kết nối đến máy chủ.');
+                          } finally {
+                            setIsLoading(false);
+                          }
+                        }}
+                        onFail={() => {
+                          setError('Đăng nhập bằng Facebook thất bại!');
+                        }}
+                        render={({ onClick }) => (
+                          <Button
+                            variant="outline"
+                            className="flex-1 flex items-center justify-center"
+                            onClick={onClick}
+                          >
+                            <img
+                              src="https://upload.wikimedia.org/wikipedia/commons/thumb/b/b9/2023_Facebook_icon.svg/667px-2023_Facebook_icon.svg.png"
+                              alt="Facebook"
+                              className="w-5 h-5 mr-2"
+                            />
+                            Facebook
+                          </Button>
+                        )}
+                      />
                     </div>
                   </div>
                 </CardContent>
