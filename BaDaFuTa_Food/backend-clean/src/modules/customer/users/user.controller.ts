@@ -6,6 +6,7 @@ import {
   LoginSchema,
   forgotPasswordSchema,
   resetPasswordSchema,
+  updateProfileSchema,
 } from './user.validation';
 import { ah } from '../../../utils/async-handler';
 
@@ -131,3 +132,52 @@ export const loginFacebook: RequestHandler = ah(async (req, res) => {
     token: result.token,
   });
 });
+
+// Thêm vào cuối file src/modules/users/user.controller.ts
+
+export const getProfile = async (req: Request, res: Response): Promise<any> => {
+  try {
+    const userId = (req as any).user?.id; // Lấy từ authMiddleware đã xác thực JWT
+    if (!userId) {
+      return res.status(401).json({ success: false, message: 'Yêu cầu xác thực tài khoản!' });
+    }
+
+    const user = await userService.getProfile(userId);
+    return res.status(200).json({ success: true, user });
+  } catch (err: any) {
+    return res.status(500).json({
+      success: false,
+      message: err.message || 'Đã xảy ra lỗi hệ thống.',
+    });
+  }
+};
+
+export const updateProfile = async (req: Request, res: Response): Promise<any> => {
+  try {
+    const userId = (req as any).user?.id;
+    if (!userId) {
+      return res.status(401).json({ success: false, message: 'Yêu cầu xác thực tài khoản!' });
+    }
+
+    // Xác thực dữ liệu đầu vào bằng Zod Schema
+    const validatedData = updateProfileSchema.parse(req.body);
+
+    // Gọi sang service thực hiện cập nhật
+    const updatedUser = await userService.updateProfile(userId, validatedData);
+
+    return res.status(200).json({
+      success: true,
+      message: 'Cập nhật hồ sơ thành công!',
+      user: updatedUser,
+    });
+  } catch (e: any) {
+    const code = e.code || (e.errors ? 'VALIDATION_ERROR' : 'AUTH_UNKNOWN');
+    const status = code === 'VALIDATION_ERROR' ? 400 : 500;
+    return res.status(status).json({
+      success: false,
+      error_code: code,
+      error: e.message || 'Cập nhật hồ sơ thất bại.',
+      issues: e.errors,
+    });
+  }
+};

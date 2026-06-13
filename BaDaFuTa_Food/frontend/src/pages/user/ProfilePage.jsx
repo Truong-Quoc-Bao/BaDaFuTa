@@ -1,67 +1,104 @@
-import { useEffect, useState } from "react";
-import { useAuth } from "../../contexts/AuthContext"; // 🔹 import auth
-import { useNavigate } from "react-router-dom";
-import {
-  ArrowLeft,
-  User,
-  Mail,
-  Phone,
-  MapPin,
-  Calendar,
-  Edit,
-  Save,
-  X,
-} from "lucide-react";
-import { Button } from "../../components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "../../components/ui/card";
-import { Input } from "../../components/ui/input";
-import { Label } from "../../components/ui/label";
-import { Avatar, AvatarFallback, AvatarImage } from "../../components/ui/avartar";
-import { Badge } from "../../components/ui/badge";
-import { Separator } from "../../components/ui/separator";
-import { Alert, AlertDescription } from "../../components/ui/alert";
+import { useEffect, useState } from 'react';
+import { useAuth } from '../../contexts/AuthContext'; // 🔹 import auth
+import { useNavigate } from 'react-router-dom';
+import { ArrowLeft, User, Mail, Phone, MapPin, Calendar, Edit, Save, X } from 'lucide-react';
+import { Button } from '../../components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card';
+import { Input } from '../../components/ui/input';
+import { Label } from '../../components/ui/label';
+import { Avatar, AvatarFallback, AvatarImage } from '../../components/ui/avartar';
+import { Badge } from '../../components/ui/badge';
+import { Separator } from '../../components/ui/separator';
+import { Alert, AlertDescription } from '../../components/ui/alert';
 
 export const ProfilePage = () => {
   const { state, updateUser } = useAuth();
   const user = state.user;
 
-//   const { state, updateUser } = useAuth();
+  //   const { state, updateUser } = useAuth();
   const navigate = useNavigate();
 
   const [isEditing, setIsEditing] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState("");
-  const [success, setSuccess] = useState("");
+  const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
 
   const [editData, setEditData] = useState({
-    name: state.user?.full_name || "",
-    email: state.user?.email || "",
-    phone: state.user?.phone || "",
-    address: state.user?.address || "",
-    dateOfBirth: state.user?.dateOfBirth || "",
-    gender: state.user?.gender || "",
+    name: state.user?.full_name || '',
+    email: state.user?.email || '',
+    phone: state.user?.phone || '',
+    address: state.user?.address || '',
+    dateOfBirth: state.user?.dateOfBirth || '',
+    gender: state.user?.gender || '',
   });
 
   const getInitials = (name) => {
     return name
-      .split(" ")
+      .split(' ')
       .map((word) => word[0])
-      .join("")
+      .join('')
       .toUpperCase()
       .slice(0, 2);
   };
 
+  useEffect(() => {
+    if (state.user) {
+      // Định dạng lại ngày sinh thành YYYY-MM-DD để thẻ <input type="date"> không bị lỗi hiển thị
+      const formattedDate = state.user.dateOfBirth ? state.user.dateOfBirth.split('T')[0] : '';
+
+      // Nếu số điện thoại chứa chuỗi 'GG_' thì đưa về rỗng để người dùng dễ sửa đổi
+      const cleanPhone =
+        state.user.phone && !state.user.phone.startsWith('GG_') ? state.user.phone : '';
+
+      setEditData({
+        name: state.user.full_name || '',
+        email: state.user.email || '',
+        phone: cleanPhone,
+        address: state.user.address || '',
+        dateOfBirth: formattedDate,
+        gender: state.user.gender || '',
+        avatar: state.user.avatar || '',
+      });
+    }
+  }, [state.user]);
+
   const handleSave = async () => {
     setIsLoading(true);
-    setError("");
-    setSuccess("");
+    setError('');
+    setSuccess('');
 
     try {
+      const token = localStorage.getItem('token');
+      const res = await fetch('https://badafuta.onrender.com/api/user/update', {
+        method: 'PUT', // Hoặc POST tùy quy chuẩn API ở backend
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`, // Gửi kèm token xác thực
+        },
+        body: JSON.stringify({
+          full_name: editData.name,
+          email: editData.email,
+          phone: editData.phone,
+          address: editData.address,
+          dateOfBirth: editData.dateOfBirth,
+          gender: editData.gender,
+          avatar: editData.avatar,
+        }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        throw new Error(data.message || 'Không thể cập nhật thông tin.');
+      }
+
+      // Backend trả về bản cập nhật thành công (data.user hoặc trực tiếp là data)
+      const updatedUser = data.user || data;
+
+      // Cập nhật lưu trữ ở trình duyệt và Context
+      localStorage.setItem('user', JSON.stringify(updatedUser));
+      updateUser(updatedUser);
+
       // Simulate API call
       await new Promise((resolve) => setTimeout(resolve, 1000));
 
@@ -73,32 +110,47 @@ export const ProfilePage = () => {
         });
       }
 
-      setSuccess("Thông tin đã được cập nhật thành công!");
+      setSuccess('Thông tin đã được cập nhật thành công!');
       setIsEditing(false);
     } catch (err) {
-      setError("Có lỗi xảy ra khi cập nhật thông tin");
+      setError('Có lỗi xảy ra khi cập nhật thông tin');
     } finally {
       setIsLoading(false);
     }
   };
 
   const handleCancel = () => {
-    setEditData({
-      name: state.user?.full_name || "",
-      email: state.user?.email || "",
-      phone: state.user?.phone || "",
-      address: state.user?.address || "",
-      dateOfBirth: state.user?.dateOfBirth || "",
-    });
+    if (state.user) {
+      const cleanPhone =
+        state.user.phone && !state.user.phone.startsWith('GG_') ? state.user.phone : '';
+
+      setEditData({
+        name: state.user.full_name || '',
+        email: state.user.email || '',
+        phone: cleanPhone,
+        address: state.user.address || '',
+        dateOfBirth: state.user.dateOfBirth ? state.user.dateOfBirth.split('T')[0] : '',
+        gender: state.user.gender || '',
+        avatar: state.user.avatar || '',
+      });
+    }
+
+    // setEditData({
+    //   name: state.user?.full_name || '',
+    //   email: state.user?.email || '',
+    //   phone: state.user?.phone || '',
+    //   address: state.user?.address || '',
+    //   dateOfBirth: state.user?.dateOfBirth || '',
+    // });
     setIsEditing(false);
-    setError("");
-    setSuccess("");
+    setError('');
+    setSuccess('');
   };
 
   const formatDate = (dateString) => {
-    if (!dateString) return "Chưa cập nhật";
+    if (!dateString) return 'Chưa cập nhật';
     const date = new Date(dateString);
-    return date.toLocaleDateString("vi-VN");
+    return date.toLocaleDateString('vi-VN');
   };
 
   if (!state.user) {
@@ -107,7 +159,7 @@ export const ProfilePage = () => {
         <Card className="w-full max-w-md hover:scale-100">
           <CardContent className="p-6 text-center">
             <p>Vui lòng đăng nhập để xem thông tin cá nhân</p>
-            <Button onClick={() => navigate("/login")} className="mt-4">
+            <Button onClick={() => navigate('/login')} className="mt-4">
               Đăng nhập
             </Button>
           </CardContent>
@@ -120,11 +172,7 @@ export const ProfilePage = () => {
     <div className=" bg-gray-50 py-8">
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Back button */}
-        <Button
-          variant="outline"
-          onClick={() => navigate(-1)}
-          className="mb-6 bg-white"
-        >
+        <Button variant="outline" onClick={() => navigate(-1)} className="mb-6 bg-white">
           <ArrowLeft className="w-4 h-4 mr-2" />
           Quay lại
         </Button>
@@ -144,7 +192,7 @@ export const ProfilePage = () => {
                 <div className="relative w-28 h-28 mx-auto mb-4">
                   <Avatar className="w-full h-full border-4 border-orange-400 shadow-md rounded-full">
                     <AvatarImage
-                      src={editData.avatar || state.user?.avatar || ""}
+                      src={editData.avatar || state.user?.avatar || ''}
                       alt={state.user?.full_name}
                       className="object-cover rounded-full"
                     />
@@ -184,15 +232,11 @@ export const ProfilePage = () => {
                   )}
                 </div>
 
-                <h2 className="text-xl font-semibold mb-2">
-                  {state.user.full_name}
-                </h2>
+                <h2 className="text-xl font-semibold mb-2">{state.user.full_name}</h2>
                 <p className="text-gray-600 mb-3">{state.user.email}</p>
 
                 <Badge variant="secondary" className="mb-4">
-                  {state.user.role === "customer"
-                    ? "Khách hàng"
-                    : "Chủ cửa hàng"}
+                  {state.user.role === 'customer' ? 'Khách hàng' : 'Chủ cửa hàng'}
                 </Badge>
 
                 {state.user.unfid && (
@@ -210,22 +254,13 @@ export const ProfilePage = () => {
               <CardHeader className="flex flex-row items-center justify-between">
                 <CardTitle>Thông tin cá nhân</CardTitle>
                 {!isEditing ? (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setIsEditing(true)}
-                  >
+                  <Button variant="outline" size="sm" onClick={() => setIsEditing(true)}>
                     <Edit className="w-4 h-4 mr-2" />
                     Chỉnh sửa
                   </Button>
                 ) : (
                   <div className="flex space-x-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={handleCancel}
-                      disabled={isLoading}
-                    >
+                    <Button variant="outline" size="sm" onClick={handleCancel} disabled={isLoading}>
                       <X className="w-4 h-4 mr-2" />
                       Hủy
                     </Button>
@@ -237,7 +272,7 @@ export const ProfilePage = () => {
                       disabled={isLoading}
                     >
                       <Save className="w-4 h-4 mr-2" />
-                      {isLoading ? "Đang lưu..." : "Lưu"}
+                      {isLoading ? 'Đang lưu...' : 'Lưu'}
                     </Button>
                   </div>
                 )}
@@ -252,9 +287,7 @@ export const ProfilePage = () => {
 
                 {success && (
                   <Alert className="border-green-200 bg-green-50">
-                    <AlertDescription className="text-green-800">
-                      {success}
-                    </AlertDescription>
+                    <AlertDescription className="text-green-800">{success}</AlertDescription>
                   </Alert>
                 )}
 
@@ -268,15 +301,11 @@ export const ProfilePage = () => {
                     {isEditing ? (
                       <Input
                         value={editData.name}
-                        onChange={(e) =>
-                          setEditData({ ...editData, name: e.target.value })
-                        }
+                        onChange={(e) => setEditData({ ...editData, name: e.target.value })}
                         placeholder="Nhập họ và tên"
                       />
                     ) : (
-                      <p className="text-gray-900 capitalize">
-                        {state.user.full_name}
-                      </p>
+                      <p className="text-gray-900 capitalize">{state.user.full_name}</p>
                     )}
                   </div>
 
@@ -290,9 +319,7 @@ export const ProfilePage = () => {
                       <Input
                         type="email"
                         value={editData.email}
-                        onChange={(e) =>
-                          setEditData({ ...editData, email: e.target.value })
-                        }
+                        onChange={(e) => setEditData({ ...editData, email: e.target.value })}
                         placeholder="Nhập email"
                       />
                     ) : (
@@ -309,14 +336,15 @@ export const ProfilePage = () => {
                     {isEditing ? (
                       <Input
                         value={editData.phone}
-                        onChange={(e) =>
-                          setEditData({ ...editData, phone: e.target.value })
-                        }
+                        onChange={(e) => setEditData({ ...editData, phone: e.target.value })}
                         placeholder="Nhập số điện thoại"
                       />
                     ) : (
+                      // <p className="text-gray-900">{state.user.phone || 'Chưa cập nhật'}</p>
                       <p className="text-gray-900">
-                        {state.user.phone || "Chưa cập nhật"}
+                        {state.user.phone && !state.user.phone.startsWith('GG_')
+                          ? state.user.phone
+                          : 'Chưa cập nhật'}
                       </p>
                     )}
                   </div>
@@ -339,9 +367,7 @@ export const ProfilePage = () => {
                         }
                       />
                     ) : (
-                      <p className="text-gray-900">
-                        {formatDate(state.user.dateOfBirth || "")}
-                      </p>
+                      <p className="text-gray-900">{formatDate(state.user.dateOfBirth || '')}</p>
                     )}
                   </div>
                 </div>
@@ -357,15 +383,11 @@ export const ProfilePage = () => {
                   {isEditing ? (
                     <Input
                       value={editData.address}
-                      onChange={(e) =>
-                        setEditData({ ...editData, address: e.target.value })
-                      }
+                      onChange={(e) => setEditData({ ...editData, address: e.target.value })}
                       placeholder="Nhập địa chỉ"
                     />
                   ) : (
-                    <p className="text-gray-900">
-                      {state.user.address || "Chưa cập nhật"}
-                    </p>
+                    <p className="text-gray-900">{state.user.address || 'Chưa cập nhật'}</p>
                   )}
                 </div>
 
@@ -392,10 +414,8 @@ export const ProfilePage = () => {
                           type="radio"
                           name="gender"
                           value="male"
-                          checked={editData.gender === "male"}
-                          onChange={(e) =>
-                            setEditData({ ...editData, gender: e.target.value })
-                          }
+                          checked={editData.gender === 'male'}
+                          onChange={(e) => setEditData({ ...editData, gender: e.target.value })}
                         />
                         <span>Nam</span>
                       </label>
@@ -405,10 +425,8 @@ export const ProfilePage = () => {
                           type="radio"
                           name="gender"
                           value="female"
-                          checked={editData.gender === "female"}
-                          onChange={(e) =>
-                            setEditData({ ...editData, gender: e.target.value })
-                          }
+                          checked={editData.gender === 'female'}
+                          onChange={(e) => setEditData({ ...editData, gender: e.target.value })}
                         />
                         <span>Nữ</span>
                       </label>
@@ -418,23 +436,21 @@ export const ProfilePage = () => {
                           type="radio"
                           name="gender"
                           value="other"
-                          checked={editData.gender === "other"}
-                          onChange={(e) =>
-                            setEditData({ ...editData, gender: e.target.value })
-                          }
+                          checked={editData.gender === 'other'}
+                          onChange={(e) => setEditData({ ...editData, gender: e.target.value })}
                         />
                         <span>Khác</span>
                       </label>
                     </div>
                   ) : (
                     <p className="text-gray-900">
-                      {state.user.gender === "male"
-                        ? "Nam"
-                        : state.user.gender === "female"
-                        ? "Nữ"
-                        : state.user.gender === "other"
-                        ? "Khác"
-                        : "Chưa cập nhật"}
+                      {state.user.gender === 'male'
+                        ? 'Nam'
+                        : state.user.gender === 'female'
+                        ? 'Nữ'
+                        : state.user.gender === 'other'
+                        ? 'Khác'
+                        : 'Chưa cập nhật'}
                     </p>
                   )}
                 </div>

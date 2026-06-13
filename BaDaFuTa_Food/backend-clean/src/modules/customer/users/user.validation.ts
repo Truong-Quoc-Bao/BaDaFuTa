@@ -111,3 +111,21 @@ export const resetPasswordSchema = Joi.object({
     'any.required': 'Mật khẩu là bắt buộc.',
   }),
 });
+
+// Validate cho chức năng cập nhật thông tin cá nhân (Update Profile)
+export const updateProfileSchema = z.object({
+  full_name: z.string().min(2, 'Tên phải có ít nhất 2 ký tự').optional(),
+  email: z.string().email('Email không đúng định dạng').optional(),
+  phone: z
+    .string()
+    .regex(
+      /^(0|\+84)[3|5|7|8|9][0-9]{8}$|^(GG_|FB_)[a-f0-9]+$/,
+      'Số điện thoại không đúng định dạng',
+    )
+    .optional()
+    .or(z.literal('')),
+  address: z.string().optional().nullable(),
+  dateOfBirth: z.string().optional().nullable(),
+  gender: z.enum(['male', 'female', 'other', '']).optional().nullable(),
+  avatar: z.string().optional().nullable(),
+});

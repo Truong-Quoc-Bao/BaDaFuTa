@@ -2,7 +2,7 @@
 import bcrypt from 'bcryptjs';
 import crypto from 'crypto';
 import * as userRepo from './user.repository';
-import { RegisterInput, LoginInput } from './user.types';
+import { RegisterInput, LoginInput, UpdateUserDTO, User } from './user.types';
 import { sendEmail } from '../../../libs/mailer';
 import { OAuth2Client } from 'google-auth-library';
 import jwt from 'jsonwebtoken';
@@ -274,4 +274,61 @@ export const loginFacebook = async (accessToken: string) => {
   });
 
   return { user, token };
+};
+
+//
+//
+// Hàm hỗ trợ format dữ liệu: Ánh xạ 'birth' -> 'dateOfBirth' và 'image' -> 'avatar'
+const formatUserResponse = (user: any) => {
+  const { password, resetPasswordToken, resetPasswordExpire, birth, image, ...safeUser } = user;
+  return {
+    ...safeUser,
+    dateOfBirth: birth ? birth.toISOString() : null,
+    avatar: image || null, // Ánh xạ cột 'image' từ DB thành 'avatar' gửi về cho FE
+  };
+};
+
+export const getProfile = async (userId: string) => {
+  const user = await userRepo.findById(userId);
+  if (!user) throw new Error('Không tìm thấy người dùng!');
+  return formatUserResponse(user);
+};
+
+export const updateProfile = async (userId: string, data: UpdateUserDTO) => {
+  const user = await userRepo.findById(userId);
+  if (!user) throw new Error('Không tìm thấy người dùng!');
+
+  if (data.email) {
+    const existingEmail = await userRepo.findByEmail(data.email);
+    if (existingEmail && existingEmail.id !== userId) {
+      throw withCode(new Error('Email đã được sử dụng!'), 'VALIDATION_ERROR');
+    }
+  }
+
+  if (data.phone && !data.phone.startsWith('GG_') && !data.phone.startsWith('FB_')) {
+    const existingPhone = await userRepo.findByPhone(data.phone);
+    if (existingPhone && existingPhone.id !== userId) {
+      throw withCode(new Error('Số điện thoại đã được sử dụng!'), 'VALIDATION_ERROR');
+    }
+  }
+
+  const prismaUpdateData: any = {};
+  if (data.full_name !== undefined) prismaUpdateData.full_name = data.full_name;
+  if (data.email !== undefined) prismaUpdateData.email = data.email;
+  if (data.phone !== undefined) prismaUpdateData.phone = data.phone;
+  if (data.address !== undefined) prismaUpdateData.address = data.address;
+  if (data.gender !== undefined) prismaUpdateData.gender = data.gender;
+
+  // Ánh xạ avatar (FE gửi lên) -> lưu vào cột image (DB) dưới dạng JSON
+  if (data.avatar !== undefined) {
+    prismaUpdateData.image = data.avatar;
+  }
+
+  // Ánh xạ dateOfBirth -> birth
+  if (data.dateOfBirth !== undefined) {
+    prismaUpdateData.birth = data.dateOfBirth ? new Date(data.dateOfBirth) : null;
+  }
+
+  const updatedUser = await userRepo.updateUser(userId, prismaUpdateData);
+  return formatUserResponse(updatedUser);
 };

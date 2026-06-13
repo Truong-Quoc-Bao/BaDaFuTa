@@ -1309,3 +1309,119 @@ apiInstance.setApiKey(
   Brevo.TransactionalEmailsApiApiKeys.apiKey,
   process.env.BREVO_API_KEY as string
 );
+
+
+
+{/* Nút đăng nhập mạng xã hội đối xứng tuyệt đối (Đã sửa lỗi lệch kích thước) */}
+<div className="flex justify-center gap-4 mt-2">
+                      
+{/* Nút đăng nhập Facebook (Bên trái) */}
+<FacebookLogin
+  appId={import.meta.env.VITE_FACEBOOK_APP_ID}
+  onSuccess={async (response) => {
+    const accessToken = response.accessToken;
+    setIsLoading(true);
+    setError('');
+    try {
+      const res = await fetch(
+        'https://badafuta.onrender.com/api/login-facebook',
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ token: accessToken }),
+        },
+      );
+
+      const data = await res.json();
+      if (res.ok) {
+        localStorage.setItem('token', data.token);
+        localStorage.setItem('user', JSON.stringify(data.user));
+        dispatch({ type: 'LOGIN_SUCCESS', payload: data.user }); // Cập nhật context
+
+        const redirectPath =
+          localStorage.getItem('redirectAfterLogin') || '/';
+        localStorage.removeItem('redirectAfterLogin');
+        navigate(redirectPath, { replace: true });
+      } else {
+        setError(data.message || 'Đăng nhập bằng Facebook thất bại.');
+      }
+    } catch (err) {
+      setError('Không thể kết nối đến máy chủ.');
+    } finally {
+      setIsLoading(false);
+    }
+  }}
+  onFail={() => {
+    setError('Đăng nhập bằng Facebook thất bại!');
+  }}
+  render={({ onClick }) => (
+    <Button
+      variant="outline"
+      // Thiết lập chiều rộng w-[200px] và chiều cao h-[40px] cố định để khớp với Google
+      className="w-[200px] h-[40px] flex items-center justify-center border-gray-300 rounded-lg hover:bg-gray-50 active:scale-95 transition-all"
+      onClick={onClick}
+    >
+      <img
+        src="https://upload.wikimedia.org/wikipedia/commons/thumb/b/b9/2023_Facebook_icon.svg/667px-2023_Facebook_icon.svg.png"
+        alt="Facebook"
+        className="w-5 h-5 mr-2"
+      />
+      <span className="font-medium text-gray-700 text-sm">Facebook</span>
+    </Button>
+  )}
+/>
+
+{/* Nút đăng nhập Google chính chủ (Bên phải - Đã đồng bộ kích thước 200px x 40px) */}
+<div className="w-[200px] h-[40px] overflow-hidden">
+  <GoogleOAuthProvider clientId={import.meta.env.VITE_GOOGLE_CLIENT_ID}>
+    <GoogleLogin
+      onSuccess={async (credentialResponse) => {
+        const idToken = credentialResponse.credential;
+        setIsLoading(true);
+        setError('');
+        try {
+          const res = await fetch(
+            'https://badafuta.onrender.com/api/login-google',
+            {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ token: idToken }),
+            },
+          );
+
+          const data = await res.json();
+
+          if (res.ok) {
+            localStorage.setItem('token', data.token);
+            localStorage.setItem('user', JSON.stringify(data.user));
+            dispatch({ type: 'LOGIN_SUCCESS', payload: data.user });
+
+            const redirectPath =
+              localStorage.getItem('redirectAfterLogin') || '/';
+            localStorage.removeItem('redirectAfterLogin');
+            navigate(redirectPath, { replace: true });
+          } else {
+            setError(data.message || 'Đăng nhập bằng Google thất bại.');
+          }
+        } catch (err) {
+          setError('Không thể kết nối đến máy chủ.');
+        } finally {
+          if (document.getElementById('email')) {
+            setIsLoading(false);
+          }
+        }
+      }}
+      onError={() => {
+        setError('Đăng nhập bằng Google thất bại!');
+      }}
+      // Cấu hình kích thước chuẩn 200px x 40px của Google
+      theme="outline"       // Tạo nền trắng và viền xám mảnh
+      size="large"          // Chiều cao nút lớn (40px) khớp với h-[40px] của Facebook
+      shape="rectangular"   // Bo góc hình chữ nhật khớp với rounded-lg của Facebook
+      width="200"           // Chiều rộng cố định 200px (mức tối thiểu của Google)
+      text="signin_with"    // Hiển thị chữ "Đăng nhập bằng Google"
+      locale="vi"
+    />
+  </GoogleOAuthProvider>
+</div>
+</div>

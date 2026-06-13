@@ -1,6 +1,6 @@
 // src/modules/users/user.repository.ts
 import { prisma } from '@/libs/prisma';
-import { RegisterInput } from './user.types';
+import { RegisterInput, UpdateUserDTO, User } from './user.types';
 
 export const findByEmail = (email: string) => prisma.users.findUnique({ where: { email } });
 
@@ -35,4 +35,10 @@ export const updatePasswordAndClearToken = (id: string, passwordHash: string) =>
       resetPasswordToken: null,
       resetPasswordExpire: null,
     },
+  });
+
+export const updateUser = (id: string, data: Partial<UpdateUserDTO>) =>
+  prisma.users.update({
+    where: { id },
+    data,
   });

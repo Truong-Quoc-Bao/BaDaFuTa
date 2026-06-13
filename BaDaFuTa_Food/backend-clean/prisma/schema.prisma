@@ -20,6 +20,9 @@ model users {
   created_at           DateTime?             @default(now()) @db.Timestamp(6)
   updated_at           DateTime?             @default(now()) @db.Timestamp(6)
 
+  address              String?               @db.Text
+  gender               String?               @db.VarChar(20)
+
   merchant             merchant[]
   orders               order[]
   payment_transactions payment_transaction[]

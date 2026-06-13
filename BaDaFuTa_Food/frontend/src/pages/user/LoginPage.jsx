@@ -348,33 +348,10 @@ export default function LoginPage() {
                       <Separator className="flex-1" />
                     </div>
 
-                    {/* Nút đăng nhập Google và Facebook cùng hàng */}
-                    {/* <div className="flex gap-4">
-                      <Button
-                        variant="outline"
-                        className="flex-1 flex items-center justify-center gap-2"
-                      >
-                        <img
-                          src="https://upload.wikimedia.org/wikipedia/commons/thumb/c/c1/Google_%22G%22_logo.svg/1200px-Google_%22G%22_logo.svg.png"
-                          alt="Google"
-                          className="w-5 h-5"
-                        />
-                        Google
-                      </Button>
-
-                      <Button variant="outline" className="flex-1 flex items-center justify-center">
-                        <img
-                          src="https://upload.wikimedia.org/wikipedia/commons/thumb/b/b9/2023_Facebook_icon.svg/667px-2023_Facebook_icon.svg.png"
-                          alt="Facebook"
-                          className="w-5 h-5"
-                        />
-                        Facebook
-                      </Button>
-                    </div> */}
-
-                    {/* Nút đăng nhập Google mới đã được cấu hình và Facebook cùng hàng */}
-                    <div className="flex gap-4">
-                      <div className="flex-grow flex justify-center">
+                    {/* <div className="flex gap-4 justify-center"> */}
+                    <div className="flex flex-col sm:flex-row gap-3">
+                      <div className="flex-1 flex justify-center">
+                        {/* <div className="flex-1 "> */}
                         <GoogleOAuthProvider clientId={import.meta.env.VITE_GOOGLE_CLIENT_ID}>
                           <GoogleLogin
                             onSuccess={async (credentialResponse) => {
@@ -416,79 +393,78 @@ export default function LoginPage() {
                             onError={() => {
                               setError('Đăng nhập bằng Google thất bại!');
                             }}
-                            text="signin_with"
-                            shape="rectangular"
+                            theme="outline" // Tạo nền trắng và viền xám mảnh
+                            size="large" // Chiều cao nút lớn (40px) khớp với h-10 của nút Facebook
+                            shape="rectangular" // Bo góc nhẹ hình chữ nhật khớp với rounded-lg của Facebook
+                            width="max"
+                            text="signin_with" // Hiển thị chữ "Đăng nhập bằng Google"
                             locale="vi"
                           />
                         </GoogleOAuthProvider>
                       </div>
 
-                      {/* <Button
-                        variant="outline"
-                        className="flex-grow flex items-center justify-center"
-                      >
-                        <img
-                          src="https://upload.wikimedia.org/wikipedia/commons/thumb/b/b9/2023_Facebook_icon.svg/667px-2023_Facebook_icon.svg.png"
-                          alt="Facebook"
-                          className="w-5 h-5 mr-2"
-                        />
-                        Facebook
-                      </Button> */}
-
                       {/* Nút đăng nhập Facebook tự động gọi API */}
-                      <FacebookLogin
-                        appId={import.meta.env.VITE_FACEBOOK_APP_ID}
-                        onSuccess={async (response) => {
-                          const accessToken = response.accessToken;
-                          setIsLoading(true);
-                          setError('');
-                          try {
-                            const res = await fetch(
-                              'https://badafuta.onrender.com/api/login-facebook',
-                              {
-                                method: 'POST',
-                                headers: { 'Content-Type': 'application/json' },
-                                body: JSON.stringify({ token: accessToken }),
-                              },
-                            );
+                      <div className="flex-1 flex justify-center">
+                        <FacebookLogin
+                          appId={import.meta.env.VITE_FACEBOOK_APP_ID}
+                          onSuccess={async (response) => {
+                            const accessToken = response.accessToken;
+                            setIsLoading(true);
+                            setError('');
+                            try {
+                              const res = await fetch(
+                                'https://badafuta.onrender.com/api/login-facebook',
+                                {
+                                  method: 'POST',
+                                  headers: { 'Content-Type': 'application/json' },
+                                  body: JSON.stringify({ token: accessToken }),
+                                },
+                              );
 
-                            const data = await res.json();
-                            if (res.ok) {
-                              localStorage.setItem('token', data.token);
-                              localStorage.setItem('user', JSON.stringify(data.user));
-                              dispatch({ type: 'LOGIN_SUCCESS', payload: data.user }); // Cập nhật context
+                              const data = await res.json();
+                              if (res.ok) {
+                                localStorage.setItem('token', data.token);
+                                localStorage.setItem('user', JSON.stringify(data.user));
+                                dispatch({ type: 'LOGIN_SUCCESS', payload: data.user }); // Cập nhật context
 
-                              const redirectPath =
-                                localStorage.getItem('redirectAfterLogin') || '/';
-                              localStorage.removeItem('redirectAfterLogin');
-                              navigate(redirectPath, { replace: true });
-                            } else {
-                              setError(data.message || 'Đăng nhập bằng Facebook thất bại.');
+                                const redirectPath =
+                                  localStorage.getItem('redirectAfterLogin') || '/';
+                                localStorage.removeItem('redirectAfterLogin');
+                                navigate(redirectPath, { replace: true });
+                              } else {
+                                setError(data.message || 'Đăng nhập bằng Facebook thất bại.');
+                              }
+                            } catch (err) {
+                              setError('Không thể kết nối đến máy chủ.');
+                            } finally {
+                              setIsLoading(false);
                             }
-                          } catch (err) {
-                            setError('Không thể kết nối đến máy chủ.');
-                          } finally {
-                            setIsLoading(false);
-                          }
-                        }}
-                        onFail={() => {
-                          setError('Đăng nhập bằng Facebook thất bại!');
-                        }}
-                        render={({ onClick }) => (
-                          <Button
-                            variant="outline"
-                            className="flex-1 flex items-center justify-center"
-                            onClick={onClick}
-                          >
-                            <img
-                              src="data:image/png;base64,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"
-                              alt="Facebook"
-                              className="w-5 h-5 mr-2"
-                            />
-                            Facebook
-                          </Button>
-                        )}
-                      />
+                          }}
+                          onFail={() => {
+                            setError('Đăng nhập bằng Facebook thất bại!');
+                          }}
+                          render={({ onClick }) => (
+                            <Button
+                              variant="facebook"
+                              className="flex justify-center font-medium border rounded-sm text-sm sm:text-xs h-[40px] text-center font-medium tracking-[0.25px] leading-6 text-[hsl(206,6%,25%)] hover:bg-[hsla(217,89%,61%,0.1)] text-[hsl(206,6%,25%)] text-sm tracking-[0.25px] leading-[21px] text-center font-medium shadow-none transition-colors"
+                              style={{ fontFamily: "'Roboto', 'Arial', sans-serif" }}
+                              onClick={onClick}
+                            >
+                              <img
+                                src="data:image/png;base64,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"
+                                alt="Facebook"
+                                className="w-4.5 h-4.5"
+                              />
+                              <span className="text-center font-medium tracking-[0.25px] leading-6 text-[hsl(206,6%,25%)]">
+                                Đăng nhập bằng Facebook
+                              </span>
+                            </Button>
+                          )}
+                          text="signin_with"
+                          shape="rectangular"
+                          locale="vi"
+                        />
+                      </div>
                     </div>
                   </div>
                 </CardContent>
