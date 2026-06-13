@@ -437,7 +437,7 @@ export default function LoginPage() {
 
                       {/* Nút đăng nhập Facebook tự động gọi API */}
                       <FacebookLogin
-                        appId="DÁN_MÃ_FACEBOOK_APP_ID_CỦA_BẠN_VÀO_ĐÂY"
+                        appId="1940235860099665"
                         onSuccess={async (response) => {
                           const accessToken = response.accessToken;
                           setIsLoading(true);
