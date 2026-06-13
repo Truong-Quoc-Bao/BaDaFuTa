@@ -54,7 +54,7 @@ export const AuthProvider = ({ children }) => {
         const user = JSON.parse(savedUser);
         dispatch({ type: 'LOGIN_SUCCESS', payload: user });
 
-        fetch('https://badafuta.onrender.com/api/user/profile', {
+        fetch('https://badafuta.onrender.com/api/profile', {
           headers: {
             Authorization: `Bearer ${token}`,
           },
