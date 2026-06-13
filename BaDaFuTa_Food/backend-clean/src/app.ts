@@ -22,7 +22,7 @@ export const createApp = () => {
 
   app.use(helmet());
   app.use(compression());
-  app.use(express.json());
+  // app.use(express.json());
   app.use(express.json({ limit: '10mb', type: 'application/json' }));
   app.use(express.urlencoded({ extended: true }));
 

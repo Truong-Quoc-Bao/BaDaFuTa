@@ -1312,47 +1312,27 @@ apiInstance.setApiKey(
 
 
 
-{/* Input Xác nhận mật khẩu mới */}
-<div className="space-y-2">
-  <Label htmlFor="confirmPassword">Xác nhận mật khẩu *</Label>
-  <div className="relative">
-    <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
-    <Input
-      id="confirmPassword"
-      type={showConfirmPassword ? 'text' : 'password'} // 🔹 Đã đổi sang showConfirmPassword
-      placeholder="Nhập lại mật khẩu mới"
-      value={confirmPassword}
-      onChange={(e) => handleConfirmPasswordChange(e.target.value)}
-      disabled={isLoading || !!successMessage}
-      className={cn(
-        'pl-10 pr-10', // 🔹 Thêm pr-10 để chữ không đè lên con mắt
-        !confirmPassword && error?.includes('xác nhận')
-          ? 'border-red-500 focus-visible:ring-red-500'
-          : confirmPasswordError
-          ? 'border-red-500 focus-visible:ring-red-500'
-          : confirmPassword && !confirmPasswordError
-          ? 'border-green-500 focus-visible:ring-green-500'
-          : '',
-      )}
-    />
-    {/* 🔹 ĐÃ THÊM NÚT CON MẮT CHO Ô XÁC NHẬN */}
-    <button
-      type="button"
-      onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-      className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
-      disabled={!!successMessage}
-    >
-      {showConfirmPassword ? (
-        <EyeOff className="w-4 h-4" />
-      ) : (
-        <Eye className="w-4 h-4" />
-      )}
-    </button>
-  </div>
-  {confirmPasswordError && (
-    <p className="text-xs text-red-500 text-left">{confirmPasswordError}</p>
-  )}
-  {!confirmPasswordError && confirmPassword && password === confirmPassword && (
-    <p className="text-xs text-green-500 text-left">✅ Mật khẩu khớp</p>
-  )}
-</div>
+onChange={(e) => {
+  const file = e.target.files[0];
+  if (file) {
+    // Chặn ngay từ client nếu ảnh vượt quá 5MB để tránh lag trình duyệt
+    const maxSize = 5 * 1024 * 1024; // 5MB
+    if (file.size > maxSize) {
+      setError('⚠️ Kích thước ảnh quá lớn! Vui lòng chọn ảnh dưới 5MB.');
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      setEditData({
+        ...editData,
+        avatar: reader.result,
+      });
+      setError(''); // Xóa cảnh báo lỗi cũ nếu có
+    };
+    reader.readAsDataURL(file);
+  }
+}}
+
+
+setError(err.message || 'Có lỗi xảy ra khi cập nhật thông tin');

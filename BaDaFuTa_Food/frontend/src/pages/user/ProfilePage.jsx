@@ -145,7 +145,7 @@ export const ProfilePage = () => {
       setSuccess('Thông tin đã được cập nhật thành công!');
       setIsEditing(false);
     } catch (err) {
-      setError('Có lỗi xảy ra khi cập nhật thông tin');
+      setError(err.message || 'Có lỗi xảy ra khi cập nhật thông tin');
     } finally {
       setIsLoading(false);
     }
@@ -375,12 +375,19 @@ export const ProfilePage = () => {
                         onChange={(e) => {
                           const file = e.target.files[0];
                           if (file) {
+                            const maxSize = 10 * 1024 * 1024; // 10MB
+                            if (file.size > maxSize) {
+                              setError('⚠️ Kích thước ảnh quá lớn! Vui lòng chọn ảnh dưới 10MB.');
+                              return;
+                            }
+
                             const reader = new FileReader();
                             reader.onloadend = () => {
                               setEditData({
                                 ...editData,
                                 avatar: reader.result,
                               });
+                              setError('');
                             };
                             reader.readAsDataURL(file);
                           }
