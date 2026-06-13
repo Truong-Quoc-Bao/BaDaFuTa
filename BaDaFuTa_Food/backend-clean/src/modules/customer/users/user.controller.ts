@@ -119,3 +119,15 @@ export const loginGoogle: RequestHandler = ah(async (req, res) => {
     token: result.token,
   });
 });
+
+// Thêm import RequestHandler ở đầu file nếu chưa có và thêm hàm này vào user.controller.ts:
+export const loginFacebook: RequestHandler = ah(async (req, res) => {
+  const { token } = req.body;
+  const result = await userService.loginFacebook(token);
+
+  res.status(200).json({
+    success: true,
+    user: result.user,
+    token: result.token,
+  });
+});

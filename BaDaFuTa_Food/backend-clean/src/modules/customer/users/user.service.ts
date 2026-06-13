@@ -232,3 +232,49 @@ export const loginGoogle = async (idToken: string) => {
 
   return { user, token };
 };
+
+// facebook
+// Thêm vào file user.service.ts của Backend
+export const loginFacebook = async (accessToken: string) => {
+  // 1. Gọi trực tiếp lên Facebook Graph API để lấy thông tin tài khoản người dùng
+  const response = await fetch(
+    `https://graph.facebook.com/me?fields=id,name,email&access_token=${accessToken}`,
+  );
+
+  const payload = await response.json();
+
+  if (!payload || !payload.id) {
+    throw new Error('Mã xác thực Facebook không hợp lệ hoặc đã hết hạn.');
+  }
+
+  // Đề phòng trường hợp Facebook không trả về email, ta tự sinh email ảo dựa trên ID Facebook của họ
+  const email = payload.email
+    ? payload.email.trim().toLowerCase()
+    : `fb_${payload.id}@badafuta.com`;
+
+  const fullName = payload.name || 'Người dùng Facebook';
+
+  // 2. Tìm kiếm hoặc tự động đăng ký tài khoản trong bảng users
+  let user = await userRepo.findByEmail(email);
+
+  if (!user) {
+    const randomPassword = crypto.randomBytes(16).toString('hex');
+    const hashedPassword = await bcrypt.hash(randomPassword, 10);
+    const tempPhone = 'FB_' + crypto.randomBytes(6).toString('hex');
+
+    user = await userRepo.create({
+      full_name: fullName,
+      email: email,
+      phone: tempPhone,
+      password: hashedPassword,
+      role: 'customer',
+    } as any);
+  }
+
+  // 3. Tạo mã JWT đăng nhập của hệ thống bạn
+  const token = jwt.sign({ id: user.id, email: user.email }, process.env.JWT_SECRET as string, {
+    expiresIn: '7d',
+  });
+
+  return { user, token };
+};
