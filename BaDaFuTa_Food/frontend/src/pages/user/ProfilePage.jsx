@@ -69,7 +69,7 @@ export const ProfilePage = () => {
 
     try {
       const token = localStorage.getItem('token');
-      const res = await fetch('https://badafuta.onrender.com/api/user/update', {
+      const res = await fetch('https://badafuta.onrender.com/api/users/update', {
         method: 'PUT', // Hoặc POST tùy quy chuẩn API ở backend
         headers: {
           'Content-Type': 'application/json',
