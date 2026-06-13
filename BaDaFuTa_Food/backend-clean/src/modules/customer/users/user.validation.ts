@@ -129,3 +129,9 @@ export const updateProfileSchema = z.object({
   gender: z.enum(['male', 'female', 'other', '']).optional().nullable(),
   avatar: z.string().optional().nullable(),
 });
+
+// Schema validate cho tính năng đổi mật khẩu
+export const ChangePasswordSchema = z.object({
+  oldPassword: z.string().trim().min(1, 'Mật khẩu cũ là bắt buộc'),
+  newPassword: PasswordSchema, // Sử dụng lại PasswordSchema đã có (tối thiểu 6 ký tự, 1 chữ, 1 số)
+});

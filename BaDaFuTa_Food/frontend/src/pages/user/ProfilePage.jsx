@@ -1,7 +1,20 @@
 import { useEffect, useState } from 'react';
 import { useAuth } from '../../contexts/AuthContext'; // 🔹 import auth
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, User, Mail, Phone, MapPin, Calendar, Edit, Save, X } from 'lucide-react';
+import {
+  ArrowLeft,
+  User,
+  Mail,
+  Phone,
+  MapPin,
+  Calendar,
+  Edit,
+  Save,
+  X,
+  Lock,
+  Eye,
+  EyeOff,
+} from 'lucide-react';
 import { Button } from '../../components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card';
 import { Input } from '../../components/ui/input';
@@ -23,6 +36,23 @@ export const ProfilePage = () => {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
 
+  // Các state quản lý đổi mật khẩu
+  const [isChangingPassword, setIsChangingPassword] = useState(false);
+  const [oldPassword, setOldPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmNewPassword, setConfirmNewPassword] = useState('');
+  const [passwordError, setPasswordError] = useState('');
+  const [passwordSuccess, setPasswordSuccess] = useState('');
+  const [isPasswordLoading, setIsPasswordLoading] = useState(false);
+  const [confirmPasswordError, setConfirmPasswordError] = useState('');
+  const [passwordFormError, setPasswordFormError] = useState(''); // Lỗi tổng khi bấm nút Xác nhận
+  const [formDisabled, setFormDisabled] = useState(false);
+
+  // Các state quản lý ẩn/hiện mật khẩu
+  const [showOldPassword, setShowOldPassword] = useState(false);
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [showConfirmNewPassword, setShowConfirmNewPassword] = useState(false);
+
   const [editData, setEditData] = useState({
     name: state.user?.full_name || '',
     email: state.user?.email || '',
@@ -33,8 +63,10 @@ export const ProfilePage = () => {
   });
 
   const getInitials = (name) => {
+    if (!name) return 'U';
     return name
       .split(' ')
+      .filter(Boolean)
       .map((word) => word[0])
       .join('')
       .toUpperCase()
@@ -69,7 +101,7 @@ export const ProfilePage = () => {
 
     try {
       const token = localStorage.getItem('token');
-      const res = await fetch('https://badafuta.onrender.com/api/users/update', {
+      const res = await fetch('https://badafuta.onrender.com/api/update', {
         method: 'PUT', // Hoặc POST tùy quy chuẩn API ở backend
         headers: {
           'Content-Type': 'application/json',
@@ -147,6 +179,138 @@ export const ProfilePage = () => {
     setSuccess('');
   };
 
+  //
+  // Hàm kiểm tra độ mạnh yếu khi gõ mật khẩu mới
+  // 1. Hàm kiểm tra độ mạnh yếu khi gõ mật khẩu mới
+  const handleNewPasswordChange = (value) => {
+    setNewPassword(value);
+
+    if (!value) {
+      setPasswordError('');
+      return;
+    }
+
+    if (value.length < 6) {
+      setPasswordError('Mật khẩu phải có ít nhất 6 ký tự.');
+      return;
+    }
+
+    const hasUppercase = /[A-Z]/.test(value);
+    const hasNumber = /\d/.test(value);
+    const hasLetter = /[a-zA-Z]/.test(value);
+    const hasSpecial = /[!@#$%^&*()_\-+=\[\]{};:"',.<>/?\\|]/.test(value);
+
+    if (!hasLetter) {
+      setPasswordError('Mật khẩu phải chứa ít nhất 1 chữ cái.');
+    } else {
+      let score = 0;
+      if (hasUppercase) score++;
+      if (hasNumber) score++;
+      if (hasSpecial) score++;
+
+      if (score === 0) {
+        setPasswordError('Mật khẩu yếu');
+      } else if (score === 1) {
+        setPasswordError('Mật khẩu trung bình');
+      } else if (score === 2) {
+        setPasswordError('Mật khẩu khá');
+      } else {
+        setPasswordError('Mật khẩu mạnh - tốt');
+      }
+    }
+  };
+
+  // 2. Hàm kiểm tra khớp mật khẩu khi gõ ô Xác nhận mật khẩu mới
+  const handleConfirmPasswordChange = (value) => {
+    setConfirmNewPassword(value);
+    if (!newPassword) {
+      setConfirmPasswordError('⚠️ Vui lòng nhập mật khẩu mới trước');
+    } else if (value !== newPassword) {
+      setConfirmPasswordError('⚠️ Mật khẩu xác nhận không khớp');
+    } else {
+      setConfirmPasswordError('');
+    }
+  };
+
+  // 3. Hàm gọi API khi bấm nút Xác nhận lưu mật khẩu
+  const handlePasswordChange = async (e) => {
+    e.preventDefault();
+    setPasswordFormError(''); // Chỉ xóa lỗi submit chính
+    setPasswordSuccess('');
+
+    if (newPassword.length < 6) {
+      setPasswordFormError('Mật khẩu mới phải có ít nhất 6 ký tự.');
+      return;
+    }
+    if (!/[a-zA-Z]/.test(newPassword)) {
+      setPasswordFormError('Mật khẩu mới phải chứa ít nhất 1 chữ cái.');
+      return;
+    }
+
+    if (newPassword !== confirmNewPassword) {
+      setConfirmPasswordError('⚠️ Mật khẩu xác nhận không trùng khớp.');
+      return;
+    }
+
+    setIsPasswordLoading(true);
+    try {
+      const token = localStorage.getItem('token');
+      const res = await fetch('https://badafuta.onrender.com/api/user/change-password', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ oldPassword, newPassword }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message || 'Đổi mật khẩu thất bại.');
+
+      setPasswordSuccess('Mật khẩu của bạn đã được cập nhật thành công!');
+      setOldPassword('');
+      setNewPassword('');
+      setConfirmNewPassword('');
+      setPasswordError(''); // Xóa độ mạnh yếu sau khi đổi thành công
+
+      setTimeout(() => {
+        setIsChangingPassword(false);
+        setPasswordSuccess('');
+      }, 2000);
+    } catch (err) {
+      setPasswordFormError(err.message || 'Mật khẩu cũ không đúng hoặc có lỗi xảy ra.');
+    } finally {
+      setIsPasswordLoading(false);
+    }
+  };
+
+  // Hàm tự động gọi API Quên mật khẩu bằng email đang đăng nhập
+  const handleAutoForgotPassword = async () => {
+    if (!state.user?.email) return;
+
+    setIsPasswordLoading(true);
+    setPasswordFormError(''); // Đổi thành passwordFormError
+    setPasswordSuccess('');
+
+    try {
+      const res = await fetch('https://badafuta.onrender.com/api/forgot-password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: state.user.email }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message || 'Gửi yêu cầu thất bại.');
+
+      setPasswordSuccess('Hệ thống đã gửi link đặt lại mật khẩu mới vào Email của bạn!');
+      setFormDisabled(true); // 👈 Tự động khóa form khi gửi mail thành công
+    } catch (err) {
+      setPasswordFormError(err.message || 'Không thể gửi yêu cầu đặt lại mật khẩu.'); // Đổi thành passwordFormError
+    } finally {
+      setIsPasswordLoading(false);
+    }
+  };
+
   const formatDate = (dateString) => {
     if (!dateString) return 'Chưa cập nhật';
     const date = new Date(dateString);
@@ -197,7 +361,7 @@ export const ProfilePage = () => {
                       className="object-cover rounded-full"
                     />
                     <AvatarFallback className="bg-gradient-to-br from-orange-300 to-orange-500 text-white font-semibold text-2xl flex items-center justify-center rounded-full">
-                      {getInitials(state.user.full_name)}
+                      {getInitials(state.user?.full_name)}
                     </AvatarFallback>
                   </Avatar>
 
@@ -246,13 +410,231 @@ export const ProfilePage = () => {
                 )}
               </CardContent>
             </Card>
+
+            {/* change password */}
+            {/* CARD BẢO MẬT (ĐỔI MẬT KHẨU) */}
+            <Card className="hover:scale-100 mt-6">
+              <CardContent className="p-6">
+                <h3 className="text-lg font-semibold mb-4 flex items-center">
+                  <Lock className="w-5 h-5 mr-2 text-orange-500" />
+                  Bảo mật tài khoản
+                </h3>
+
+                {!isChangingPassword ? (
+                  <Button
+                    variant="outline"
+                    className="w-full border-orange-200 text-orange-600 hover:bg-orange-50"
+                    onClick={() => setIsChangingPassword(true)}
+                  >
+                    Đổi mật khẩu
+                  </Button>
+                ) : (
+                  <form onSubmit={handlePasswordChange} className="space-y-4">
+                    {passwordFormError && (
+                      <Alert variant="destructive" className="py-2 px-3">
+                        <AlertDescription className="text-xs">{passwordFormError}</AlertDescription>
+                      </Alert>
+                    )}
+                    {passwordSuccess ? (
+                      // 🔹 KHI THÀNH CÔNG: Ẩn hết các ô nhập liệu thừa đi, chỉ hiện thông báo và nút Đóng
+                      <div className="space-y-4 text-center py-2">
+                        <Alert className="border-green-200 bg-green-50 py-3 px-4">
+                          <AlertDescription className="text-xs text-green-800 font-semibold leading-relaxed">
+                            {passwordSuccess}
+                          </AlertDescription>
+                        </Alert>
+                        <Button
+                          type="button"
+                          className="w-full bg-orange-500 hover:bg-orange-600 text-white text-xs py-2"
+                          onClick={() => {
+                            setIsChangingPassword(false);
+                            setPasswordSuccess('');
+                            setOldPassword('');
+                            setNewPassword('');
+                            setConfirmNewPassword('');
+                            setConfirmPasswordError('');
+                            setPasswordError('');
+                          }}
+                        >
+                          Đóng bảo mật
+                        </Button>
+                      </div>
+                    ) : (
+                      <>
+                        {/* Ô mật khẩu cũ */}
+                        <div className="space-y-1">
+                          {/* ĐÃ CẬP NHẬT: Thêm nút Quên mật khẩu bên phải */}
+                          <div className="flex justify-between items-center">
+                            <Label className="text-xs font-medium">Mật khẩu cũ</Label>
+                            <button
+                              type="button"
+                              onClick={handleAutoForgotPassword} // Gọi hàm tự động gửi mail quên mật khẩu
+                              disabled={isPasswordLoading}
+                              className="text-[10px] text-orange-500 hover:underline font-semibold disabled:opacity-50"
+                            >
+                              Quên mật khẩu?
+                            </button>
+                          </div>
+
+                          <div className="relative">
+                            <Input
+                              type={showOldPassword ? 'text' : 'password'}
+                              value={oldPassword}
+                              onChange={(e) => setOldPassword(e.target.value)}
+                              placeholder="••••••••"
+                              required
+                              className="h-9 text-sm pr-10"
+                            />
+                            <button
+                              type="button"
+                              onClick={() => setShowOldPassword(!showOldPassword)}
+                              className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                            >
+                              {showOldPassword ? (
+                                <EyeOff className="w-4 h-4" />
+                              ) : (
+                                <Eye className="w-4 h-4" />
+                              )}
+                            </button>
+                          </div>
+                        </div>
+
+                        {/* Ô mật khẩu mới */}
+                        <div className="space-y-1">
+                          <Label className="text-xs font-medium">Mật khẩu mới</Label>
+                          <div className="relative">
+                            <Input
+                              type={showNewPassword ? 'text' : 'password'}
+                              value={newPassword}
+                              onChange={(e) => handleNewPasswordChange(e.target.value)}
+                              placeholder="Tối thiểu 6 ký tự"
+                              required
+                              className={`h-9 text-sm pr-10 ${
+                                passwordError
+                                  ? passwordError.includes('ít nhất 6') ||
+                                    passwordError.includes('chữ cái') ||
+                                    passwordError === 'Mật khẩu yếu'
+                                    ? 'border-red-500 focus:border-red-500'
+                                    : passwordError === 'Mật khẩu trung bình'
+                                    ? 'border-yellow-500 focus:border-yellow-500'
+                                    : passwordError === 'Mật khẩu khá'
+                                    ? 'border-yellow-300 focus:border-yellow-300'
+                                    : passwordError === 'Mật khẩu mạnh - tốt'
+                                    ? 'border-green-500 focus:border-green-500'
+                                    : ''
+                                  : ''
+                              }`}
+                            />
+                            <button
+                              type="button"
+                              onClick={() => setShowNewPassword(!showNewPassword)}
+                              className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                            >
+                              {showNewPassword ? (
+                                <EyeOff className="w-4 h-4" />
+                              ) : (
+                                <Eye className="w-4 h-4" />
+                              )}
+                            </button>
+                          </div>
+                          {passwordError && (
+                            <p
+                              className={`text-[10px] text-left font-semibold ${
+                                passwordError.includes('ít nhất 6') ||
+                                passwordError.includes('chữ cái') ||
+                                passwordError === 'Mật khẩu yếu'
+                                  ? 'text-red-500'
+                                  : passwordError === 'Mật khẩu trung bình'
+                                  ? 'text-yellow-500'
+                                  : passwordError === 'Mật khẩu khá'
+                                  ? 'text-yellow-500'
+                                  : passwordError === 'Mật khẩu mạnh - tốt'
+                                  ? 'text-green-500'
+                                  : 'text-red-500'
+                              }`}
+                            >
+                              {passwordError}
+                            </p>
+                          )}
+                        </div>
+
+                        {/* Ô xác nhận mật khẩu mới */}
+                        <div className="space-y-1">
+                          <Label className="text-xs font-medium">Xác nhận mật khẩu mới</Label>
+                          <div className="relative">
+                            <Input
+                              type={showConfirmNewPassword ? 'text' : 'password'}
+                              value={confirmNewPassword}
+                              onChange={(e) => handleConfirmPasswordChange(e.target.value)}
+                              placeholder="Nhập lại mật khẩu mới"
+                              required
+                              className={`h-9 text-sm pr-10 ${
+                                confirmPasswordError ? 'border-red-500 focus:border-red-500' : ''
+                              }`}
+                            />
+                            <button
+                              type="button"
+                              onClick={() => setShowConfirmNewPassword(!showConfirmNewPassword)}
+                              className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                            >
+                              {showConfirmNewPassword ? (
+                                <EyeOff className="w-4 h-4" />
+                              ) : (
+                                <Eye className="w-4 h-4" />
+                              )}
+                            </button>
+                          </div>
+                          {confirmPasswordError && (
+                            <p className="text-[10px] text-left font-semibold text-red-500">
+                              {confirmPasswordError}
+                            </p>
+                          )}
+                        </div>
+                        <div className="flex space-x-2 pt-2">
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            className="w-1/2 text-gray-500 text-xs"
+                            onClick={() => {
+                              setIsChangingPassword(false);
+                              setOldPassword('');
+                              setNewPassword('');
+                              setConfirmNewPassword('');
+                              setPasswordError('');
+                              setConfirmPasswordError('');
+                              setPasswordFormError('');
+                            }}
+                            disabled={isPasswordLoading}
+                          >
+                            Hủy
+                          </Button>
+                          <Button
+                            type="submit"
+                            variant="default"
+                            size="sm"
+                            className="w-1/2 text-xs bg-orange-500 hover:bg-orange-600 text-white"
+                            disabled={isPasswordLoading}
+                          >
+                            {isPasswordLoading ? 'Đang lưu...' : 'Xác nhận'}
+                          </Button>
+                        </div>
+                      </>
+                    )}
+                  </form>
+                )}
+              </CardContent>
+            </Card>
           </div>
 
           {/* Profile Information */}
           <div className="lg:col-span-2">
             <Card className="hover:scale-100">
               <CardHeader className="flex flex-row items-center justify-between">
-                <CardTitle>Thông tin cá nhân</CardTitle>
+                <CardTitle className="text-lg font-semibold flex items-center">
+                  <User className="w-5 h-5 mr-2 text-orange-500" />
+                  Thông tin cá nhân
+                </CardTitle>
                 {!isEditing ? (
                   <Button variant="outline" size="sm" onClick={() => setIsEditing(true)}>
                     <Edit className="w-4 h-4 mr-2" />

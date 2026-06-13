@@ -7,6 +7,7 @@ import {
   forgotPasswordSchema,
   resetPasswordSchema,
   updateProfileSchema,
+  ChangePasswordSchema,
 } from './user.validation';
 import { ah } from '../../../utils/async-handler';
 
@@ -177,6 +178,34 @@ export const updateProfile = async (req: Request, res: Response): Promise<any> =
       success: false,
       error_code: code,
       error: e.message || 'Cập nhật hồ sơ thất bại.',
+      issues: e.errors,
+    });
+  }
+};
+
+// đổi mk
+export const changePassword = async (req: Request, res: Response): Promise<any> => {
+  try {
+    const userId = (req as any).user?.id;
+    if (!userId) {
+      return res.status(401).json({ success: false, message: 'Yêu cầu xác thực tài khoản!' });
+    }
+
+    // Xác thực dữ liệu đầu vào bằng Zod
+    const { oldPassword, newPassword } = ChangePasswordSchema.parse(req.body);
+
+    // Gọi service thực hiện đổi mật khẩu
+    await userService.changePassword(userId, oldPassword, newPassword);
+
+    return res.status(200).json({
+      success: true,
+      message: 'Đổi mật khẩu thành công!',
+    });
+  } catch (e: any) {
+    const isValError = e.errors ? true : false;
+    return res.status(isValError ? 400 : 500).json({
+      success: false,
+      message: e.message || 'Đổi mật khẩu thất bại.',
       issues: e.errors,
     });
   }

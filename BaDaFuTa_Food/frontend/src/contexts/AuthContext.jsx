@@ -47,10 +47,34 @@ export const AuthProvider = ({ children }) => {
   // 🔹 Kiểm tra session khi app khởi động
   useEffect(() => {
     const savedUser = localStorage.getItem('user');
+    const token = localStorage.getItem('token'); // Lấy thêm token
+
     if (savedUser) {
       try {
         const user = JSON.parse(savedUser);
         dispatch({ type: 'LOGIN_SUCCESS', payload: user });
+
+        fetch('https://badafuta.onrender.com/api/user/profile', {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        })
+          .then((res) => {
+            if (res.status === 401) {
+              // Nếu token hết hạn, bắt buộc logout luôn
+              logout();
+              throw new Error('Phiên đăng nhập hết hạn');
+            }
+            return res.json();
+          })
+          .then((data) => {
+            if (data.success && data.user) {
+              // Cập nhật lại dữ liệu mới nhất vào localStorage và Context
+              localStorage.setItem('user', JSON.stringify(data.user));
+              dispatch({ type: 'LOGIN_SUCCESS', payload: data.user });
+            }
+          })
+          .catch((error) => console.error('Lỗi đồng bộ thông tin:', error));
       } catch (error) {
         localStorage.removeItem('user');
         localStorage.removeItem('token');

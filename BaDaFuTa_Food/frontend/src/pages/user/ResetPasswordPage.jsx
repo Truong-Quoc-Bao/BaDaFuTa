@@ -24,6 +24,8 @@ export default function ResetPasswordPage() {
   const [error, setError] = useState('');
   const [successMessage, setSuccessMessage] = useState('');
 
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+
   // State quản lý lỗi mật khẩu yếu/mạnh và xác nhận mật khẩu giống RegisterPage
   const [passwordError, setPasswordError] = useState('');
   const [confirmPasswordError, setConfirmPasswordError] = useState('');
@@ -311,7 +313,8 @@ export default function ResetPasswordPage() {
                       <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
                       <Input
                         id="confirmPassword"
-                        type={showPassword ? 'text' : 'password'}
+                        // type={showPassword ? 'text' : 'password'}
+                        type={showConfirmPassword ? 'text' : 'password'}
                         placeholder="Nhập lại mật khẩu mới"
                         value={confirmPassword}
                         onChange={(e) => handleConfirmPasswordChange(e.target.value)}
@@ -327,6 +330,19 @@ export default function ResetPasswordPage() {
                             : '',
                         )}
                       />
+
+                      <button
+                        type="button"
+                        onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                        className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                        disabled={!!successMessage}
+                      >
+                        {showConfirmPassword ? (
+                          <EyeOff className="w-4 h-4" />
+                        ) : (
+                          <Eye className="w-4 h-4" />
+                        )}
+                      </button>
                     </div>
                     {confirmPasswordError && (
                       <p className="text-xs text-red-500 text-left">{confirmPasswordError}</p>

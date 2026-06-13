@@ -332,3 +332,27 @@ export const updateProfile = async (userId: string, data: UpdateUserDTO) => {
   const updatedUser = await userRepo.updateUser(userId, prismaUpdateData);
   return formatUserResponse(updatedUser);
 };
+
+// đổi mk trong tk
+export const changePassword = async (userId: string, oldPass: string, newPass: string) => {
+  // 1. Tìm user trong CSDL
+  const user = await userRepo.findById(userId);
+  if (!user) {
+    throw new Error('Không tìm thấy người dùng!');
+  }
+
+  // 2. So sánh mật khẩu cũ người dùng nhập vào với mật khẩu băm trong database
+  const valid = await bcrypt.compare(oldPass, user.password);
+  if (!valid) {
+    throw new Error('Mật khẩu cũ không chính xác!');
+  }
+
+  // 3. Kiểm tra xem mật khẩu mới có trùng mật khẩu cũ không
+  if (oldPass === newPass) {
+    throw new Error('Mật khẩu mới không được trùng với mật khẩu cũ!');
+  }
+
+  // 4. Băm mật khẩu mới và cập nhật vào Database
+  const hashedPassword = await bcrypt.hash(newPass, 10);
+  await userRepo.updatePasswordAndClearToken(userId, hashedPassword);
+};

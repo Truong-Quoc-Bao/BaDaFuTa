@@ -19,6 +19,7 @@ router.post('/forgot-password', userController.forgotPassword);
 // Đường dẫn xác nhận mật khẩu mới
 router.post('/reset-password', userController.resetPassword);
 
+router.put('/change-password', authMiddleware as any, userController.changePassword as any);
 // Thêm vào src/modules/users/user.route.ts
 
 // ⚠️ Bạn nhớ import Middleware xác thực JWT của dự án bạn vào đây (ví dụ: import { authMiddleware } from '...')
