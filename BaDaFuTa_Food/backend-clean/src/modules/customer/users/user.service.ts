@@ -184,17 +184,14 @@ export const login = async (data: LoginInput) => {
 };
 
 // login google
-
-const client = new OAuth2Client(
-  '138305516299-2e9fia9gnhnl4k72j7a67h3a47krl68v.apps.googleusercontent.com',
-);
+const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID as string);
 
 // Thêm hàm loginGoogle này vào file user.service.ts
 export const loginGoogle = async (idToken: string) => {
   // 1. Xác thực ID Token do Google gửi lên có hợp lệ không
   const ticket = await client.verifyIdToken({
     idToken,
-    audience: '138305516299-2e9fia9gnhnl4k72j7a67h3a47krl68v.apps.googleusercontent.com',
+    audience: process.env.GOOGLE_CLIENT_ID as string,
   });
 
   const payload = ticket.getPayload();

@@ -375,7 +375,7 @@ export default function LoginPage() {
                     {/* Nút đăng nhập Google mới đã được cấu hình và Facebook cùng hàng */}
                     <div className="flex gap-4">
                       <div className="flex-grow flex justify-center">
-                        <GoogleOAuthProvider clientId="138305516299-2e9fia9gnhnl4k72j7a67h3a47krl68v.apps.googleusercontent.com">
+                        <GoogleOAuthProvider clientId={import.meta.env.VITE_GOOGLE_CLIENT_ID}>
                           <GoogleLogin
                             onSuccess={async (credentialResponse) => {
                               const idToken = credentialResponse.credential;
@@ -437,7 +437,7 @@ export default function LoginPage() {
 
                       {/* Nút đăng nhập Facebook tự động gọi API */}
                       <FacebookLogin
-                        appId="1940235860099665"
+                        appId={import.meta.env.VITE_FACEBOOK_APP_ID}
                         onSuccess={async (response) => {
                           const accessToken = response.accessToken;
                           setIsLoading(true);
