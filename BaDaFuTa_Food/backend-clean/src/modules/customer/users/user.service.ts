@@ -16,7 +16,20 @@ export const forgotPassword = async (email: string) => {
   // 1. Tìm kiếm user
   const user = await userRepo.findByEmail(email);
   if (!user) {
-    return; // Bảo mật: Không thông báo lỗi cụ thể để tránh dò tìm email
+    // return; // Bảo mật: Không thông báo lỗi cụ thể để tránh dò tìm email
+    throw new Error('Email này chưa được đăng ký trên hệ thống BADAFUTA!');
+  }
+
+  // LỚP CHẶN SPAM GỬI MAIL (RATE LIMIT 2 PHÚT)
+  if (user.resetPasswordExpire) {
+    const remainingTime = user.resetPasswordExpire.getTime() - Date.now();
+    const elapsedTime = 15 * 60 * 1000 - remainingTime; // 15 phút ban đầu trừ đi thời gian còn lại
+    const cooldownTime = 2 * 60 * 1000; // Cooldown 2 phút (120.000 ms)
+
+    if (elapsedTime < cooldownTime) {
+      const secondsToWait = Math.ceil((cooldownTime - elapsedTime) / 1000);
+      throw new Error(`Vui lòng chờ ${secondsToWait} giây trước khi yêu cầu gửi lại email!`);
+    }
   }
 
   // 2. Tạo token ngẫu nhiên và thời gian hết hạn (15 phút)
