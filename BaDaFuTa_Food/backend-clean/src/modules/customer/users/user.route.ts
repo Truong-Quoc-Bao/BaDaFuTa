@@ -7,6 +7,9 @@ const router = Router();
 router.post('/register', userController.register);
 router.post('/login', userController.login);
 
+// Đăng ký thêm route này vào user.route.ts
+router.post('/login-google', userController.loginGoogle);
+
 // Đường dẫn yêu cầu gửi mail quên mật khẩu
 router.post('/forgot-password', userController.forgotPassword);
 

@@ -1,5 +1,5 @@
 // src/modules/users/user.controller.ts
-import { Request, Response } from 'express';
+import { Request, Response, NextFunction, RequestHandler } from 'express';
 import * as userService from './user.service';
 import {
   RegisterSchema,
@@ -7,6 +7,7 @@ import {
   forgotPasswordSchema,
   resetPasswordSchema,
 } from './user.validation';
+import { ah } from '../../../utils/async-handler';
 
 export const forgotPassword = async (req: Request, res: Response): Promise<any> => {
   try {
@@ -105,3 +106,16 @@ export const login = async (req: Request, res: Response) => {
     });
   }
 };
+
+export const loginGoogle: RequestHandler = ah(async (req, res) => {
+  const { token } = req.body;
+
+  // Gọi sang Service xử lý
+  const result = await userService.loginGoogle(token);
+
+  res.status(200).json({
+    success: true,
+    user: result.user,
+    token: result.token,
+  });
+});

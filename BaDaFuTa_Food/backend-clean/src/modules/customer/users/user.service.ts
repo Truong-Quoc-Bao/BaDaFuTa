@@ -4,8 +4,8 @@ import crypto from 'crypto';
 import * as userRepo from './user.repository';
 import { RegisterInput, LoginInput } from './user.types';
 import { sendEmail } from '../../../libs/mailer';
-// Hãy import hàm gửi mail (sendEmail) của bạn từ thư mục libs hoặc utils tương ứng
-// import { sendEmail } from '../../libs/mailer';
+import { OAuth2Client } from 'google-auth-library';
+import jwt from 'jsonwebtoken';
 
 function withCode(err: Error, code: string) {
   (err as any).code = code;
@@ -181,4 +181,54 @@ export const login = async (data: LoginInput) => {
   if (!valid) throw withCode(new Error('Mật khẩu không đúng'), 'AUTH_WRONG_PASSWORD');
 
   return user;
+};
+
+// login google
+
+const client = new OAuth2Client(
+  '138305516299-2e9fia9gnhnl4k72j7a67h3a47krl68v.apps.googleusercontent.com',
+);
+
+// Thêm hàm loginGoogle này vào file user.service.ts
+export const loginGoogle = async (idToken: string) => {
+  // 1. Xác thực ID Token do Google gửi lên có hợp lệ không
+  const ticket = await client.verifyIdToken({
+    idToken,
+    audience: '138305516299-2e9fia9gnhnl4k72j7a67h3a47krl68v.apps.googleusercontent.com',
+  });
+
+  const payload = ticket.getPayload();
+  if (!payload || !payload.email) {
+    throw new Error('Mã xác thực Google không hợp lệ.');
+  }
+
+  const email = payload.email.trim().toLowerCase();
+  const fullName = payload.name || 'Người dùng Google';
+
+  // 2. Kiểm tra xem người dùng này đã có tài khoản trong hệ thống chưa
+  let user = await userRepo.findByEmail(email);
+
+  if (!user) {
+    // 3. Nếu chưa có, tiến hành đăng ký tài khoản tự động
+    const randomPassword = crypto.randomBytes(16).toString('hex');
+    const hashedPassword = await bcrypt.hash(randomPassword, 10);
+
+    // Tạo số điện thoại ảo tạm thời vì Google không trả về SĐT (Người dùng sẽ cập nhật trong Profile sau)
+    const tempPhone = 'GG_' + crypto.randomBytes(6).toString('hex');
+
+    user = await userRepo.create({
+      full_name: fullName,
+      email: email,
+      phone: tempPhone,
+      password: hashedPassword,
+      role: 'customer',
+    } as any);
+  }
+
+  // 4. Phát hành mã Token JWT của hệ thống bạn
+  const token = jwt.sign({ id: user.id, email: user.email }, process.env.JWT_SECRET as string, {
+    expiresIn: '7d',
+  });
+
+  return { user, token };
 };

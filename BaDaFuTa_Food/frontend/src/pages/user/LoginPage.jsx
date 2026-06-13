@@ -16,13 +16,14 @@ import { Alert, AlertDescription } from '../../components/ui/alert';
 import { Separator } from '../../components/ui/separator';
 import { Eye, EyeOff, Loader2, User, Lock, ArrowLeft } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
-import { useEffect } from 'react'; // <-- thêm useEffect
+import { useEffect } from 'react';
+import { GoogleOAuthProvider, GoogleLogin } from '@react-oauth/google';
+
 export default function LoginPage() {
   const [formData, setFormData] = useState({
     identifier: '',
     password: '',
   });
-  
 
   // usestate
   const [identifier, setIdentifier] = useState('');
@@ -347,7 +348,7 @@ export default function LoginPage() {
                     </div>
 
                     {/* Nút đăng nhập Google và Facebook cùng hàng */}
-                    <div className="flex gap-4">
+                    {/* <div className="flex gap-4">
                       <Button
                         variant="outline"
                         className="flex-1 flex items-center justify-center gap-2"
@@ -365,6 +366,70 @@ export default function LoginPage() {
                           src="https://upload.wikimedia.org/wikipedia/commons/thumb/b/b9/2023_Facebook_icon.svg/667px-2023_Facebook_icon.svg.png"
                           alt="Facebook"
                           className="w-5 h-5"
+                        />
+                        Facebook
+                      </Button>
+                    </div> */}
+
+                    {/* Nút đăng nhập Google mới đã được cấu hình và Facebook cùng hàng */}
+                    <div className="flex gap-4">
+                      <div className="flex-grow flex justify-center">
+                        <GoogleOAuthProvider clientId="138305516299-2e9fia9gnhnl4k72j7a67h3a47krl68v.apps.googleusercontent.com">
+                          <GoogleLogin
+                            onSuccess={async (credentialResponse) => {
+                              const idToken = credentialResponse.credential;
+                              setIsLoading(true);
+                              setError('');
+                              try {
+                                const res = await fetch(
+                                  'https://badafuta.onrender.com/api/login-google',
+                                  {
+                                    method: 'POST',
+                                    headers: { 'Content-Type': 'application/json' },
+                                    body: JSON.stringify({ token: idToken }),
+                                  },
+                                );
+
+                                const data = await res.json();
+
+                                if (res.ok) {
+                                  localStorage.setItem('token', data.token);
+                                  localStorage.setItem('user', JSON.stringify(data.user));
+                                  dispatch({ type: 'LOGIN_SUCCESS', payload: data.user }); // Cập nhật context
+
+                                  const redirectPath =
+                                    localStorage.getItem('redirectAfterLogin') || '/';
+                                  localStorage.removeItem('redirectAfterLogin');
+                                  navigate(redirectPath, { replace: true });
+                                } else {
+                                  setError(data.message || 'Đăng nhập bằng Google thất bại.');
+                                }
+                              } catch (err) {
+                                setError('Không thể kết nối đến máy chủ.');
+                              } finally {
+                                if (document.getElementById('email')) {
+                                  setIsLoading(false);
+                                }
+                              }
+                            }}
+                            onError={() => {
+                              setError('Đăng nhập bằng Google thất bại!');
+                            }}
+                            text="signin_with"
+                            shape="rectangular"
+                            locale="vi"
+                          />
+                        </GoogleOAuthProvider>
+                      </div>
+
+                      <Button
+                        variant="outline"
+                        className="flex-grow flex items-center justify-center"
+                      >
+                        <img
+                          src="https://upload.wikimedia.org/wikipedia/commons/thumb/b/b9/2023_Facebook_icon.svg/667px-2023_Facebook_icon.svg.png"
+                          alt="Facebook"
+                          className="w-5 h-5 mr-2"
                         />
                         Facebook
                       </Button>
