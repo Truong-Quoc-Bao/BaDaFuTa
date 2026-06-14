@@ -930,17 +930,22 @@ export default function CheckOutPage() {
                     </div>
                   </div>
 
-                  <p className="flex items-center gap-2 text-sm text-gray-500">
-                    <User className="w-4 h-4 text-accent" />
-                    <span>Tên khách hàng: </span>
-                    <span className="font-semibold text-gray-900">
+                  <p className="flex items-center justify-between text-sm text-gray-500 w-full whitespace-nowrap gap-2">
+                    <span className="flex items-center gap-2">
+                      <User className="w-4 h-4 text-accent" />
+                      <span>Tên khách hàng: </span>
+                    </span>
+                    <span className="font-semibold text-gray-900 capitalize">
                       {selectedAddress?.full_name || 'Người dùng'}
                     </span>
                   </p>
-                  <p className="flex items-center gap-2 text-sm text-gray-500">
-                    <Phone className="w-4 h-4 text-accent" />
-                    <span> Số điện thoại giao hàng: </span>
-                    <span className="font-semibold text-gray-900">
+
+                  <p className="flex items-center justify-between text-sm text-gray-500 w-full whitespace-nowrap gap-2">
+                    <span className="flex items-center gap-2">
+                      <Phone className="w-4 h-4 text-accent" />
+                      <span> Số điện thoại giao hàng: </span>
+                    </span>
+                    <span className="font-semibold text-gray-900 capitalize">
                       {selectedAddress?.phone || ''}
                     </span>
                   </p>
@@ -961,7 +966,7 @@ export default function CheckOutPage() {
                             className="font-semibold text-gray-900 break-words"
                           />
                         ) : (
-                          <span className="font-semibold text-gray-900 break-words">
+                          <span className="font-semibold text-gray-900 break-words capitalize">
                             {' '}
                             {selectedAddress?.address || 'Chưa có địa chỉ'}
                           </span>
@@ -1001,7 +1006,7 @@ export default function CheckOutPage() {
                           note: e.target.value,
                         }));
                       }}
-                      className="w-full min-h-[90px] font-semibold text-gray-500 break-words resize-none"
+                      className="w-full min-h-[90px] font-semibold text-gray-500 break-words resize-none text-xs capitalize"
                     />
                   </div>
 
