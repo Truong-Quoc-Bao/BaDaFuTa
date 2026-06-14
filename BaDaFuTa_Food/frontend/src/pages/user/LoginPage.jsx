@@ -396,7 +396,7 @@ export default function LoginPage() {
                             theme="outline" // Tạo nền trắng và viền xám mảnh
                             size="large" // Chiều cao nút lớn (40px) khớp với h-10 của nút Facebook
                             shape="rectangular" // Bo góc nhẹ hình chữ nhật khớp với rounded-lg của Facebook
-                            // width="max"
+                            width="max"
                             text="signin_with" // Hiển thị chữ "Đăng nhập bằng Google"
                             locale="vi"
                           />
