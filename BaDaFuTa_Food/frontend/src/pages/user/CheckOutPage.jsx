@@ -1395,13 +1395,13 @@ export default function CheckOutPage() {
               {/* Thông tin địa chỉ */}
               <div className="flex flex-col gap-4 text-gray-700">
                 {/* Thẻ địa chỉ */}
-                <div className="flex items-start gap-3 p-3 bg-gray-50 rounded-lg shadow-sm border border-gray-200">
+                <div className="flex items-start gap-1 p-3 bg-gray-50 rounded-lg shadow-sm border border-gray-200">
                   <MapPin className="w-5 h-5 text-orange-500 flex-shrink-0 mt-0.5" />
-                  <div className="flex flex-col w-full">
-                    <span className="font-semibold text-gray-900 break-words">
+                  <div className="flex flex-col w-full text-between">
+                    <span className="font-semibold text-gray-900 break-words text-sm leading-relaxed">
                       {selectedAddress?.address || 'Chưa có địa chỉ'}
                     </span>
-                    <p className="text-gray-600 text-sm mt-1">
+                    <p className="text-gray-600 text-sm mt-1 capitalize font-medium text-center">
                       {selectedAddress?.full_name} | {selectedAddress?.phone}
                     </p>
                   </div>

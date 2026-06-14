@@ -1356,3 +1356,18 @@ const handleSave = async () => {
     setIsLoading(false);
   }
 };
+
+<div className="p-3 bg-gray-50 rounded-lg shadow-sm border border-gray-200 text-center">
+  {/* Đặt text-center cho toàn bộ container */}
+  <div className="w-full text-center">
+    <span className="font-semibold text-gray-900 break-words text-sm leading-relaxed">
+      {/* 🔹 ĐƯA ICON VÀO CHẠY CHUNG HÀNG VỚI CHỮ (Sử dụng inline-flex và align-middle) */}
+      <MapPin className="w-5 h-5 text-orange-500 inline-flex align-middle mr-1.5 -mt-0.5" />
+      {selectedAddress?.address || 'Chưa có địa chỉ'}
+    </span>
+    
+    <p className="text-gray-600 text-xs mt-2 capitalize font-medium text-center">
+      {selectedAddress?.full_name} | {selectedAddress?.phone}
+    </p>
+  </div>
+</div>
