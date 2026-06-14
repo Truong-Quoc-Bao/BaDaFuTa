@@ -185,12 +185,12 @@ export const Header = () => {
                         {authState.user.full_name ? getInitials(authState.user.full_name) : '??'}
                       </AvatarFallback>
                     </Avatar>
-                    <span className="hidden sm:inline">{authState.user.full_name}</span>
+                    <span className="hidden sm:inline capitalize">{authState.user.full_name}</span>
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="w-56">
                   <div className="p-2 break-words">
-                    <p className="font-medium">{authState.user.full_name}</p>
+                    <p className="font-medium capitalize">{authState.user.full_name}</p>
                     <p className="text-sm text-gray-500">{authState.user.email}</p>
                     <Badge variant="secondary" className="text-xs mt-1 bg-gray-300">
                       {authState.user.role === 'customer' ? 'Khách hàng' : 'Chủ cửa hàng'}

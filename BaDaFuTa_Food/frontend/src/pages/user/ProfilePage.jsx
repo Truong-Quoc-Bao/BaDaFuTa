@@ -14,6 +14,7 @@ import {
   Lock,
   Eye,
   EyeOff,
+  Trash2,
 } from 'lucide-react';
 import { Button } from '../../components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card';
@@ -127,20 +128,23 @@ export const ProfilePage = () => {
       // Backend trả về bản cập nhật thành công (data.user hoặc trực tiếp là data)
       const updatedUser = data.user || data;
 
-      // Cập nhật lưu trữ ở trình duyệt và Context
       localStorage.setItem('user', JSON.stringify(updatedUser));
       updateUser(updatedUser);
 
-      // Simulate API call
-      await new Promise((resolve) => setTimeout(resolve, 1000));
+      // // Cập nhật lưu trữ ở trình duyệt và Context
+      // localStorage.setItem('user', JSON.stringify(updatedUser));
+      // updateUser(updatedUser);
+
+      // // Simulate API call
+      // await new Promise((resolve) => setTimeout(resolve, 1000));
 
       // Update user in auth context
-      if (state.user) {
-        updateUser({
-          ...state.user,
-          ...editData,
-        });
-      }
+      // if (state.user) {
+      //   updateUser({
+      //     ...state.user,
+      //     ...editData,
+      //   });
+      // }
 
       setSuccess('Thông tin đã được cập nhật thành công!');
       setIsEditing(false);
@@ -179,7 +183,6 @@ export const ProfilePage = () => {
     setSuccess('');
   };
 
-  //
   // Hàm kiểm tra độ mạnh yếu khi gõ mật khẩu mới
   // 1. Hàm kiểm tra độ mạnh yếu khi gõ mật khẩu mới
   const handleNewPasswordChange = (value) => {
@@ -255,7 +258,7 @@ export const ProfilePage = () => {
     setIsPasswordLoading(true);
     try {
       const token = localStorage.getItem('token');
-      const res = await fetch('https://badafuta.onrender.com/api/user/change-password', {
+      const res = await fetch('https://badafuta.onrender.com/api/change-password', {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -356,7 +359,8 @@ export const ProfilePage = () => {
                 <div className="relative w-28 h-28 mx-auto mb-4">
                   <Avatar className="w-full h-full border-4 border-orange-400 shadow-md rounded-full">
                     <AvatarImage
-                      src={editData.avatar || state.user?.avatar || ''}
+                      // src={editData.avatar || state.user?.avatar || ''}
+                      src={editData.avatar || ''}
                       alt={state.user?.full_name}
                       className="object-cover rounded-full"
                     />
@@ -399,14 +403,39 @@ export const ProfilePage = () => {
                       >
                         <Edit className="w-4 h-4" />
                       </label>
+
+                      {/* Nút Xóa ảnh đại diện (Nằm góc dưới bên trái - Chỉ hiện khi đang có ảnh) */}
+                      {(editData.avatar || state.user?.avatar) && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setEditData({
+                              ...editData,
+                              avatar: null, // Đặt avatar về null để gỡ ảnh
+                            });
+                          }}
+                          className="absolute bottom-0 left-0 bg-red-500 text-white p-2 rounded-full cursor-pointer hover:bg-red-600 transition shadow-md"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      )}
                     </>
                   )}
                 </div>
 
-                <h2 className="text-xl font-semibold mb-2">{state.user.full_name}</h2>
-                <p className="text-gray-600 mb-3">{state.user.email}</p>
+                {/* Hiển thị Họ tên (Tiêu đề lớn) */}
+                <h2 className="text-xl font-bold text-gray-900 mb-1 capitalize">
+                  {state.user.full_name}
+                </h2>
 
-                <Badge variant="secondary" className="mb-4">
+                {/* Hiển thị Email (Chữ xám thường) */}
+                <p className="text-sm text-gray-500 mb-4">{state.user.email}</p>
+
+                {/* Chỉ dùng Badge cho Vai trò (Độ rộng vừa vặn, màu xám nhạt nhẹ nhàng) */}
+                <Badge
+                  variant="secondary"
+                  className="mb-4 bg-gray-100 hover:bg-gray-100 text-gray-700 border-none px-3 py-1 text-xs font-medium"
+                >
                   {state.user.role === 'customer' ? 'Khách hàng' : 'Chủ cửa hàng'}
                 </Badge>
 
@@ -602,7 +631,7 @@ export const ProfilePage = () => {
                             type="button"
                             variant="ghost"
                             size="sm"
-                            className="w-1/2 text-gray-500 text-xs"
+                            className="w-1/2 text-gray-500 text-xs border border-gray-200"
                             onClick={() => {
                               setIsChangingPassword(false);
                               setOldPassword('');

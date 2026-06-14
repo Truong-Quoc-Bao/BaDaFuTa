@@ -1312,27 +1312,47 @@ apiInstance.setApiKey(
 
 
 
-onChange={(e) => {
-  const file = e.target.files[0];
-  if (file) {
-    // Chặn ngay từ client nếu ảnh vượt quá 5MB để tránh lag trình duyệt
-    const maxSize = 5 * 1024 * 1024; // 5MB
-    if (file.size > maxSize) {
-      setError('⚠️ Kích thước ảnh quá lớn! Vui lòng chọn ảnh dưới 5MB.');
-      return;
+const handleSave = async () => {
+  setIsLoading(true);
+  setError('');
+  setSuccess('');
+
+  try {
+    const token = localStorage.getItem('token');
+    const res = await fetch('https://badafuta.onrender.com/api/user/update', { // Đã thêm /user cho chuẩn API
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({
+        full_name: editData.name,
+        email: editData.email,
+        phone: editData.phone,
+        address: editData.address,
+        dateOfBirth: editData.dateOfBirth,
+        gender: editData.gender,
+        avatar: editData.avatar,
+      }),
+    });
+
+    const data = await res.json();
+
+    if (!res.ok) {
+      throw new Error(data.message || 'Không thể cập nhật thông tin.');
     }
 
-    const reader = new FileReader();
-    reader.onloadend = () => {
-      setEditData({
-        ...editData,
-        avatar: reader.result,
-      });
-      setError(''); // Xóa cảnh báo lỗi cũ nếu có
-    };
-    reader.readAsDataURL(file);
+    const updatedUser = data.user || data;
+
+    // Cập nhật lưu trữ ở trình duyệt và Context một lần duy nhất
+    localStorage.setItem('user', JSON.stringify(updatedUser));
+    updateUser(updatedUser);
+
+    setSuccess('Thông tin đã được cập nhật thành công!');
+    setIsEditing(false);
+  } catch (err) {
+    setError(err.message || 'Có lỗi xảy ra khi cập nhật thông tin');
+  } finally {
+    setIsLoading(false);
   }
-}}
-
-
-setError(err.message || 'Có lỗi xảy ra khi cập nhật thông tin');
+};
