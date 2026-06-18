@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 import { merchantMenuService } from './merchant-menu.service';
 import { AddMenuSchema, UpdateMenuSchema, ToggleMenuSchema } from './merchant-menu.validation';
+import { z } from 'zod';
 
 export const merchantMenuController = {
   // GET /api/merchant/menu?restaurantId=xxx
@@ -8,10 +9,10 @@ export const merchantMenuController = {
     try {
       const merchantId = (req.query.restaurantId || req.query.merchant_id) as string;
 
-      if (!merchantId) {
+      if (!merchantId || !z.string().uuid().safeParse(merchantId).success) {
         return res.status(400).json({
           success: false,
-          message: 'Thiếu restaurantId',
+          message: 'restaurantId không hợp lệ hoặc bị thiếu (phải là UUID)',
         });
       }
 
