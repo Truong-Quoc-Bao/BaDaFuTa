@@ -1,1 +1,1 @@
-export { default as merchantRoutes } from "./merchant-store-routes";
+export { default as merchantRoutes } from './merchant.route';
