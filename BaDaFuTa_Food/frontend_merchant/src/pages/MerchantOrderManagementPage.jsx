@@ -45,7 +45,7 @@ export function MerchantOrderManagementPage() {
     const merchantId = '14cdec77-6ece-429b-a952-44bce7c96eda'; // hardcode tạm
 
     // const socket = io('https://badafuta-production.up.railway.app', {
-    const socket = io(' https://badafuta.onrender.com', {
+    const socket = io('https://badafuta.onrender.com', {
       path: '/socket.io',
       transports: ['websocket'],
       reconnection: true,
