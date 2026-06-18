@@ -1,1 +1,1 @@
-export { default as merchantRoutes } from './merchant.route'; // <--- Thêm dòng này
+export { default as login } from './merchant.route'; // <--- Thêm dòng này

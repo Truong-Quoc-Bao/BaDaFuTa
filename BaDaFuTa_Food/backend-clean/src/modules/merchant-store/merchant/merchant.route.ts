@@ -4,7 +4,7 @@ import * as merchantController from './merchant.controller'; // Import controlle
 const router = Router();
 
 // Đường dẫn thực tế sẽ là: /api/merchant/login
-router.post('/merchant/login', merchantController.login);
+router.post('/login', merchantController.login);
 // router.post('/overview', merchantController.getOverview);
 
 export default router;
