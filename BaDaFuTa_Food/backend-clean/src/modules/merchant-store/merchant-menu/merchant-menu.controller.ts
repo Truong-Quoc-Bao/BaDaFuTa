@@ -50,7 +50,7 @@ export const merchantMenuController = {
   // PUT /api/merchant/menu/:id
   async updateMenu(req: Request, res: Response) {
     try {
-      const { id } = req.params;
+      const id = req.params.id as string;
 
       // Dùng UpdateMenuSchema riêng thay vì AddMenuSchema.partial()
       // để tránh lỗi type inference khi có .transform()
@@ -74,7 +74,7 @@ export const merchantMenuController = {
   // PUT /api/merchant/menu/:id/toggle
   async toggleMenu(req: Request, res: Response) {
     try {
-      const { id } = req.params;
+      const id = req.params.id as string;
       const validated = ToggleMenuSchema.parse(req.body);
 
       const result = await merchantMenuService.toggleMenu(id, validated);
@@ -91,7 +91,7 @@ export const merchantMenuController = {
   // DELETE /api/merchant/menu/:id
   async deleteMenu(req: Request, res: Response) {
     try {
-      const { id } = req.params;
+      const id = req.params.id as string;
       await merchantMenuService.deleteMenu(id);
 
       res.json({ success: true, message: 'Xóa món thành công' });
