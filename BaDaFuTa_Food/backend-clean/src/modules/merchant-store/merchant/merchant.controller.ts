@@ -3,21 +3,16 @@ import * as merchantService from './merchant.service';
 
 export const login = async (req: Request, res: Response) => {
   try {
-    // FE đang gửi {email, password}
     const { email, password } = req.body;
-
-    // Gọi service xử lý
     const merchantData = await merchantService.login(email, password);
-
-    // Trả về đúng format mà FE mong đợi: { data: { merchant_id: ... } }
-    res.status(200).json({
-      success: true,
-      data: merchantData,
-    });
+    res.status(200).json({ success: true, data: merchantData });
   } catch (err: any) {
+    // THÊM DÒNG LOG NÀY ĐỂ XEM LỖI TRÊN RENDER
+    console.error('Login Error:', err.message);
+
     res.status(401).json({
       success: false,
-      message: err.message || 'Đăng nhập thất bại',
+      message: err.message, // Lỗi này sẽ hiện ở tab Response của trình duyệt
     });
   }
 };
