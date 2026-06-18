@@ -7,20 +7,22 @@ export const merchantMenuController = {
   // GET /api/merchant/menu?restaurantId=xxx
   async getMenu(req: Request, res: Response) {
     try {
-      // Lấy restaurantId từ query string
+      // 1. Lấy ID từ query (ưu tiên restaurantId, sau đó là merchant_id)
       const restaurantId = (req.query.restaurantId || req.query.merchant_id) as string;
 
-      // Kiểm tra UUID hợp lệ (Ví dụ: 14cdec77-6ece-429b-a952-44bce7c96eda)
-      if (!restaurantId || !z.string().uuid().safeParse(restaurantId).success) {
+      // 2. Kiểm tra xem có ID hay không
+      if (!restaurantId || typeof restaurantId !== 'string') {
         return res.status(400).json({
           success: false,
-          message: 'restaurantId không hợp lệ (phải là định dạng UUID)',
+          message: 'restaurantId không hợp lệ hoặc bị thiếu',
         });
       }
 
+      // 3. Gọi service (Xóa kiểm tra .uuid() để chấp nhận cả "rest-1")
       const data = await merchantMenuService.getMenu(restaurantId);
       return res.json({ success: true, data });
     } catch (err: any) {
+      console.error('Error in getMenu:', err);
       return res.status(500).json({ success: false, message: err.message });
     }
   },
@@ -28,11 +30,13 @@ export const merchantMenuController = {
   // POST /api/merchant/menu
   async addMenu(req: Request, res: Response) {
     try {
-      const validated = AddMenuSchema.parse({
+      // Chuẩn hóa dữ liệu merchant_id từ FE gửi lên
+      const payload = {
         ...req.body,
         merchant_id: req.body.merchant_id || req.body.user_id,
-      });
+      };
 
+      const validated = AddMenuSchema.parse(payload);
       const result = await merchantMenuService.addMenu(validated);
 
       return res.status(201).json({
@@ -51,12 +55,11 @@ export const merchantMenuController = {
   // PUT /api/merchant/menu/:id
   async updateMenu(req: Request, res: Response) {
     try {
-      // Lấy id từ params theo cách bạn muốn
+      // Lấy id từ params theo đúng yêu cầu của bạn
       const id = req.params.id as string;
 
-      // Kiểm tra id có phải UUID không trước khi xử lý
-      if (!z.string().uuid().safeParse(id).success) {
-        return res.status(400).json({ success: false, message: 'ID món ăn không hợp lệ' });
+      if (!id) {
+        return res.status(400).json({ success: false, message: 'ID món ăn là bắt buộc' });
       }
 
       const validated = UpdateMenuSchema.parse(req.body);
@@ -80,14 +83,18 @@ export const merchantMenuController = {
     try {
       const id = req.params.id as string;
 
-      if (!z.string().uuid().safeParse(id).success) {
-        return res.status(400).json({ success: false, message: 'ID món ăn không hợp lệ' });
+      if (!id) {
+        return res.status(400).json({ success: false, message: 'ID món ăn là bắt buộc' });
       }
 
       const validated = ToggleMenuSchema.parse(req.body);
       const result = await merchantMenuService.toggleMenu(id, validated);
 
-      return res.json({ success: true, data: result });
+      return res.json({
+        success: true,
+        message: 'Cập nhật trạng thái thành công',
+        data: result,
+      });
     } catch (err: any) {
       return res.status(400).json({
         success: false,
@@ -101,16 +108,17 @@ export const merchantMenuController = {
     try {
       const id = req.params.id as string;
 
-      if (!z.string().uuid().safeParse(id).success) {
-        return res.status(400).json({ success: false, message: 'ID món ăn không hợp lệ' });
+      if (!id) {
+        return res.status(400).json({ success: false, message: 'ID món ăn là bắt buộc' });
       }
 
       await merchantMenuService.deleteMenu(id);
       return res.json({ success: true, message: 'Xóa món thành công' });
     } catch (err: any) {
+      console.error('Error in deleteMenu:', err);
       return res.status(500).json({
         success: false,
-        message: err.message,
+        message: err.message || 'Lỗi server khi xóa món',
       });
     }
   },
