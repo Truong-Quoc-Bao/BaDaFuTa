@@ -1,6 +1,7 @@
 import bcrypt from 'bcryptjs';
 import * as merchantRepo from './merchant.repository';
 
+
 export const login = async (email: string, password: string) => {
   const merchant = await merchantRepo.findByEmail(email.toLowerCase());
 
