@@ -1,24 +1,23 @@
 import { Request, Response } from 'express';
 import * as merchantService from './merchant.service';
-import { MerchantLoginSchema } from './merchant.validation';
 
 export const login = async (req: Request, res: Response) => {
   try {
-    const data = MerchantLoginSchema.parse(req.body);
-    const merchant = await merchantService.login(data);
+    // FE đang gửi {email, password}
+    const { email, password } = req.body;
 
-    // Phát JWT riêng cho Merchant
-    // const token = jwt.sign({ id: merchant.merchant_id, type: 'MERCHANT' }, process.env.JWT_SECRET!);
+    // Gọi service xử lý
+    const merchantData = await merchantService.login(email, password);
 
+    // Trả về đúng format mà FE mong đợi: { data: { merchant_id: ... } }
     res.status(200).json({
       success: true,
-      data: merchant,
-      message: 'Đăng nhập Merchant thành công',
+      data: merchantData,
     });
-  } catch (e: any) {
+  } catch (err: any) {
     res.status(401).json({
       success: false,
-      message: e.message || 'Đăng nhập Merchant thất bại',
+      message: err.message || 'Đăng nhập thất bại',
     });
   }
 };

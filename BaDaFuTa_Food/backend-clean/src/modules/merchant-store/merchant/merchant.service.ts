@@ -1,26 +1,23 @@
 import bcrypt from 'bcryptjs';
 import * as merchantRepo from './merchant.repository';
-import { LoginInput } from './merchant.types';
 
-export const login = async (data: LoginInput) => {
-  // Tìm user có role 'merchant'
-  const user = await merchantRepo.findMerchantByEmail(data.email.toLowerCase());
+export const login = async (email: string, password: string) => {
+  const merchant = await merchantRepo.findByEmail(email.toLowerCase());
 
-  if (!user) {
-    throw new Error('Tài khoản Merchant không tồn tại');
+  if (!merchant) {
+    throw new Error('Email không tồn tại');
   }
 
-  // So sánh password từ bảng users
-  const valid = await bcrypt.compare(data.password, user.password);
+  // So sánh mật khẩu (đã thêm cột password vào merchant table)
+  const valid = await bcrypt.compare(password, merchant.password);
   if (!valid) {
     throw new Error('Mật khẩu không đúng');
   }
 
-  // Trả về info merchant
+  // Trả về object chứa merchant_id để FE lưu vào merchantAuth
   return {
-    user_id: user.id,
-    merchant_id: user.merchant[0]?.id, // Giả định quan hệ 1-n
-    email: user.email,
-    merchant_name: user.merchant[0]?.merchant_name,
+    merchant_id: merchant.id,
+    merchant_name: merchant.merchant_name,
+    email: merchant.email,
   };
 };
