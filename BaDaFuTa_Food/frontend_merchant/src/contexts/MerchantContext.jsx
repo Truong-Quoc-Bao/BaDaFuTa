@@ -76,7 +76,7 @@ export function MerchantProvider({ children }) {
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ user_id: 'be32facc-e24e-4429-9059-a1298498584f' }),
+          body: JSON.stringify({ user_id: 'a3364e3a-baa0-41d0-b8cf-783981650b25' }),
         },
       );
       const data = await response.json();
