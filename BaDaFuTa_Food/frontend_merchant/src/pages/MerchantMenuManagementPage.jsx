@@ -206,6 +206,7 @@ export function MerchantMenuManagementPage() {
         'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&q=80&w=400',
       restaurantId: merchantSettings.restaurantId,
       isAvailable: true,
+      merchant_id: merchantSettings.restaurantId,
       ingredients: formData.ingredients
         .split(',')
         .map((i) => i.trim())
@@ -229,7 +230,12 @@ export function MerchantMenuManagementPage() {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${merchantAuth?.token}`,
         },
-        body: JSON.stringify({ ...newItem, user_id: merchantAuth?.user_id }),
+        // body: JSON.stringify({ ...newItem, merchant_id: req.body.merchant_id || req.body.user_id }),
+        body: JSON.stringify({
+          ...newItem,
+          merchant_id: merchantSettings.restaurantId,
+          user_id: merchantAuth?.user_id,
+        }),
       });
 
       if (!res.ok) {
@@ -244,7 +250,15 @@ export function MerchantMenuManagementPage() {
     } catch (error) {
       console.warn('Đang cập nhật lên bộ nhớ giao diện cục bộ do API lỗi:', error);
       // Fallback lưu cục bộ để đảm bảo trải nghiệm không bị gián đoạn
-      setMenuList((prev) => [...prev, { ...newItem, id: `new_${Date.now()}` }]);
+      setMenuList((prev) => [
+        ...prev,
+        {
+          ...newItem,
+          merchant_id: merchantSettings.restaurantId, // ✅ thêm dòng này
+          user_id: merchantAuth?.user_id,
+          id: `new_${Date.now()}`,
+        },
+      ]);
       setShowAddDialog(false);
       resetForm();
       toast.success('Đã thêm món ăn mới thành công!');
@@ -368,7 +382,8 @@ export function MerchantMenuManagementPage() {
           item.id === itemId ? { ...item, isAvailable: !item.isAvailable } : item,
         ),
       );
-      toast.success(`Đã ${!item.isAvailable ? 'tắt' : 'bật'} món "${item.name}"`);
+      // toast.success(`Đã ${!item.isAvailable ? 'tắt' : 'bật'} món "${item.name}"`);
+      toast.success(`Đã ${nextAvailability ? 'bật' : 'tắt'} món "${item.name}"`);
     }
   };
 
@@ -439,7 +454,8 @@ export function MerchantMenuManagementPage() {
       id: `group_${Date.now()}`,
       name: toppingFormData.name,
       description: toppingFormData.description,
-      restaurantId: merchantSettings.restaurantId,
+      // merchant_id: req.body.merchant_id || req.body.user_id,
+      merchant_id: merchantSettings.restaurantId,
       toppings: toppingFormData.toppings,
     };
 
