@@ -41,10 +41,110 @@ export function MerchantOrderManagementPage() {
   //   }
   // }, [dashboardData, orders.length, setOrders]);
 
-  useEffect(() => {
-    const merchantId = '14cdec77-6ece-429b-a952-44bce7c96eda'; // hardcode tạm
+  // useEffect(() => {
+  //   const merchantId = '14cdec77-6ece-429b-a952-44bce7c96eda'; // hardcode tạm
 
-    // const socket = io('https://badafuta-production.up.railway.app', {
+  //   // const socket = io('https://badafuta-production.up.railway.app', {
+  //   const socket = io('https://badafuta.onrender.com', {
+  //     path: '/socket.io',
+  //     transports: ['websocket'],
+  //     reconnection: true,
+  //   });
+
+  //   socket.emit('joinMerchant', merchantId);
+
+  //   socket.on('connect', () => {
+  //     console.log('✅ Connected merchant socket:', socket.id);
+  //   });
+
+  //   socket.on('newOrder', (rawOrder) => {
+  //     console.log('Nhận order realtime:', rawOrder);
+
+  //     // Chuẩn hóa dữ liệu để giống hệt với dashboardData
+  //     const newOrder = {
+  //       ...rawOrder,
+  //       id: rawOrder.order_id,
+  //       order_id: rawOrder.order_id,
+  //       status: 'PENDING', // BẮT BUỘC
+  //       customerName: rawOrder.customerName || 'Khách vãng lai',
+  //       created_at: new Date().toISOString(),
+  //       total_amount:
+  //         rawOrder.delivery_fee +
+  //         (rawOrder.items || []).reduce((sum, item) => {
+  //           const optionPrice = (item.selected_option_items || []).reduce(
+  //             (s, opt) => s + (opt.price || 0),
+  //             0,
+  //           );
+  //           return sum + (item.price + optionPrice) * item.quantity;
+  //         }, 0),
+  //     };
+
+  //     // Thêm vào đầu danh sách, tránh duplicate
+  //     setOrders((prev) => {
+  //       if (prev.some((o) => o.order_id === newOrder.order_id)) return prev;
+  //       return [newOrder, ...prev];
+  //     });
+
+  //     // Thông báo + chuyển tab
+  //     toast.success('Đơn hàng mới đến!', {
+  //       description: `#${newOrder.order_id.slice(-6).toUpperCase()} • ${newOrder.customerName}`,
+  //       duration: 8000,
+  //     });
+  //     toast.success(`Đơn mới #${newOrder.order_id.slice(-6).toUpperCase()}`, {
+  //       description: `${newOrder.customerName} • ${newOrder.items.length} món • ${newOrder.payment_method}`,
+  //       duration: 8000,
+  //       action: {
+  //         label: 'Xem ngay',
+  //         onClick: () => setActiveTab('PENDING'),
+  //       },
+  //     });
+
+  //     // ======== ÂM THANH + GIỌNG NÓI LẶP LẠI CHO ĐẾN KHI XÁC NHẬN ========
+  //     // Biến toàn cục để kiểm soát việc lặp
+  //     window.voiceInterval = null; // ← thêm window.
+
+  //     const speakNewOrder = () => {
+  //       // Dừng nếu đang lặp
+  //       if (voiceInterval) clearInterval(voiceInterval);
+
+  //       // Phát giọng nói lần đầu
+  //       const text = 'Bạn có đơn hàng mới từ Ba Da Fu Ta Food!';
+
+  //       const msg = new SpeechSynthesisUtterance(text);
+  //       msg.lang = 'vi-VN'; // giọng tiếng Việt
+  //       msg.volume = 1; // to nhất
+  //       msg.rate = 0.9; // tốc độ nói tự nhiên
+  //       msg.pitch = 1.1; // cao một chút cho dễ nghe
+
+  //       // ÉP ĐỌC CHUẨN TÊN QUÁN (mẹo pro)
+  //       msg.text = text
+  //         .replace('Ba Da Fu Ta', 'Ba-Đa-Phu-Ta') // ép tách từng âm tiết
+  //         .replace('Food', 'Phút'); // nếu muốn đọc là "Phút" cho đúng tên vui
+
+  //       // Phát lần đầu
+  //       window.speechSynthesis.cancel(); // xóa hàng đợi cũ
+  //       window.speechSynthesis.speak(msg);
+
+  //       // Lặp lại mỗi 6 giây cho đến khi bấm xác nhận
+  //       window.voiceInterval = setInterval(() => {
+  //         window.speechSynthesis.speak(msg);
+  //       }, 5000);
+  //     };
+
+  //     // GỌI HÀM KHI CÓ ĐƠN MỚI
+  //     speakNewOrder();
+
+  //     // Tự động chuyển về tab chờ xác nhận + focus vào đơn mới nhất
+  //     setActiveTab('PENDING');
+  //   });
+
+  //   return () => socket.disconnect();
+  // }, [setOrders]);
+
+  useEffect(() => {
+    // SỬA: Lấy dynamic restaurantId từ merchantAuth, nếu chưa có mới dùng fallback
+    const merchantId = merchantAuth?.restaurantId || '14cdec77-6ece-429b-a952-44bce7c96eda';
+
     const socket = io('https://badafuta.onrender.com', {
       path: '/socket.io',
       transports: ['websocket'],
@@ -60,12 +160,11 @@ export function MerchantOrderManagementPage() {
     socket.on('newOrder', (rawOrder) => {
       console.log('Nhận order realtime:', rawOrder);
 
-      // Chuẩn hóa dữ liệu để giống hệt với dashboardData
       const newOrder = {
         ...rawOrder,
         id: rawOrder.order_id,
         order_id: rawOrder.order_id,
-        status: 'PENDING', // BẮT BUỘC
+        status: 'PENDING',
         customerName: rawOrder.customerName || 'Khách vãng lai',
         created_at: new Date().toISOString(),
         total_amount:
@@ -79,13 +178,11 @@ export function MerchantOrderManagementPage() {
           }, 0),
       };
 
-      // Thêm vào đầu danh sách, tránh duplicate
       setOrders((prev) => {
         if (prev.some((o) => o.order_id === newOrder.order_id)) return prev;
         return [newOrder, ...prev];
       });
 
-      // Thông báo + chuyển tab
       toast.success('Đơn hàng mới đến!', {
         description: `#${newOrder.order_id.slice(-6).toUpperCase()} • ${newOrder.customerName}`,
         duration: 8000,
@@ -99,47 +196,39 @@ export function MerchantOrderManagementPage() {
         },
       });
 
-      // ======== ÂM THANH + GIỌNG NÓI LẶP LẠI CHO ĐẾN KHI XÁC NHẬN ========
-      // Biến toàn cục để kiểm soát việc lặp
-      window.voiceInterval = null; // ← thêm window.
-
+      // SỬA: Sử dụng window.voiceInterval xuyên suốt để không bị crash do biến cục bộ không tồn tại
       const speakNewOrder = () => {
-        // Dừng nếu đang lặp
-        if (voiceInterval) clearInterval(voiceInterval);
+        if (window.voiceInterval) clearInterval(window.voiceInterval);
 
-        // Phát giọng nói lần đầu
         const text = 'Bạn có đơn hàng mới từ Ba Da Fu Ta Food!';
-
         const msg = new SpeechSynthesisUtterance(text);
-        msg.lang = 'vi-VN'; // giọng tiếng Việt
-        msg.volume = 1; // to nhất
-        msg.rate = 0.9; // tốc độ nói tự nhiên
-        msg.pitch = 1.1; // cao một chút cho dễ nghe
+        msg.lang = 'vi-VN';
+        msg.volume = 1;
+        msg.rate = 0.9;
+        msg.pitch = 1.1;
 
-        // ÉP ĐỌC CHUẨN TÊN QUÁN (mẹo pro)
-        msg.text = text
-          .replace('Ba Da Fu Ta', 'Ba-Đa-Phu-Ta') // ép tách từng âm tiết
-          .replace('Food', 'Phút'); // nếu muốn đọc là "Phút" cho đúng tên vui
+        msg.text = text.replace('Ba Da Fu Ta', 'Ba-Đa-Phu-Ta').replace('Food', 'Phút');
 
-        // Phát lần đầu
-        window.speechSynthesis.cancel(); // xóa hàng đợi cũ
+        window.speechSynthesis.cancel();
         window.speechSynthesis.speak(msg);
 
-        // Lặp lại mỗi 6 giây cho đến khi bấm xác nhận
         window.voiceInterval = setInterval(() => {
           window.speechSynthesis.speak(msg);
         }, 5000);
       };
 
-      // GỌI HÀM KHI CÓ ĐƠN MỚI
       speakNewOrder();
-
-      // Tự động chuyển về tab chờ xác nhận + focus vào đơn mới nhất
       setActiveTab('PENDING');
     });
 
-    return () => socket.disconnect();
-  }, [setOrders]);
+    return () => {
+      socket.disconnect();
+      if (window.voiceInterval) {
+        clearInterval(window.voiceInterval);
+      }
+    };
+  }, [setOrders, merchantAuth?.restaurantId]); // Thêm merchantAuth?.restaurantId vào dependency
+
   window.speechSynthesis.speak(new SpeechSynthesisUtterance('Test'));
   console.log('Merchant Auth:', merchantAuth);
   console.log('Dashboard Data:', dashboardData);
@@ -301,7 +390,7 @@ export function MerchantOrderManagementPage() {
               <XCircle className="h-4 w-4 text-red-500" />
               <div>
                 <p className="text-sm text-muted-foreground">Đã hủy</p>
-                <p className="text-2xl font-bold">{getTabCount('cancelled')}</p>
+                <p className="text-2xl font-bold">{getTabCount('CANCELED')}</p>
               </div>
             </div>
           </CardContent>
@@ -379,7 +468,7 @@ export function MerchantOrderManagementPage() {
                           ? 'text-green-500'
                           : status === 'COMPLETED'
                           ? 'text-green-600'
-                          : status === 'cancelled'
+                          : status === 'CANCELED'
                           ? 'text-red-500'
                           : 'text-muted-foreground'
                       }`}

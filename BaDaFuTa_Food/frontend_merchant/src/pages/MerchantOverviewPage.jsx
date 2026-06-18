@@ -11,6 +11,8 @@ export function MerchantOverviewPage() {
   console.log('Dashboard Data:', dashboardData);
   console.log('dashboardData hiện tại:', dashboardData);
 
+  const restaurantName = merchantAuth?.merchant_name || merchantAuth?.restaurantName || 'nhà hàng';
+
   const todayRevenue = dashboardData?.data?.todayRevenue || 0;
   const todayOrders = dashboardData?.data?.todayOrders || 0;
   const pendingOrders = dashboardData?.data?.pendingOrders || 0;
@@ -19,7 +21,7 @@ export function MerchantOverviewPage() {
   const recentOrders = dashboardData?.data?.recentOrders || [];
 
   const completedOrders = recentOrders.filter(
-    (order) => order.status?.toLowerCase() === 'COMPLETED',
+    (order) => order.status?.toLowerCase() === 'completed',
   ).length;
 
   const averageRating = 4.5; // Mock rating

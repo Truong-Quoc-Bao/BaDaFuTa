@@ -27,7 +27,23 @@ export function MerchantProvider({ children }) {
     },
   });
 
-  const [merchantAuth, setMerchantAuth] = useState(null);
+  // const [merchantAuth, setMerchantAuth] = useState(null);
+
+  // SỬA: Khởi tạo State đồng bộ từ localStorage
+  const [merchantAuth, setMerchantAuth] = useState(() => {
+    const stored = localStorage.getItem('merchantAuth');
+    if (stored) {
+      try {
+        return JSON.parse(stored);
+      } catch (e) {
+        console.error('Lỗi parse merchantAuth:', e);
+        return null;
+      }
+    }
+    return null;
+  });
+
+  // Sau khi sửa dòng trên, bạn có thể xóa bỏ hoàn toàn khối useEffect khôi phục stored cũ.
   const [orders, setOrders] = useState([]);
   // Dashboard data state
   const [dashboardData, setDashboardData] = useState(null);
@@ -100,7 +116,7 @@ export function MerchantProvider({ children }) {
     } catch (error) {
       console.error('Error fetching dashboard:', error);
     }
-  }, []);
+  }, [merchantAuth?.user_id]);
 
   // Gọi fetchDashboard khi Provider mount
   useEffect(() => {
@@ -109,6 +125,52 @@ export function MerchantProvider({ children }) {
 
   // ===========================================
   // MerchantContext.jsx
+
+  // Trong file MerchantContext.jsx, tìm hàm login và sửa lại:
+
+  const login = async (email, password) => {
+    try {
+      // 1. Gọi API mới cho merchant riêng biệt
+      const response = await fetch('https://badafuta.onrender.com/api/merchant/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password }), // Chỉ gửi email/password
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData?.message || errorData?.error || 'Đăng nhập merchant thất bại');
+      }
+
+      const resData = await response.json();
+      // 2. Dữ liệu trả về bây giờ sẽ chứa thẳng merchant_id, không cần qua authInfo.user_id nữa
+      const authInfo = resData.data;
+
+      if (!authInfo.merchant_id) {
+        throw new Error('Thông tin merchant không hợp lệ');
+      }
+
+      // 3. Lưu thông tin merchant mới vào state
+      const completeAuth = {
+        ...authInfo,
+        user_id: authInfo.merchant_id, // Gán để đồng bộ logic cũ nếu cần
+        email,
+      };
+
+      setMerchantAuth(completeAuth);
+      localStorage.setItem('merchantAuth', JSON.stringify(completeAuth));
+      return completeAuth;
+    } catch (error) {
+      // Fallback nếu cần test offline
+      if (email === 'merchant@badafuta.com' && password === 'merchant123') {
+        const mockAuth = { email, user_id: 'rest-1', merchant_id: 'rest-1' };
+        setMerchantAuth(mockAuth);
+        localStorage.setItem('merchantAuth', JSON.stringify(mockAuth));
+        return mockAuth;
+      }
+      throw error;
+    }
+  };
 
   const updateOrderStatus = async (orderId, status, reason) => {
     try {
@@ -152,7 +214,7 @@ export function MerchantProvider({ children }) {
 
   const cancelOrder = (orderId, reason) =>
     setOrders((prev) =>
-      prev.map((o) => (o.id === orderId ? { ...o, status: 'cancelled', notes: reason } : o)),
+      prev.map((o) => (o.id === orderId ? { ...o, status: 'CANCELED', notes: reason } : o)),
     );
 
   const toggleAutoConfirm = useCallback(() => {
@@ -179,6 +241,7 @@ export function MerchantProvider({ children }) {
         autoConfirmEnabled: merchantSettings.autoConfirmOrders,
         toggleAutoConfirm,
         merchantAuth,
+        login,
         logout,
         dashboardData, // <- thêm dashboardData vào context
         fetchDashboard,

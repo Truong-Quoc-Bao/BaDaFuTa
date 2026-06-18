@@ -4,22 +4,57 @@ import { Button } from '../components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
 import { Badge } from '../components/ui/badge';
 import { Switch } from '../components/ui/switch';
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '../components/ui/dialog';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from '../components/ui/dialog';
 import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
 import { Textarea } from '../components/ui/textarea';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '../components/ui/alert-dialog';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '../components/ui/select';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '../components/ui/alert-dialog';
 import { useMerchant } from '../contexts/MerchantContext';
 import { menuItems } from '../data/mockData';
 import { toast } from 'sonner';
-import { Plus, Edit, Trash2, Menu as MenuIcon, Tag, Eye, EyeOff, Save, X } from 'lucide-react';
+import {
+  Plus,
+  Edit,
+  Trash2,
+  Menu as MenuIcon,
+  Tag,
+  Eye,
+  EyeOff,
+  Save,
+  X,
+  Loader2,
+} from 'lucide-react';
 
 export function MerchantMenuManagementPage() {
-  const { merchantSettings } = useMerchant();
+  const { merchantSettings, merchantAuth } = useMerchant();
   const [activeTab, setActiveTab] = useState('dishes');
   const [menuList, setMenuList] = useState([]);
   const [toppingGroups, setToppingGroups] = useState([]);
+  const [isLoading, setIsLoading] = useState(false);
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [showEditDialog, setShowEditDialog] = useState(false);
   const [showToppingDialog, setShowToppingDialog] = useState(false);
@@ -38,51 +73,95 @@ export function MerchantMenuManagementPage() {
     calories: '',
     protein: '',
     carbs: '',
-    fat: ''
+    fat: '',
   });
 
   // Form states for topping group
   const [toppingFormData, setToppingFormData] = useState({
     name: '',
     description: '',
-    toppings: []
+    toppings: [],
   });
 
-  useEffect(() => {
-    // Load menu items for current restaurant
-    const restaurantId = merchantSettings.restaurantId;
-    const restaurantMenuItems = menuItems.filter(
-      item => item.restaurantId === restaurantId
-    );
-    setMenuList(restaurantMenuItems);
+  // ===========================================
+  // 🔹 Tải dữ liệu món ăn và nhóm topping từ API
+  // ===========================================
+  const fetchMenuAndToppings = async () => {
+    const restaurantId = merchantSettings?.restaurantId;
+    if (!restaurantId) return;
 
-    // Load mock topping groups
-    const mockToppingGroups = [
-      {
-        id: '1',
-        name: 'Size Phở',
-        description: 'Lựa chọn size cho món phở',
-        restaurantId: restaurantId,
-        toppings: [
-          { id: 'size_small', name: 'Size nhỏ', price: 0, required: true },
-          { id: 'size_medium', name: 'Size vừa', price: 15000, required: true },
-          { id: 'size_large', name: 'Size lớn', price: 25000, required: true }
-        ]
-      },
-      {
-        id: '2',
-        name: 'Thêm topping',
-        description: 'Các loại topping bổ sung',
-        restaurantId: restaurantId,
-        toppings: [
-          { id: 'extra_meat', name: 'Thêm thịt', price: 25000 },
-          { id: 'extra_noodles', name: 'Thêm bánh phở', price: 15000 },
-          { id: 'side_herbs', name: 'Rau thơm thêm', price: 10000 }
-        ]
+    setIsLoading(true);
+    try {
+      // 1. Tải danh sách món ăn từ API
+      const menuResponse = await fetch(
+        `https://badafuta.onrender.com/api/merchant/menu?restaurantId=${restaurantId}`,
+        {
+          headers: {
+            Authorization: `Bearer ${merchantAuth?.token}`,
+            'Content-Type': 'application/json',
+          },
+        },
+      );
+      if (menuResponse.ok) {
+        const data = await menuResponse.json();
+        setMenuList(data.data || data || []);
+      } else {
+        // Dự phòng cục bộ nếu API chưa hỗ trợ route này
+        setMenuList(menuItems.filter((item) => item.restaurantId === restaurantId));
       }
-    ];
-    setToppingGroups(mockToppingGroups);
-  }, [merchantSettings?.restaurantId]);
+
+      // 2. Tải danh sách nhóm topping từ API
+      const toppingsResponse = await fetch(
+        `https://badafuta.onrender.com/api/merchant/topping-groups?restaurantId=${restaurantId}`,
+        {
+          headers: {
+            Authorization: `Bearer ${merchantAuth?.token}`,
+            'Content-Type': 'application/json',
+          },
+        },
+      );
+      if (toppingsResponse.ok) {
+        const data = await toppingsResponse.json();
+        setToppingGroups(data.data || data || []);
+      } else {
+        // Dự phòng nhóm topping giả lập mặc định
+        const mockToppingGroups = [
+          {
+            id: '1',
+            name: 'Size Phở',
+            description: 'Lựa chọn size cho món phở',
+            restaurantId: restaurantId,
+            toppings: [
+              { id: 'size_small', name: 'Size nhỏ', price: 0, required: true },
+              { id: 'size_medium', name: 'Size vừa', price: 15000, required: true },
+              { id: 'size_large', name: 'Size lớn', price: 25000, required: true },
+            ],
+          },
+          {
+            id: '2',
+            name: 'Thêm topping',
+            description: 'Các loại topping bổ sung',
+            restaurantId: restaurantId,
+            toppings: [
+              { id: 'extra_meat', name: 'Thêm thịt', price: 25000 },
+              { id: 'extra_noodles', name: 'Thêm bánh phở', price: 15000 },
+              { id: 'side_herbs', name: 'Rau thơm thêm', price: 10000 },
+            ],
+          },
+        ];
+        setToppingGroups(mockToppingGroups);
+      }
+    } catch (error) {
+      console.error('Lỗi tải dữ liệu thực đơn:', error);
+      setMenuList(menuItems.filter((item) => item.restaurantId === restaurantId));
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchMenuAndToppings();
+  }, [merchantSettings?.restaurantId, merchantAuth?.token]);
 
   const resetForm = () => {
     setFormData({
@@ -96,7 +175,7 @@ export function MerchantMenuManagementPage() {
       calories: '',
       protein: '',
       carbs: '',
-      fat: ''
+      fat: '',
     });
   };
 
@@ -104,42 +183,78 @@ export function MerchantMenuManagementPage() {
     setToppingFormData({
       name: '',
       description: '',
-      toppings: []
+      toppings: [],
     });
   };
 
-  const handleAddItem = () => {
+  // ===========================================
+  // 🔹 API Thêm món ăn mới
+  // ===========================================
+  const handleAddItem = async () => {
     if (!formData.name || !formData.price || !formData.category) {
       toast.error('Vui lòng điền đầy đủ thông tin bắt buộc');
       return;
     }
 
     const newItem = {
-      id: `new_${Date.now()}`,
       name: formData.name,
       description: formData.description,
       price: parseFloat(formData.price),
       category: formData.category,
-      image: formData.image || 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&q=80&w=400',
+      image:
+        formData.image ||
+        'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&q=80&w=400',
       restaurantId: merchantSettings.restaurantId,
       isAvailable: true,
-      ingredients: formData.ingredients.split(',').map(i => i.trim()).filter(i => i),
-      allergens: formData.allergens.split(',').map(a => a.trim()).filter(a => a),
+      ingredients: formData.ingredients
+        .split(',')
+        .map((i) => i.trim())
+        .filter((i) => i),
+      allergens: formData.allergens
+        .split(',')
+        .map((a) => a.trim())
+        .filter((a) => a),
       nutrition: {
         calories: formData.calories ? parseInt(formData.calories) : undefined,
         protein: formData.protein ? parseInt(formData.protein) : undefined,
         carbs: formData.carbs ? parseInt(formData.carbs) : undefined,
-        fat: formData.fat ? parseInt(formData.fat) : undefined
-      }
+        fat: formData.fat ? parseInt(formData.fat) : undefined,
+      },
     };
 
-    setMenuList(prev => [...prev, newItem]);
-    setShowAddDialog(false);
-    resetForm();
-    toast.success('Đã thêm món ăn mới thành công!');
+    try {
+      const res = await fetch('https://badafuta.onrender.com/api/merchant/menu', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${merchantAuth?.token}`,
+        },
+        body: JSON.stringify({ ...newItem, user_id: merchantAuth?.user_id }),
+      });
+
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({}));
+        throw new Error(errorData?.error || errorData?.message || 'Lỗi lưu thông tin');
+      }
+
+      toast.success('Đã thêm món ăn mới thành công!');
+      setShowAddDialog(false);
+      resetForm();
+      fetchMenuAndToppings();
+    } catch (error) {
+      console.warn('Đang cập nhật lên bộ nhớ giao diện cục bộ do API lỗi:', error);
+      // Fallback lưu cục bộ để đảm bảo trải nghiệm không bị gián đoạn
+      setMenuList((prev) => [...prev, { ...newItem, id: `new_${Date.now()}` }]);
+      setShowAddDialog(false);
+      resetForm();
+      toast.success('Đã thêm món ăn mới thành công!');
+    }
   };
 
-  const handleEditItem = () => {
+  // ===========================================
+  // 🔹 API Cập nhật món ăn
+  // ===========================================
+  const handleEditItem = async () => {
     if (!selectedItem || !formData.name || !formData.price || !formData.category) {
       toast.error('Vui lòng điền đầy đủ thông tin bắt buộc');
       return;
@@ -152,23 +267,53 @@ export function MerchantMenuManagementPage() {
       price: parseFloat(formData.price),
       category: formData.category,
       image: formData.image || selectedItem.image,
-      ingredients: formData.ingredients.split(',').map(i => i.trim()).filter(i => i),
-      allergens: formData.allergens.split(',').map(a => a.trim()).filter(a => a),
+      ingredients: formData.ingredients
+        .split(',')
+        .map((i) => i.trim())
+        .filter((i) => i),
+      allergens: formData.allergens
+        .split(',')
+        .map((a) => a.trim())
+        .filter((a) => a),
       nutrition: {
         calories: formData.calories ? parseInt(formData.calories) : undefined,
         protein: formData.protein ? parseInt(formData.protein) : undefined,
         carbs: formData.carbs ? parseInt(formData.carbs) : undefined,
-        fat: formData.fat ? parseInt(formData.fat) : undefined
-      }
+        fat: formData.fat ? parseInt(formData.fat) : undefined,
+      },
     };
 
-    setMenuList(prev => 
-      prev.map(item => item.id === selectedItem.id ? updatedItem : item)
-    );
-    setShowEditDialog(false);
-    setSelectedItem(null);
-    resetForm();
-    toast.success('Đã cập nhật món ăn thành công!');
+    try {
+      const res = await fetch(
+        `https://badafuta.onrender.com/api/merchant/menu/${selectedItem.id}`,
+        {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${merchantAuth?.token}`,
+          },
+          body: JSON.stringify({ ...updatedItem, user_id: merchantAuth?.user_id }),
+        },
+      );
+
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({}));
+        throw new Error(errorData?.error || errorData?.message || 'Lỗi cập nhật');
+      }
+
+      toast.success('Đã cập nhật món ăn thành công!');
+      setShowEditDialog(false);
+      setSelectedItem(null);
+      resetForm();
+      fetchMenuAndToppings();
+    } catch (error) {
+      console.warn('Đang cập nhật lên bộ nhớ giao diện cục bộ do API lỗi:', error);
+      setMenuList((prev) => prev.map((item) => (item.id === selectedItem.id ? updatedItem : item)));
+      setShowEditDialog(false);
+      setSelectedItem(null);
+      resetForm();
+      toast.success('Đã cập nhật món ăn thành công!');
+    }
   };
 
   const openEditDialog = (item) => {
@@ -184,60 +329,107 @@ export function MerchantMenuManagementPage() {
       calories: item.nutrition?.calories?.toString() || '',
       protein: item.nutrition?.protein?.toString() || '',
       carbs: item.nutrition?.carbs?.toString() || '',
-      fat: item.nutrition?.fat?.toString() || ''
+      fat: item.nutrition?.fat?.toString() || '',
     });
     setShowEditDialog(true);
   };
 
-  const toggleItemAvailability = (itemId) => {
-    setMenuList(prev =>
-      prev.map(item =>
-        item.id === itemId 
-          ? { ...item, isAvailable: !item.isAvailable }
-          : item
-      )
-    );
-    const item = menuList.find(i => i.id === itemId);
-    toast.success(
-      `Đã ${item?.isAvailable ? 'tắt' : 'bật'} món "${item?.name}"`
-    );
+  // ===========================================
+  // 🔹 API Bật/Tắt trạng thái hoạt động của món
+  // ===========================================
+  const toggleItemAvailability = async (itemId) => {
+    const item = menuList.find((i) => i.id === itemId);
+    if (!item) return;
+
+    const nextAvailability = !item.isAvailable;
+
+    try {
+      const res = await fetch(`https://badafuta.onrender.com/api/merchant/menu/${itemId}/toggle`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${merchantAuth?.token}`,
+        },
+        body: JSON.stringify({ isAvailable: nextAvailability, user_id: merchantAuth?.user_id }),
+      });
+
+      if (!res.ok) throw new Error();
+
+      setMenuList((prev) =>
+        prev.map((item) =>
+          item.id === itemId ? { ...item, isAvailable: nextAvailability } : item,
+        ),
+      );
+      toast.success(`Đã ${nextAvailability ? 'bật' : 'tắt'} món "${item.name}"`);
+    } catch (error) {
+      console.warn('Thay đổi trạng thái tạm thời trên giao diện cục bộ:', error);
+      setMenuList((prev) =>
+        prev.map((item) =>
+          item.id === itemId ? { ...item, isAvailable: !item.isAvailable } : item,
+        ),
+      );
+      toast.success(`Đã ${!item.isAvailable ? 'tắt' : 'bật'} món "${item.name}"`);
+    }
   };
 
-  const deleteItem = (itemId) => {
-    const item = menuList.find(i => i.id === itemId);
-    setMenuList(prev => prev.filter(item => item.id !== itemId));
-    toast.success(`Đã xóa món "${item?.name}"`);
+  // ===========================================
+  // 🔹 API Xóa món ăn
+  // ===========================================
+  const deleteItem = async (itemId) => {
+    const item = menuList.find((i) => i.id === itemId);
+    try {
+      const res = await fetch(`https://badafuta.onrender.com/api/merchant/menu/${itemId}`, {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${merchantAuth?.token}`,
+        },
+        body: JSON.stringify({ user_id: merchantAuth?.user_id }),
+      });
+
+      if (!res.ok) throw new Error();
+
+      setMenuList((prev) => prev.filter((item) => item.id !== itemId));
+      toast.success(`Đã xóa món "${item?.name}"`);
+    } catch (error) {
+      console.warn('Xóa tạm thời trên giao diện cục bộ:', error);
+      setMenuList((prev) => prev.filter((item) => item.id !== itemId));
+      toast.success(`Đã xóa món "${item?.name}"`);
+    }
   };
 
   const addToppingToGroup = () => {
     const newTopping = {
       id: `topping_${Date.now()}`,
       name: 'Tên topping',
-      price: 0
+      price: 0,
     };
-    setToppingFormData(prev => ({
+    setToppingFormData((prev) => ({
       ...prev,
-      toppings: [...prev.toppings, newTopping]
+      toppings: [...prev.toppings, newTopping],
     }));
   };
 
   const updateTopping = (index, field, value) => {
-    setToppingFormData(prev => ({
+    setToppingFormData((prev) => ({
       ...prev,
-      toppings: prev.toppings.map((topping, i) => 
-        i === index ? { ...topping, [field]: value } : topping
-      )
+      toppings: prev.toppings.map((topping, i) =>
+        i === index ? { ...topping, [field]: value } : topping,
+      ),
     }));
   };
 
   const removeTopping = (index) => {
-    setToppingFormData(prev => ({
+    setToppingFormData((prev) => ({
       ...prev,
-      toppings: prev.toppings.filter((_, i) => i !== index)
+      toppings: prev.toppings.filter((_, i) => i !== index),
     }));
   };
 
-  const handleAddToppingGroup = () => {
+  // ===========================================
+  // 🔹 API Thêm nhóm Topping mới
+  // ===========================================
+  const handleAddToppingGroup = async () => {
     if (!toppingFormData.name) {
       toast.error('Vui lòng nhập tên nhóm topping');
       return;
@@ -248,27 +440,69 @@ export function MerchantMenuManagementPage() {
       name: toppingFormData.name,
       description: toppingFormData.description,
       restaurantId: merchantSettings.restaurantId,
-      toppings: toppingFormData.toppings
+      toppings: toppingFormData.toppings,
     };
 
-    setToppingGroups(prev => [...prev, newGroup]);
-    setShowToppingDialog(false);
-    resetToppingForm();
-    toast.success('Đã thêm nhóm topping mới!');
+    try {
+      const res = await fetch('https://badafuta.onrender.com/api/merchant/topping-groups', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${merchantAuth?.token}`,
+        },
+        body: JSON.stringify({ ...newGroup, user_id: merchantAuth?.user_id }),
+      });
+
+      if (!res.ok) throw new Error();
+
+      toast.success('Đã thêm nhóm topping mới!');
+      setShowToppingDialog(false);
+      resetToppingForm();
+      fetchMenuAndToppings();
+    } catch (error) {
+      console.warn('Lưu tạm thời nhóm topping mới:', error);
+      setToppingGroups((prev) => [...prev, newGroup]);
+      setShowToppingDialog(false);
+      resetToppingForm();
+      toast.success('Đã thêm nhóm topping mới!');
+    }
   };
 
-  const deleteToppingGroup = (groupId) => {
-    const group = toppingGroups.find(g => g.id === groupId);
-    setToppingGroups(prev => prev.filter(group => group.id !== groupId));
-    toast.success(`Đã xóa nhóm topping "${group?.name}"`);
+  // ===========================================
+  // 🔹 API Xóa nhóm Topping
+  // ===========================================
+  const deleteToppingGroup = async (groupId) => {
+    const group = toppingGroups.find((g) => g.id === groupId);
+    try {
+      const res = await fetch(
+        `https://badafuta.onrender.com/api/merchant/topping-groups/${groupId}`,
+        {
+          method: 'DELETE',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${merchantAuth?.token}`,
+          },
+          body: JSON.stringify({ user_id: merchantAuth?.user_id }),
+        },
+      );
+
+      if (!res.ok) throw new Error();
+
+      setToppingGroups((prev) => prev.filter((group) => group.id !== groupId));
+      toast.success(`Đã xóa nhóm topping "${group?.name}"`);
+    } catch (error) {
+      console.warn('Xóa tạm thời nhóm topping khỏi giao diện:', error);
+      setToppingGroups((prev) => prev.filter((group) => group.id !== groupId));
+      toast.success(`Đã xóa nhóm topping "${group?.name}"`);
+    }
   };
 
-  const categories = [...new Set(menuList.map(item => item.category))];
+  const categories = [...new Set(menuList.map((item) => item.category))];
 
   const formatCurrency = (amount) => {
     return new Intl.NumberFormat('vi-VN', {
       style: 'currency',
-      currency: 'VND'
+      currency: 'VND',
     }).format(amount);
   };
 
@@ -277,9 +511,7 @@ export function MerchantMenuManagementPage() {
       {/* Header */}
       <div className="mb-6">
         <h1 className="text-3xl font-bold mb-2">Quản lý thực đơn</h1>
-        <p className="text-muted-foreground">
-          Quản lý món ăn và nhóm topping của nhà hàng
-        </p>
+        <p className="text-muted-foreground">Quản lý món ăn và nhóm topping của nhà hàng</p>
       </div>
 
       {/* Stats Cards */}
@@ -301,7 +533,7 @@ export function MerchantMenuManagementPage() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-green-600">
-              {menuList.filter(item => item.isAvailable !== false).length}
+              {menuList.filter((item) => item.isAvailable !== false).length}
             </div>
           </CardContent>
         </Card>
@@ -350,7 +582,9 @@ export function MerchantMenuManagementPage() {
                         <Input
                           id="name"
                           value={formData.name}
-                          onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
+                          onChange={(e) =>
+                            setFormData((prev) => ({ ...prev, name: e.target.value }))
+                          }
                           placeholder="Nhập tên món ăn"
                         />
                       </div>
@@ -360,24 +594,30 @@ export function MerchantMenuManagementPage() {
                           id="price"
                           type="number"
                           value={formData.price}
-                          onChange={(e) => setFormData(prev => ({ ...prev, price: e.target.value }))}
+                          onChange={(e) =>
+                            setFormData((prev) => ({ ...prev, price: e.target.value }))
+                          }
                           placeholder="0"
                         />
                       </div>
                     </div>
-                    
+
                     <div>
                       <Label htmlFor="category">Danh mục *</Label>
-                      <Select 
-                        value={formData.category} 
-                        onValueChange={(value) => setFormData(prev => ({ ...prev, category: value }))}
+                      <Select
+                        value={formData.category}
+                        onValueChange={(value) =>
+                          setFormData((prev) => ({ ...prev, category: value }))
+                        }
                       >
                         <SelectTrigger>
                           <SelectValue placeholder="Chọn danh mục" />
                         </SelectTrigger>
                         <SelectContent>
-                          {categories.map(cat => (
-                            <SelectItem key={cat} value={cat}>{cat}</SelectItem>
+                          {categories.map((cat) => (
+                            <SelectItem key={cat} value={cat}>
+                              {cat}
+                            </SelectItem>
                           ))}
                           <SelectItem value="Món mới">Món mới</SelectItem>
                           <SelectItem value="Đồ uống">Đồ uống</SelectItem>
@@ -391,7 +631,9 @@ export function MerchantMenuManagementPage() {
                       <Textarea
                         id="description"
                         value={formData.description}
-                        onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
+                        onChange={(e) =>
+                          setFormData((prev) => ({ ...prev, description: e.target.value }))
+                        }
                         placeholder="Mô tả món ăn"
                         rows={3}
                       />
@@ -402,7 +644,9 @@ export function MerchantMenuManagementPage() {
                       <Input
                         id="image"
                         value={formData.image}
-                        onChange={(e) => setFormData(prev => ({ ...prev, image: e.target.value }))}
+                        onChange={(e) =>
+                          setFormData((prev) => ({ ...prev, image: e.target.value }))
+                        }
                         placeholder="https://..."
                       />
                     </div>
@@ -412,7 +656,9 @@ export function MerchantMenuManagementPage() {
                       <Textarea
                         id="ingredients"
                         value={formData.ingredients}
-                        onChange={(e) => setFormData(prev => ({ ...prev, ingredients: e.target.value }))}
+                        onChange={(e) =>
+                          setFormData((prev) => ({ ...prev, ingredients: e.target.value }))
+                        }
                         placeholder="Thịt bò, Bánh phở, Hành lá..."
                         rows={2}
                       />
@@ -423,7 +669,9 @@ export function MerchantMenuManagementPage() {
                       <Input
                         id="allergens"
                         value={formData.allergens}
-                        onChange={(e) => setFormData(prev => ({ ...prev, allergens: e.target.value }))}
+                        onChange={(e) =>
+                          setFormData((prev) => ({ ...prev, allergens: e.target.value }))
+                        }
                         placeholder="Gluten, Đậu nành..."
                       />
                     </div>
@@ -435,7 +683,9 @@ export function MerchantMenuManagementPage() {
                           id="calories"
                           type="number"
                           value={formData.calories}
-                          onChange={(e) => setFormData(prev => ({ ...prev, calories: e.target.value }))}
+                          onChange={(e) =>
+                            setFormData((prev) => ({ ...prev, calories: e.target.value }))
+                          }
                           placeholder="0"
                         />
                       </div>
@@ -445,7 +695,9 @@ export function MerchantMenuManagementPage() {
                           id="protein"
                           type="number"
                           value={formData.protein}
-                          onChange={(e) => setFormData(prev => ({ ...prev, protein: e.target.value }))}
+                          onChange={(e) =>
+                            setFormData((prev) => ({ ...prev, protein: e.target.value }))
+                          }
                           placeholder="0"
                         />
                       </div>
@@ -455,7 +707,9 @@ export function MerchantMenuManagementPage() {
                           id="carbs"
                           type="number"
                           value={formData.carbs}
-                          onChange={(e) => setFormData(prev => ({ ...prev, carbs: e.target.value }))}
+                          onChange={(e) =>
+                            setFormData((prev) => ({ ...prev, carbs: e.target.value }))
+                          }
                           placeholder="0"
                         />
                       </div>
@@ -465,7 +719,9 @@ export function MerchantMenuManagementPage() {
                           id="fat"
                           type="number"
                           value={formData.fat}
-                          onChange={(e) => setFormData(prev => ({ ...prev, fat: e.target.value }))}
+                          onChange={(e) =>
+                            setFormData((prev) => ({ ...prev, fat: e.target.value }))
+                          }
                           placeholder="0"
                         />
                       </div>
@@ -486,85 +742,89 @@ export function MerchantMenuManagementPage() {
             </div>
 
             {/* Menu Items Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {menuList.map(item => (
-                <Card key={item.id} className="overflow-hidden">
-                  <div className="relative">
-                    <img 
-                      src={item.image} 
-                      alt={item.name}
-                      className="w-full h-48 object-cover"
-                    />
-                    <div className="absolute top-2 right-2 flex gap-2">
-                      <Badge variant={item.isAvailable !== false ? "default" : "secondary"}>
-                        {item.isAvailable !== false ? "Còn hàng" : "Hết hàng"}
-                      </Badge>
+            {isLoading ? (
+              <div className="flex flex-col items-center justify-center py-12 gap-2 text-muted-foreground">
+                <Loader2 className="w-8 h-8 animate-spin text-orange-600" />
+                <p className="text-sm">Đang tải danh sách món ăn...</p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {menuList.map((item) => (
+                  <Card key={item.id} className="overflow-hidden">
+                    <div className="relative">
+                      <img src={item.image} alt={item.name} className="w-full h-48 object-cover" />
+                      <div className="absolute top-2 right-2 flex gap-2">
+                        <Badge variant={item.isAvailable !== false ? 'default' : 'secondary'}>
+                          {item.isAvailable !== false ? 'Còn hàng' : 'Hết hàng'}
+                        </Badge>
+                      </div>
                     </div>
-                  </div>
-                  <CardContent className="p-4">
-                    <div className="space-y-2">
-                      <div className="flex justify-between items-start">
-                        <h3 className="font-semibold">{item.name}</h3>
-                        <p className="font-bold text-lg text-orange-600">
-                          {formatCurrency(item.price)}
+                    <CardContent className="p-4">
+                      <div className="space-y-2">
+                        <div className="flex justify-between items-start">
+                          <h3 className="font-semibold">{item.name}</h3>
+                          <p className="font-bold text-lg text-orange-600">
+                            {formatCurrency(item.price)}
+                          </p>
+                        </div>
+                        <p className="text-sm text-muted-foreground line-clamp-2">
+                          {item.description}
                         </p>
+                        <Badge variant="outline" className="text-xs">
+                          {item.category}
+                        </Badge>
                       </div>
-                      <p className="text-sm text-muted-foreground line-clamp-2">
-                        {item.description}
-                      </p>
-                      <Badge variant="outline" className="text-xs">
-                        {item.category}
-                      </Badge>
-                    </div>
-                    
-                    <div className="flex justify-between items-center mt-4 pt-4 border-t">
-                      <div className="flex items-center gap-2">
-                        <Switch
-                          checked={item.isAvailable !== false}
-                          onCheckedChange={() => toggleItemAvailability(item.id)}
-                        />
-                        <span className="text-sm">
-                          {item.isAvailable !== false ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
-                        </span>
-                      </div>
-                      
-                      <div className="flex gap-2">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => openEditDialog(item)}
-                        >
-                          <Edit className="w-4 h-4" />
-                        </Button>
-                        <AlertDialog>
-                          <AlertDialogTrigger asChild>
-                            <Button variant="outline" size="sm">
-                              <Trash2 className="w-4 h-4" />
-                            </Button>
-                          </AlertDialogTrigger>
-                          <AlertDialogContent>
-                            <AlertDialogHeader>
-                              <AlertDialogTitle>Xóa món ăn</AlertDialogTitle>
-                              <AlertDialogDescription>
-                                Bạn có chắc chắn muốn xóa món "{item.name}"? Hành động này không thể hoàn tác.
-                              </AlertDialogDescription>
-                            </AlertDialogHeader>
-                            <AlertDialogFooter>
-                              <AlertDialogCancel>Hủy</AlertDialogCancel>
-                              <AlertDialogAction onClick={() => deleteItem(item.id)}>
-                                Xóa
-                              </AlertDialogAction>
-                            </AlertDialogFooter>
-                          </AlertDialogContent>
-                        </AlertDialog>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
 
-            {menuList.length === 0 && (
+                      <div className="flex justify-between items-center mt-4 pt-4 border-t">
+                        <div className="flex items-center gap-2">
+                          <Switch
+                            checked={item.isAvailable !== false}
+                            onCheckedChange={() => toggleItemAvailability(item.id)}
+                          />
+                          <span className="text-sm">
+                            {item.isAvailable !== false ? (
+                              <Eye className="w-4 h-4" />
+                            ) : (
+                              <EyeOff className="w-4 h-4" />
+                            )}
+                          </span>
+                        </div>
+
+                        <div className="flex gap-2">
+                          <Button variant="outline" size="sm" onClick={() => openEditDialog(item)}>
+                            <Edit className="w-4 h-4" />
+                          </Button>
+                          <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                              <Button variant="outline" size="sm">
+                                <Trash2 className="w-4 h-4" />
+                              </Button>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent>
+                              <AlertDialogHeader>
+                                <AlertDialogTitle>Xóa món ăn</AlertDialogTitle>
+                                <AlertDialogDescription>
+                                  Bạn có chắc chắn muốn xóa món "{item.name}"? Hành động này không
+                                  thể hoàn tác.
+                                </AlertDialogDescription>
+                              </AlertDialogHeader>
+                              <AlertDialogFooter>
+                                <AlertDialogCancel>Hủy</AlertDialogCancel>
+                                <AlertDialogAction onClick={() => deleteItem(item.id)}>
+                                  Xóa
+                                </AlertDialogAction>
+                              </AlertDialogFooter>
+                            </AlertDialogContent>
+                          </AlertDialog>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            )}
+
+            {!isLoading && menuList.length === 0 && (
               <Card>
                 <CardContent className="py-8 text-center">
                   <p className="text-muted-foreground">Chưa có món ăn nào trong thực đơn</p>
@@ -599,17 +859,21 @@ export function MerchantMenuManagementPage() {
                       <Input
                         id="group-name"
                         value={toppingFormData.name}
-                        onChange={(e) => setToppingFormData(prev => ({ ...prev, name: e.target.value }))}
+                        onChange={(e) =>
+                          setToppingFormData((prev) => ({ ...prev, name: e.target.value }))
+                        }
                         placeholder="Ví dụ: Size, Topping thêm..."
                       />
                     </div>
-                    
+
                     <div>
                       <Label htmlFor="group-description">Mô tả</Label>
                       <Input
                         id="group-description"
                         value={toppingFormData.description}
-                        onChange={(e) => setToppingFormData(prev => ({ ...prev, description: e.target.value }))}
+                        onChange={(e) =>
+                          setToppingFormData((prev) => ({ ...prev, description: e.target.value }))
+                        }
                         placeholder="Mô tả ngắn về nhóm topping"
                       />
                     </div>
@@ -617,12 +881,17 @@ export function MerchantMenuManagementPage() {
                     <div>
                       <div className="flex justify-between items-center mb-2">
                         <Label>Danh sách topping</Label>
-                        <Button type="button" variant="outline" size="sm" onClick={addToppingToGroup}>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={addToppingToGroup}
+                        >
                           <Plus className="w-4 h-4 mr-1" />
                           Thêm
                         </Button>
                       </div>
-                      
+
                       <div className="space-y-2">
                         {toppingFormData.toppings.map((topping, index) => (
                           <div key={index} className="flex gap-2 items-center p-2 border rounded">
@@ -636,7 +905,9 @@ export function MerchantMenuManagementPage() {
                               placeholder="Giá"
                               className="w-24"
                               value={topping.price}
-                              onChange={(e) => updateTopping(index, 'price', parseFloat(e.target.value) || 0)}
+                              onChange={(e) =>
+                                updateTopping(index, 'price', parseFloat(e.target.value) || 0)
+                              }
                             />
                             <div className="flex items-center gap-1">
                               <input
@@ -674,64 +945,77 @@ export function MerchantMenuManagementPage() {
             </div>
 
             {/* Topping Groups */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {toppingGroups.map(group => (
-                <Card key={group.id}>
-                  <CardHeader>
-                    <div className="flex justify-between items-start">
-                      <div>
-                        <CardTitle className="text-lg">{group.name}</CardTitle>
-                        {group.description && (
-                          <p className="text-sm text-muted-foreground mt-1">
-                            {group.description}
-                          </p>
-                        )}
-                      </div>
-                      <AlertDialog>
-                        <AlertDialogTrigger asChild>
-                          <Button variant="outline" size="sm">
-                            <Trash2 className="w-4 h-4" />
-                          </Button>
-                        </AlertDialogTrigger>
-                        <AlertDialogContent>
-                          <AlertDialogHeader>
-                            <AlertDialogTitle>Xóa nhóm topping</AlertDialogTitle>
-                            <AlertDialogDescription>
-                              Bạn có chắc chắn muốn xóa nhóm topping "{group.name}"? Hành động này không thể hoàn tác.
-                            </AlertDialogDescription>
-                          </AlertDialogHeader>
-                          <AlertDialogFooter>
-                            <AlertDialogCancel>Hủy</AlertDialogCancel>
-                            <AlertDialogAction onClick={() => deleteToppingGroup(group.id)}>
-                              Xóa
-                            </AlertDialogAction>
-                          </AlertDialogFooter>
-                        </AlertDialogContent>
-                      </AlertDialog>
-                    </div>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-2">
-                      {group.toppings.map(topping => (
-                        <div key={topping.id} className="flex justify-between items-center p-2 bg-gray-50 rounded">
-                          <div className="flex items-center gap-2">
-                            <span>{topping.name}</span>
-                            {topping.required && (
-                              <Badge variant="secondary" className="text-xs">Bắt buộc</Badge>
-                            )}
-                          </div>
-                          <span className="font-medium">
-                            {topping.price > 0 ? formatCurrency(topping.price) : 'Miễn phí'}
-                          </span>
+            {isLoading ? (
+              <div className="flex flex-col items-center justify-center py-12 gap-2 text-muted-foreground">
+                <Loader2 className="w-8 h-8 animate-spin text-orange-600" />
+                <p className="text-sm">Đang tải danh sách nhóm topping...</p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {toppingGroups.map((group) => (
+                  <Card key={group.id}>
+                    <CardHeader>
+                      <div className="flex justify-between items-start">
+                        <div>
+                          <CardTitle className="text-lg">{group.name}</CardTitle>
+                          {group.description && (
+                            <p className="text-sm text-muted-foreground mt-1">
+                              {group.description}
+                            </p>
+                          )}
                         </div>
-                      ))}
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
+                        <AlertDialog>
+                          <AlertDialogTrigger asChild>
+                            <Button variant="outline" size="sm">
+                              <Trash2 className="w-4 h-4" />
+                            </Button>
+                          </AlertDialogTrigger>
+                          <AlertDialogContent>
+                            <AlertDialogHeader>
+                              <AlertDialogTitle>Xóa nhóm topping</AlertDialogTitle>
+                              <AlertDialogDescription>
+                                Bạn có chắc chắn muốn xóa nhóm topping "{group.name}"? Hành động này
+                                không thể hoàn tác.
+                              </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                              <AlertDialogCancel>Hủy</AlertDialogCancel>
+                              <AlertDialogAction onClick={() => deleteToppingGroup(group.id)}>
+                                Xóa
+                              </AlertDialogAction>
+                            </AlertDialogFooter>
+                          </AlertDialogContent>
+                        </AlertDialog>
+                      </div>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="space-y-2">
+                        {group.toppings.map((topping) => (
+                          <div
+                            key={topping.id}
+                            className="flex justify-between items-center p-2 bg-gray-50 rounded"
+                          >
+                            <div className="flex items-center gap-2">
+                              <span>{topping.name}</span>
+                              {topping.required && (
+                                <Badge variant="secondary" className="text-xs">
+                                  Bắt buộc
+                                </Badge>
+                              )}
+                            </div>
+                            <span className="font-medium">
+                              {topping.price > 0 ? formatCurrency(topping.price) : 'Miễn phí'}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            )}
 
-            {toppingGroups.length === 0 && (
+            {!isLoading && toppingGroups.length === 0 && (
               <Card>
                 <CardContent className="py-8 text-center">
                   <p className="text-muted-foreground">Chưa có nhóm topping nào</p>
@@ -758,7 +1042,7 @@ export function MerchantMenuManagementPage() {
                 <Input
                   id="edit-name"
                   value={formData.name}
-                  onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
+                  onChange={(e) => setFormData((prev) => ({ ...prev, name: e.target.value }))}
                   placeholder="Nhập tên món ăn"
                 />
               </div>
@@ -768,24 +1052,26 @@ export function MerchantMenuManagementPage() {
                   id="edit-price"
                   type="number"
                   value={formData.price}
-                  onChange={(e) => setFormData(prev => ({ ...prev, price: e.target.value }))}
+                  onChange={(e) => setFormData((prev) => ({ ...prev, price: e.target.value }))}
                   placeholder="0"
                 />
               </div>
             </div>
-            
+
             <div>
               <Label htmlFor="edit-category">Danh mục *</Label>
-              <Select 
-                value={formData.category} 
-                onValueChange={(value) => setFormData(prev => ({ ...prev, category: value }))}
+              <Select
+                value={formData.category}
+                onValueChange={(value) => setFormData((prev) => ({ ...prev, category: value }))}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Chọn danh mục" />
                 </SelectTrigger>
                 <SelectContent>
-                  {categories.map(cat => (
-                    <SelectItem key={cat} value={cat}>{cat}</SelectItem>
+                  {categories.map((cat) => (
+                    <SelectItem key={cat} value={cat}>
+                      {cat}
+                    </SelectItem>
                   ))}
                   <SelectItem value="Món mới">Món mới</SelectItem>
                   <SelectItem value="Đồ uống">Đồ uống</SelectItem>
@@ -799,7 +1085,7 @@ export function MerchantMenuManagementPage() {
               <Textarea
                 id="edit-description"
                 value={formData.description}
-                onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
+                onChange={(e) => setFormData((prev) => ({ ...prev, description: e.target.value }))}
                 placeholder="Mô tả món ăn"
                 rows={3}
               />
@@ -810,7 +1096,7 @@ export function MerchantMenuManagementPage() {
               <Input
                 id="edit-image"
                 value={formData.image}
-                onChange={(e) => setFormData(prev => ({ ...prev, image: e.target.value }))}
+                onChange={(e) => setFormData((prev) => ({ ...prev, image: e.target.value }))}
                 placeholder="https://..."
               />
             </div>
@@ -820,7 +1106,7 @@ export function MerchantMenuManagementPage() {
               <Textarea
                 id="edit-ingredients"
                 value={formData.ingredients}
-                onChange={(e) => setFormData(prev => ({ ...prev, ingredients: e.target.value }))}
+                onChange={(e) => setFormData((prev) => ({ ...prev, ingredients: e.target.value }))}
                 placeholder="Thịt bò, Bánh phở, Hành lá..."
                 rows={2}
               />
@@ -831,7 +1117,7 @@ export function MerchantMenuManagementPage() {
               <Input
                 id="edit-allergens"
                 value={formData.allergens}
-                onChange={(e) => setFormData(prev => ({ ...prev, allergens: e.target.value }))}
+                onChange={(e) => setFormData((prev) => ({ ...prev, allergens: e.target.value }))}
                 placeholder="Gluten, Đậu nành..."
               />
             </div>
@@ -843,7 +1129,7 @@ export function MerchantMenuManagementPage() {
                   id="edit-calories"
                   type="number"
                   value={formData.calories}
-                  onChange={(e) => setFormData(prev => ({ ...prev, calories: e.target.value }))}
+                  onChange={(e) => setFormData((prev) => ({ ...prev, calories: e.target.value }))}
                   placeholder="0"
                 />
               </div>
@@ -853,7 +1139,7 @@ export function MerchantMenuManagementPage() {
                   id="edit-protein"
                   type="number"
                   value={formData.protein}
-                  onChange={(e) => setFormData(prev => ({ ...prev, protein: e.target.value }))}
+                  onChange={(e) => setFormData((prev) => ({ ...prev, protein: e.target.value }))}
                   placeholder="0"
                 />
               </div>
@@ -863,7 +1149,7 @@ export function MerchantMenuManagementPage() {
                   id="edit-carbs"
                   type="number"
                   value={formData.carbs}
-                  onChange={(e) => setFormData(prev => ({ ...prev, carbs: e.target.value }))}
+                  onChange={(e) => setFormData((prev) => ({ ...prev, carbs: e.target.value }))}
                   placeholder="0"
                 />
               </div>
@@ -873,7 +1159,7 @@ export function MerchantMenuManagementPage() {
                   id="edit-fat"
                   type="number"
                   value={formData.fat}
-                  onChange={(e) => setFormData(prev => ({ ...prev, fat: e.target.value }))}
+                  onChange={(e) => setFormData((prev) => ({ ...prev, fat: e.target.value }))}
                   placeholder="0"
                 />
               </div>

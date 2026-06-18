@@ -1,6 +1,6 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react'; // <-- SỬA: Thêm useEffect vào đây
 import { useNavigate, Link } from 'react-router-dom';
-// import { useMerchant } from "../contexts/MerchantContext";
+import { useMerchant } from '../contexts/MerchantContext';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Separator } from '../components/ui/separator';
@@ -15,32 +15,35 @@ export default function MerchantLoginPage() {
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
+  // const { login } = useMerchant();
+  const { login, merchantAuth } = useMerchant();
   //const { merchantAuth } = useMerchant();
 
+  // ... trong file MerchantLoginPage.jsx
   const handleLogin = async (e) => {
     e.preventDefault();
-
     if (!email || !password) {
       toast.error('Vui lòng nhập đầy đủ thông tin');
       return;
     }
-
     setLoading(true);
-
-    // Mock authentication - trong thực tế sẽ gọi API
-    setTimeout(() => {
-      if (email === 'merchant@badafuta.com' && password === 'merchant123') {
-        // Set merchant auth in localStorage
-        const authData = { email };
-        localStorage.setItem('merchantAuth', JSON.stringify(authData));
-        toast.success('Đăng nhập thành công!');
-        navigate('/merchant/dashboard');
-      } else {
-        toast.error('Email hoặc mật khẩu không đúng');
-      }
+    try {
+      // Gọi đúng hàm login đã được cập nhật logic bên dưới
+      await login(email, password);
+      toast.success('Đăng nhập thành công!');
+      navigate('/merchant/dashboard');
+    } catch (error) {
+      toast.error(error.message || 'Email hoặc mật khẩu không đúng');
+    } finally {
       setLoading(false);
-    }, 1000);
+    }
   };
+  // ...
+  useEffect(() => {
+    if (merchantAuth?.user_id) {
+      navigate('/merchant/dashboard', { replace: true });
+    }
+  }, [merchantAuth, navigate]);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-orange-50 to-red-50 flex items-center justify-center p-4">
