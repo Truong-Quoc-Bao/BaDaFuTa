@@ -7,7 +7,7 @@ const MerchantContext = createContext(undefined);
 // 🟢 Tạo socket 1 lần duy nhất
 // =======================
 // const socket = io('https://badafuta-production.up.railway.app', {
-const socket = io('  https://badafuta.onrender.com', {
+const socket = io('https://badafuta.onrender.com', {
   path: '/socket.io',
   transports: ['websocket', 'polling'],
   secure: true,
@@ -71,8 +71,7 @@ export function MerchantProvider({ children }) {
     try {
       const response = await fetch(
         // 'https://badafuta-production.up.railway.app/api/merchant/overview',
-        ' https://badafuta.onrender.com/api/merchant/overview',
-
+        'https://badafuta.onrender.com/api/merchant/overview',
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -115,7 +114,7 @@ export function MerchantProvider({ children }) {
     try {
       const response = await fetch(
         // 'https://badafuta-production.up.railway.app/api/merchant/update-status',
-        ' https://badafuta.onrender.com/api/merchant/update-status',
+        'https://badafuta.onrender.com/api/merchant/update-status',
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
