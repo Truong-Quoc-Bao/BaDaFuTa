@@ -76,7 +76,10 @@ export function MerchantProvider({ children }) {
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ user_id: 'a3364e3a-baa0-41d0-b8cf-783981650b25' }),
+          // body: JSON.stringify({ user_id: 'a3364e3a-baa0-41d0-b8cf-783981650b25' }),
+          body: JSON.stringify({
+            user_id: merchantAuth?.user_id || 'a3364e3a-baa0-41d0-b8cf-783981650b25',
+          }),
         },
       );
       const data = await response.json();
@@ -117,7 +120,8 @@ export function MerchantProvider({ children }) {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            user_id: 'a3364e3a-baa0-41d0-b8cf-783981650b25', // <- thử trực tiếp
+            // user_id: 'a3364e3a-baa0-41d0-b8cf-783981650b25', // <- thử trực tiếp
+            user_id: merchantAuth?.user_id || 'a3364e3a-baa0-41d0-b8cf-783981650b25',
             order_id: orderId,
             action: status,
             reason: reason || '',
@@ -140,6 +144,7 @@ export function MerchantProvider({ children }) {
     } catch (error) {
       console.error(error);
       toast.error(error.message || 'Có lỗi khi cập nhật đơn hàng');
+      throw error;
     }
   };
 

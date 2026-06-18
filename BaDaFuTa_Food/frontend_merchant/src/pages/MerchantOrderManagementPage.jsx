@@ -42,7 +42,7 @@ export function MerchantOrderManagementPage() {
   // }, [dashboardData, orders.length, setOrders]);
 
   useEffect(() => {
-    const merchantId = '00ea6129-7f16-4376-925f-d1eab34037fa'; // hardcode tạm
+    const merchantId = '14cdec77-6ece-429b-a952-44bce7c96eda'; // hardcode tạm
 
     // const socket = io('https://badafuta-production.up.railway.app', {
     const socket = io(' https://badafuta.onrender.com', {

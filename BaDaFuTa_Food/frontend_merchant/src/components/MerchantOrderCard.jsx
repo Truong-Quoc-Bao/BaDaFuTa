@@ -67,12 +67,27 @@ export function MerchantOrderCard({ order, onStatusUpdate }) {
     }
   };
 
+  // const handleMarkReady = async () => {
+  //   setLoadingStatus('READY');
+  //   onStatusUpdate?.(order.id, 'READY');
+  //   try {
+  //     await updateOrderStatus(order.id, 'READY');
+  //     toast.success('Đơn hàng đã sẵn sàng!');
+  //   } catch {
+  //     onStatusUpdate?.(order.id, 'PREPARING');
+  //     toast.error('Cập nhật thất bại');
+  //   } finally {
+  //     setLoadingStatus(null);
+  //   }
+  // };
+
   const handleMarkReady = async () => {
-    setLoadingStatus('READY');
-    onStatusUpdate?.(order.id, 'READY');
+    setLoadingStatus('DELIVERING');
+    onStatusUpdate?.(order.id, 'DELIVERING');
+
     try {
-      await updateOrderStatus(order.id, 'READY');
-      toast.success('Đơn hàng đã sẵn sàng!');
+      await updateOrderStatus(order.id, 'DELIVERING'); // <-- Phải truyền 'DELIVERING'
+      toast.success('Đơn hàng đang được giao!');
     } catch {
       onStatusUpdate?.(order.id, 'PREPARING');
       toast.error('Cập nhật thất bại');
@@ -173,7 +188,7 @@ export function MerchantOrderCard({ order, onStatusUpdate }) {
       <CardContent className="pt-0">
         {/* Danh sách món ăn */}
         <div className="mb-4">
-          {order.items.map((item) => (
+          {order.items.map((item, index) => (
             <div
               key={item.id || item.menu_item_id || `fallback-${order.id}-${index}`}
               className="flex justify-between items-center py-2 border-b last:border-b-0"
