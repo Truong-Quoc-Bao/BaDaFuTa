@@ -1371,3 +1371,100 @@ const handleSave = async () => {
     </p>
   </div>
 </div>
+
+
+
+export function MerchantProvider({ children }) {
+  // 1. Khởi tạo Auth từ localStorage (Lazy Initializer - CHUẨN)
+  const [merchantAuth, setMerchantAuth] = useState(() => {
+    const stored = localStorage.getItem('merchantAuth');
+    if (stored) {
+      try { return JSON.parse(stored); } catch (e) { return null; }
+    }
+    return null;
+  });
+
+  // 2. Khởi tạo Settings dựa trên Auth (CHUẨN)
+  const [merchantSettings, setMerchantSettings] = useState({
+    restaurantId: merchantAuth?.merchant_id || '',
+    autoConfirmOrders: false,
+    maxOrdersPerHour: 20,
+    operatingHours: { open: '08:00', close: '22:00' },
+  });
+
+  const [orders, setOrders] = useState([]);
+  const [dashboardData, setDashboardData] = useState(null);
+
+  // 3. Đồng bộ ID khi Auth thay đổi (Ví dụ: sau khi Login)
+  useEffect(() => {
+    if (merchantAuth?.merchant_id) {
+      setMerchantSettings((prev) => ({
+        ...prev,
+        restaurantId: merchantAuth.merchant_id,
+      }));
+    }
+  }, [merchantAuth?.merchant_id]);
+
+  // 4. Socket logic
+  useEffect(() => {
+    if (!merchantAuth?.user_id) return;
+
+    socket.emit('joinMerchant', merchantAuth.user_id);
+
+    const handleNewOrder = (order) => {
+      // Lưu ý: nên check merchant_id nếu backend gửi merchant_id
+      if (order.merchant_id !== merchantAuth.merchant_id) return; 
+      
+      setOrders((prev) => [order, ...prev]);
+      toast.success('🔥 Có đơn hàng mới!');
+    };
+
+    socket.on('newOrder', handleNewOrder);
+    return () => socket.off('newOrder', handleNewOrder);
+  }, [merchantAuth?.user_id, merchantAuth?.merchant_id]);
+
+  // 5. Login - Cập nhật cả Auth và Settings
+  const login = async (email, password) => {
+    try {
+      const response = await fetch('https://badafuta.onrender.com/api/merchant/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password }),
+      });
+      const resData = await response.json();
+      if (!response.ok) throw new Error(resData.message || 'Đăng nhập thất bại');
+
+      const authData = resData.data;
+      setMerchantAuth(authData);
+      localStorage.setItem('merchantAuth', JSON.stringify(authData));
+      
+      // Cập nhật ngay ID nhà hàng để các trang Menu/Dashboard nhận ngay
+      setMerchantSettings((prev) => ({ ...prev, restaurantId: authData.merchant_id }));
+
+      return authData;
+    } catch (error) {
+      toast.error(error.message);
+      throw error;
+    }
+  };
+
+  // 6. Logout - Dọn dẹp sạch sẽ (BỔ SUNG)
+  const logout = useCallback(() => {
+    setMerchantAuth(null);
+    setMerchantSettings((prev) => ({ ...prev, restaurantId: '' })); // Xóa ID khi thoát
+    localStorage.removeItem('merchantAuth');
+    toast.info("Đã đăng xuất");
+  }, []);
+
+  // ... (Các hàm fetchDashboard, updateOrderStatus giữ nguyên) ...
+
+  return (
+    <MerchantContext.Provider value={{
+        merchantSettings, updateMerchantSettings, orders, setOrders,
+        updateOrderStatus, cancelOrder, autoConfirmEnabled: merchantSettings.autoConfirmOrders,
+        toggleAutoConfirm, merchantAuth, login, logout, dashboardData, fetchDashboard,
+    }}>
+      {children}
+    </MerchantContext.Provider>
+  );
+}

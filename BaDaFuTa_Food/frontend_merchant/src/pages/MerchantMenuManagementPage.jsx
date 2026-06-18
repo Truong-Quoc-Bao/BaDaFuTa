@@ -87,7 +87,6 @@ export function MerchantMenuManagementPage() {
   // 🔹 Tải dữ liệu món ăn và nhóm topping từ API
   // ===========================================
 
-  
   const fetchMenuAndToppings = async () => {
     const restaurantId = merchantSettings?.restaurantId;
     if (!restaurantId) return;
@@ -339,7 +338,7 @@ export function MerchantMenuManagementPage() {
       description: item.description,
       price: item.price.toString(),
       category: item.category,
-      image: item.image,
+      image: item.image?.url || item.url || (typeof item.image === 'string' ? item.image : ''),
       ingredients: item.ingredients?.join(', ') || '',
       allergens: item.allergens?.join(', ') || '',
       calories: item.nutrition?.calories?.toString() || '',
@@ -770,7 +769,21 @@ export function MerchantMenuManagementPage() {
                 {menuList.map((item) => (
                   <Card key={item.id} className="overflow-hidden">
                     <div className="relative">
-                      <img src={item.image} alt={item.name} className="w-full h-48 object-cover" />
+                      <img
+                        src={
+                          item.image?.url || // Lấy url từ object image (Cấu trúc mới của bạn)
+                          item.url || // Dự phòng nếu có trường url riêng
+                          item.image || // Dự phòng nếu image là string
+                          'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=500' // Ảnh mặc định
+                        }
+                        alt={item.name}
+                        className="w-full h-48 object-cover"
+                        onError={(e) => {
+                          e.target.onerror = null;
+                          e.target.src =
+                            'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=500';
+                        }}
+                      />
                       <div className="absolute top-2 right-2 flex gap-2">
                         <Badge variant={item.isAvailable !== false ? 'default' : 'secondary'}>
                           {item.isAvailable !== false ? 'Còn hàng' : 'Hết hàng'}

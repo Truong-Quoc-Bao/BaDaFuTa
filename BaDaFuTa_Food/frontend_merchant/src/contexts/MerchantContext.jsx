@@ -17,31 +17,23 @@ const socket = io('https://badafuta.onrender.com', {
 });
 
 export function MerchantProvider({ children }) {
-  const [merchantSettings, setMerchantSettings] = useState({
-    restaurantId: 'rest-1',
-    autoConfirmOrders: false,
-    maxOrdersPerHour: 20,
-    operatingHours: {
-      open: '08:00',
-      close: '22:00',
-    },
-  });
-
-  // const [merchantAuth, setMerchantAuth] = useState(null);
-
-  // SỬA: Khởi tạo State đồng bộ từ localStorage
+  // --- THÀNH ĐOẠN NÀY ---
   const [merchantAuth, setMerchantAuth] = useState(() => {
     const stored = localStorage.getItem('merchantAuth');
-    if (stored) {
-      try {
-        return JSON.parse(stored);
-      } catch (e) {
-        console.error('Lỗi parse merchantAuth:', e);
-        return null;
-      }
+    try {
+      return stored ? JSON.parse(stored) : null;
+    } catch (e) {
+      return null;
     }
-    return null;
   });
+
+  // Khởi tạo độc lập để không bị lỗi ReferenceError
+  const [merchantSettings, setMerchantSettings] = useState({
+    restaurantId: '', // Để trống lúc đầu
+    autoConfirmOrders: false,
+    maxOrdersPerHour: 20,
+  });
+  // const [merchantAuth, setMerchantAuth] = useState(null);
 
   // Sau khi sửa dòng trên, bạn có thể xóa bỏ hoàn toàn khối useEffect khôi phục stored cũ.
   const [orders, setOrders] = useState([]);
@@ -59,6 +51,15 @@ export function MerchantProvider({ children }) {
     }
   }, []);
 
+  // Thêm đoạn này bên dưới các useState
+  useEffect(() => {
+    if (merchantAuth?.merchant_id) {
+      setMerchantSettings((prev) => ({
+        ...prev,
+        restaurantId: merchantAuth.merchant_id,
+      }));
+    }
+  }, [merchantAuth?.merchant_id]);
   // =======================
   // 🔹 Join socket room ngay khi có merchantAuth
   // =======================
@@ -91,7 +92,6 @@ export function MerchantProvider({ children }) {
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          // body: JSON.stringify({ user_id: 'a3364e3a-baa0-41d0-b8cf-783981650b25' }),
           body: JSON.stringify({
             user_id: merchantAuth?.user_id || 'a3364e3a-baa0-41d0-b8cf-783981650b25',
           }),
@@ -152,6 +152,7 @@ export function MerchantProvider({ children }) {
 
       setMerchantAuth(completeAuth);
       localStorage.setItem('merchantAuth', JSON.stringify(completeAuth));
+      setMerchantSettings((prev) => ({ ...prev, restaurantId: completeAuth.merchant_id }));
 
       return completeAuth;
     } catch (error) {
