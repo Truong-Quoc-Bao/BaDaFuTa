@@ -124,50 +124,38 @@ export function MerchantProvider({ children }) {
   }, [fetchDashboard]);
 
   // ===========================================
-  // MerchantContext.jsx
-
-  // Trong file MerchantContext.jsx, tìm hàm login và sửa lại:
 
   const login = async (email, password) => {
     try {
-      // 1. Gọi API mới cho merchant riêng biệt
       const response = await fetch('https://badafuta.onrender.com/api/merchant/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password }), // Chỉ gửi email/password
+        body: JSON.stringify({ email, password }),
       });
 
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData?.message || errorData?.error || 'Đăng nhập merchant thất bại');
-      }
-
       const resData = await response.json();
-      // 2. Dữ liệu trả về bây giờ sẽ chứa thẳng merchant_id, không cần qua authInfo.user_id nữa
-      const authInfo = resData.data;
 
-      if (!authInfo.merchant_id) {
-        throw new Error('Thông tin merchant không hợp lệ');
+      if (!response.ok) {
+        throw new Error(resData.message || 'Đăng nhập thất bại');
       }
 
-      // 3. Lưu thông tin merchant mới vào state
+      // Backend trả về: { data: { user_id, merchant_id, merchant_name, email } }
+      const authData = resData.data;
+
+      // QUAN TRỌNG: Lưu merchant_id để gọi API overview/orders sau này
       const completeAuth = {
-        ...authInfo,
-        user_id: authInfo.merchant_id, // Gán để đồng bộ logic cũ nếu cần
-        email,
+        ...authData,
+        // Đảm bảo các hàm fetchDashboard sử dụng cái này
+        user_id: authData.user_id,
+        merchant_id: authData.merchant_id,
       };
 
       setMerchantAuth(completeAuth);
       localStorage.setItem('merchantAuth', JSON.stringify(completeAuth));
+
       return completeAuth;
     } catch (error) {
-      // Fallback nếu cần test offline
-      if (email === 'merchant@badafuta.com' && password === 'merchant123') {
-        const mockAuth = { email, user_id: 'rest-1', merchant_id: 'rest-1' };
-        setMerchantAuth(mockAuth);
-        localStorage.setItem('merchantAuth', JSON.stringify(mockAuth));
-        return mockAuth;
-      }
+      toast.error(error.message);
       throw error;
     }
   };

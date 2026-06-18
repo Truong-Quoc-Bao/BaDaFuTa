@@ -10,6 +10,10 @@ import path from 'path';
 
 dotenv.config();
 
+(BigInt.prototype as any).toJSON = function () {
+  return this.toString();
+};
+
 export const createApp = () => {
   const app = express();
   const __dirname = path.resolve(); // nếu cần

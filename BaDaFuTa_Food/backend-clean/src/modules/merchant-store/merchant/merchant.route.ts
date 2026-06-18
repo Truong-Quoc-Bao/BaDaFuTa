@@ -1,8 +1,6 @@
 import { Router } from 'express';
-import * as merchantController from './merchant.controller'; // Import controller của merchant
+import * as merchantController from './merchant.controller';
 
 const router = Router();
-
 router.post('/login', merchantController.login);
-
 export default router;

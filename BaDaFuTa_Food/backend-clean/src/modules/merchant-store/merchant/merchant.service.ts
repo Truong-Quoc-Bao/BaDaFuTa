@@ -1,25 +1,28 @@
 import bcrypt from 'bcryptjs';
-import * as merchantRepo from './merchant.repository';
-// BẠN ĐANG THIẾU DÒNG IMPORT NÀY HOẶC NÓ ĐANG BỊ LỖI
-import { prisma } from '@/libs/prisma';
+import { merchantRepository } from './merchant.repository';
 
-export const login = async (email: string, password: string) => {
-  const merchant = await merchantRepo.findByEmail(email);
-  if (!merchant) throw new Error('Email không tồn tại');
+export const merchantService = {
+  async login(email: string, pass: string) {
+    // 1. Xác thực danh tính qua bảng USERS
+    const user = await merchantRepository.findOwnerByEmail(email);
 
-  // LOG NÀY SẼ HIỆN LÊN RENDER
-  console.log('Input password:', password);
-  console.log('DB password:', merchant.password);
+    if (!user || user.role !== 'merchant') {
+      throw new Error('Tài khoản không tồn tại hoặc không có quyền Partner');
+    }
 
-  const valid = await bcrypt.compare(password, merchant.password);
+    // 2. So sánh mật khẩu (Lấy từ bảng users)
+    const isMatch = await bcrypt.compare(pass, user.password);
+    if (!isMatch) throw new Error('Mật khẩu không chính xác');
 
-  if (!valid) {
-    throw new Error('Mật khẩu không đúng');
-  }
-  // ...
-  return {
-    merchant_id: merchant.id,
-    merchant_name: merchant.merchant_name,
-    email: merchant.email,
-  };
+    // 3. Lấy thông tin cửa hàng (Dù tên B khác tên A vẫn lấy được ở đây)
+    const store = user.merchant[0];
+    if (!store) throw new Error('Tài khoản chưa được thiết lập nhà hàng');
+
+    return {
+      user_id: user.id, // ID ông chủ (A)
+      merchant_id: store.id, // ID nhà hàng (B)
+      merchant_name: store.merchant_name, // Tên nhà hàng hiển thị
+      email: user.email, // Email dùng để đăng nhập
+    };
+  },
 };
