@@ -39,7 +39,6 @@ model merchant {
   location             Json?
   phone                String?               @db.VarChar(20)
   email                String?               @db.VarChar(100)
-  password             String                 @db.VarChar(255)
   profile_image         Json?
   cover_image          Json?
   time_open            Json?
