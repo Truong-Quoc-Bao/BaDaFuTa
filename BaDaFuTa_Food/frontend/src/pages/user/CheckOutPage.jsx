@@ -36,6 +36,8 @@ import PopupVoucher from '@/components/VoucherDialog';
 import { CashIcon, VnPayIcon, MomoIcon } from '../../components/PaymentIcons';
 import { io } from 'socket.io-client/dist/socket.io.js';
 import { LocateFixed } from 'lucide-react';
+import { useLocation as useAppLocation } from '../../contexts/LocationContext';
+
 export default function CheckOutPage() {
   // 🟢 Khai báo socketRef
   const socketRef = useRef(null);
@@ -57,6 +59,10 @@ export default function CheckOutPage() {
   const [voucherPopup, setVoucherPopup] = useState(false);
   const [vouchers, setVouchers] = useState([]);
   const [selectedVoucher, setSelectedVoucher] = useState(null);
+  const [formErrors, setFormErrors] = useState({});
+
+  // Địa chỉ
+  const { state: locationState } = useAppLocation();
 
   console.log('ORDER SEND VOUCHER:', selectedVoucher || null);
   console.log('TYPE:', typeof selectedVoucher);
@@ -333,7 +339,7 @@ export default function CheckOutPage() {
     const savedAddresses = JSON.parse(localStorage.getItem(`addressList_${user.id}`)) || [];
     setAddressList(savedAddresses);
 
-    // Load địa chỉ đang chọn
+    // 1️⃣ Load địa chỉ đang chọn
     const savedSelected = JSON.parse(localStorage.getItem(`selectedAddress_${user.id}`));
 
     if (savedSelected) {
@@ -343,10 +349,29 @@ export default function CheckOutPage() {
       return; // ⛔ Có rồi thì DỪNG, không tự chạy GPS
     }
 
+    // 2️⃣ Fallback: lấy từ LocationContext (vị trí chọn ở HomePage)
+    const appLocation = locationState?.currentLocation;
+    if (appLocation) {
+      const locationAddress = {
+        id: Date.now(),
+        full_name: user?.full_name ?? 'Người dùng',
+        phone: user?.phone ?? '',
+        address: appLocation.ward
+          ? `${appLocation.ward}, ${appLocation.city}` // "Phường 1, Hồ Chí Minh"
+          : appLocation.name ?? '',
+        note: '',
+        lat: appLocation.coordinates?.lat ?? 0,
+        lng: appLocation.coordinates?.lng ?? 0,
+      };
+      setSelectedAddress(locationAddress);
+      setFormData(locationAddress);
+      return; // ⛔ Có rồi, không cần GPS
+    }
+
     // ⛔ Nếu chưa có thì mới tự động chạy GPS lần đầu
     console.log('🌍 Chưa có địa chỉ, tự động lấy GPS...');
     handleGetCurrentLocation();
-  }, [user]);
+  }, [user, locationState?.currentLocation]);
 
   const [showConfirmPopup, setShowConfirmPopup] = useState(false);
   const [countdown, setCountdown] = useState(20);
@@ -357,6 +382,25 @@ export default function CheckOutPage() {
   const handleSaveOnCheckout = async () => {
     if (!selectedAddress) {
       alert('Chưa có địa chỉ giao hàng!');
+      return;
+    }
+    // ✅ Validate các field bắt buộc
+    if (!formData.full_name?.trim()) {
+      alert('Vui lòng nhập họ tên người nhận!');
+      return;
+    }
+    if (!formData.phone?.trim()) {
+      alert('Vui lòng nhập số điện thoại!');
+      return;
+    }
+    if (!formData.address?.trim()) {
+      alert('Vui lòng nhập địa chỉ giao hàng!');
+      return;
+    }
+    // Validate số điện thoại VN
+    const phoneRegex = /^(0[3|5|7|8|9])+([0-9]{8})$/;
+    if (!phoneRegex.test(formData.phone.trim())) {
+      alert('Số điện thoại không hợp lệ!');
       return;
     }
     if (!selectedPaymentMethod) {
@@ -701,8 +745,47 @@ export default function CheckOutPage() {
     return null;
   };
 
+  const handleDeleteAddress = (addrId) => {
+    if (!window.confirm('Bạn có chắc muốn xóa địa chỉ này không?')) return;
+
+    const updatedList = addressList.filter((a) => a.id !== addrId);
+    setAddressList(updatedList);
+    localStorage.setItem(`addressList_${user.id}`, JSON.stringify(updatedList));
+
+    // Nếu xóa đúng địa chỉ đang chọn thì reset
+    if (selectedAddress?.id === addrId) {
+      const next = updatedList[0] ?? null;
+      setSelectedAddress(next);
+      setFormData(next ?? { full_name: '', phone: '', address: '', note: '' });
+      if (next) {
+        localStorage.setItem(`selectedAddress_${user?.id}`, JSON.stringify(next));
+      } else {
+        localStorage.removeItem(`selectedAddress_${user?.id}`);
+      }
+    }
+  };
+
   // 💾 Lưu khi chỉnh sửa (Fix: Gọi API LocationIQ để lấy lat/lng mới)
   const handleSaveEdit = async () => {
+    // ✅ Validate trước khi lưu
+    const errors = {};
+    if (!formData.full_name?.trim()) errors.full_name = 'Vui lòng nhập họ tên!';
+    if (!formData.phone?.trim()) {
+      errors.phone = 'Vui lòng nhập số điện thoại!';
+    } else {
+      const phoneRegex = /^(0[3|5|7|8|9])+([0-9]{8})$/;
+      if (!phoneRegex.test(formData.phone.trim())) {
+        errors.phone = 'Số điện thoại không hợp lệ (VD: 0901234567)!';
+      }
+    }
+    if (!formData.address?.trim()) errors.address = 'Vui lòng nhập địa chỉ!';
+
+    if (Object.keys(errors).length > 0) {
+      setFormErrors(errors);
+      return; // ⛔ dừng hẳn
+    }
+    setFormErrors({});
+
     // Gọi API lấy tọa độ
     const coords = await fetchCoordinates(formData.address);
 
@@ -728,8 +811,28 @@ export default function CheckOutPage() {
       alert('✅ Đã cập nhật thông tin giao hàng!');
     }
   };
+  
   // 💾 Lưu khi thêm mới (Fix: Gọi API LocationIQ để lấy lat/lng mới)
   const handleSaveAdd = async () => {
+    // ✅ Validate trước khi lưu
+    const errors = {};
+    if (!formData.full_name?.trim()) errors.full_name = 'Vui lòng nhập họ tên!';
+    if (!formData.phone?.trim()) {
+      errors.phone = 'Vui lòng nhập số điện thoại!';
+    } else {
+      const phoneRegex = /^(0[3|5|7|8|9])+([0-9]{8})$/;
+      if (!phoneRegex.test(formData.phone.trim())) {
+        errors.phone = 'Số điện thoại không hợp lệ (VD: 0901234567)!';
+      }
+    }
+    if (!formData.address?.trim()) errors.address = 'Vui lòng nhập địa chỉ!';
+
+    if (Object.keys(errors).length > 0) {
+      setFormErrors(errors);
+      return; // ⛔ dừng hẳn
+    }
+    setFormErrors({});
+
     // Gọi API lấy tọa độ
     const coords = await fetchCoordinates(formData.address);
 
@@ -743,11 +846,10 @@ export default function CheckOutPage() {
     const updatedList = [...addressList, newAddress];
     setAddressList(updatedList);
     setSelectedAddress(newAddress);
-
     localStorage.setItem(`addressList_${user.id}`, JSON.stringify(updatedList));
     localStorage.setItem(`selectedAddress_${user?.id}`, JSON.stringify(newAddress));
-
     setIsAdding(false);
+
     if (coords) {
       alert('✅ Đã thêm địa chỉ mới và cập nhật phí ship!');
     } else {
@@ -922,6 +1024,7 @@ export default function CheckOutPage() {
                           setFormData(selectedAddress); // ✅ nạp dữ liệu đang chọn
                           setIsEditing(true); // ✅ bật chế độ sửa
                           setIsAdding(false);
+                          setFormErrors({});
                           setIsDialogOpen(true); // ✅ mở popup
                         }}
                       >
@@ -1066,9 +1169,18 @@ export default function CheckOutPage() {
                         <Input
                           name="full_name"
                           value={formData.full_name}
-                          onChange={handleInputChange}
+                          onChange={(e) => {
+                            handleInputChange(e);
+                            setFormErrors((prev) => ({ ...prev, full_name: '' }));
+                          }}
                           placeholder="Nhập họ tên người nhận"
+                          className={
+                            formErrors.full_name ? 'border-red-500 focus-visible:ring-red-400' : ''
+                          }
                         />
+                        {formErrors.full_name && (
+                          <p className="text-xs text-red-500">{formErrors.full_name}</p>
+                        )}
                       </div>
 
                       <div className="space-y-2">
@@ -1076,9 +1188,18 @@ export default function CheckOutPage() {
                         <Input
                           name="phone"
                           value={formData.phone}
-                          onChange={handleInputChange}
+                          onChange={(e) => {
+                            handleInputChange(e);
+                            setFormErrors((prev) => ({ ...prev, phone: '' }));
+                          }}
                           placeholder="Nhập số điện thoại"
+                          className={
+                            formErrors.phone ? 'border-red-500 focus-visible:ring-red-400' : ''
+                          }
                         />
+                        {formErrors.phone && (
+                          <p className="text-xs text-red-500">{formErrors.phone}</p>
+                        )}
                       </div>
 
                       <div className="space-y-2">
@@ -1086,9 +1207,18 @@ export default function CheckOutPage() {
                         <Input
                           name="address"
                           value={formData.address}
-                          onChange={handleInputChange}
+                          onChange={(e) => {
+                            handleInputChange(e);
+                            setFormErrors((prev) => ({ ...prev, address: '' }));
+                          }}
                           placeholder="Nhập địa chỉ giao hàng"
+                          className={
+                            formErrors.address ? 'border-red-500 focus-visible:ring-red-400' : ''
+                          }
                         />
+                        {formErrors.address && (
+                          <p className="text-xs text-red-500">{formErrors.address}</p>
+                        )}
                       </div>
 
                       <div className="space-y-2">
@@ -1202,10 +1332,24 @@ export default function CheckOutPage() {
                                   setFormData(addr); // Nạp data của địa chỉ này vào form
                                   setIsEditing(true);
                                   setIsAdding(false);
+                                  setFormErrors({});
                                   setIsDialogOpen(true);
                                 }}
                               >
                                 <Edit className="w-4 h-4 mr-1" /> Sửa
+                              </Button>
+
+                              {/* ✅ Nút xóa mới */}
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                className="text-red-500 border-red-200 hover:bg-red-50 hover:text-red-600"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleDeleteAddress(addr.id);
+                                }}
+                              >
+                                <X className="w-4 h-4 mr-1" /> Xóa
                               </Button>
                             </div>
                           </div>
@@ -1220,6 +1364,7 @@ export default function CheckOutPage() {
                           onClick={() => {
                             setIsAdding(true);
                             setIsEditing(false);
+                            setFormErrors({});
                             setFormData({
                               name: '',
                               phone: '',
@@ -1247,6 +1392,7 @@ export default function CheckOutPage() {
                 onClick={() => {
                   setIsAdding(true);
                   setIsEditing(false);
+                  setFormErrors({});
                   setFormData({
                     name: '',
                     phone: '',

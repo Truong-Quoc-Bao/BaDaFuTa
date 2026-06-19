@@ -1468,3 +1468,28 @@ export function MerchantProvider({ children }) {
     </MerchantContext.Provider>
   );
 }
+
+
+
+
+const handleSaveEdit = async () => {
+  const errors = {};
+  if (!formData.full_name?.trim()) errors.full_name = 'Vui lòng nhập họ tên!';
+  if (!formData.phone?.trim()) {
+    errors.phone = 'Vui lòng nhập số điện thoại!';
+  } else {
+    const phoneRegex = /^(0[3|5|7|8|9])+([0-9]{8})$/;
+    if (!phoneRegex.test(formData.phone.trim())) {
+      errors.phone = 'Số điện thoại không hợp lệ (VD: 0901234567)!';
+    }
+  }
+  if (!formData.address?.trim()) errors.address = 'Vui lòng nhập địa chỉ!';
+
+  if (Object.keys(errors).length > 0) {
+    setFormErrors(errors);
+    return; // ⛔ dừng hẳn
+  }
+  setFormErrors({});
+
+  // ... phần còn lại giữ nguyên
+};

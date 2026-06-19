@@ -42,8 +42,8 @@ export default function HomePage() {
       .map((r) => {
         if (!r.coordinates) return { ...r, distance: Infinity };
         const distance = calculateDistance(
-          locationState.currentLocation.coordinates.lat,
-          locationState.currentLocation.coordinates.lng,
+          locationState.currentLocation.coordinates?.lat,
+          locationState.currentLocation.coordinates?.lng,
           r.coordinates.lat,
           r.coordinates.lng,
         );
@@ -73,7 +73,32 @@ export default function HomePage() {
     return name.includes(query) || cuisine.includes(query);
   });
 
-  const cuisineTypes = ['Tất cả', 'Việt Nam', 'Coffee', 'Philippin', 'Thái Lan', 'Hàn Quốc', 'Mỹ'];
+  // const cuisineTypes = ['Tất cả', 'Việt Nam', 'Coffee', 'Philippin', 'Thái Lan', 'Hàn Quốc', 'Mỹ'];
+  const [cuisineTypes, setCuisineTypes] = useState(['Tất cả']);
+
+  useEffect(() => {
+    const fetchCuisineFromDb = async () => {
+      try {
+        const res = await fetch('https://badafuta.onrender.com/api/restaurants');
+        if (!res.ok) throw new Error('Không thể tải danh sách ẩm thực');
+        const data = await res.json();
+
+        // Lọc các cuisine duy nhất không trùng lặp và không rỗng từ CSDL
+        const uniqueCuisines = [
+          'Tất cả',
+          ...new Set(data.map((r) => r.cuisine).filter((c) => c && c.trim() !== '')),
+        ];
+
+        setCuisineTypes(uniqueCuisines);
+      } catch (err) {
+        console.error('Lỗi lấy danh sách Cuisine từ DB:', err.message);
+      }
+    };
+
+    fetchCuisineFromDb();
+  }, []);
+
+  console.log('cuisine', cuisineTypes);
 
   const finalFilteredRestaurants =
     selectedCuisine === 'Tất cả'
@@ -171,8 +196,8 @@ export default function HomePage() {
             m.location && locationState.currentLocation
               ? Math.round(
                   calculateDistance(
-                    locationState.currentLocation.coordinates.lat,
-                    locationState.currentLocation.coordinates.lng,
+                    locationState.currentLocation.coordinates?.lat,
+                    locationState.currentLocation.coordinates?.lng,
                     m.location.lat,
                     m.location.lng,
                   ) * 10,
@@ -367,8 +392,8 @@ export default function HomePage() {
                 r.coordinates && locationState.currentLocation
                   ? Math.round(
                       calculateDistance(
-                        locationState.currentLocation.coordinates.lat,
-                        locationState.currentLocation.coordinates.lng,
+                        locationState.currentLocation.coordinates?.lat,
+                        locationState.currentLocation.coordinates?.lng,
                         r.coordinates.lat,
                         r.coordinates.lng,
                       ) * 10,
