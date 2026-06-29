@@ -55,4 +55,29 @@ export class AdminController {
       return res.status(500).json({ message: error.message });
     }
   }
+
+  // Xóa đối tác
+  async deletePartner(req: Request, res: Response) {
+    try {
+      const { id } = req.params;
+      await adminService.executeDeletePartner(id);
+      return res.status(200).json({ message: 'Xóa đối tác thành công' });
+    } catch (error: any) {
+      return res.status(500).json({ message: error.message });
+    }
+  }
+
+  // Cập nhật thông tin đối tác
+  async updatePartner(req: Request, res: Response) {
+    try {
+      const { id } = req.params;
+      const updated = await adminService.executeUpdatePartner(id, req.body);
+      return res.status(200).json({
+        message: 'Cập nhật đối tác thành công',
+        partner: updated,
+      });
+    } catch (error: any) {
+      return res.status(500).json({ message: error.message });
+    }
+  }
 }

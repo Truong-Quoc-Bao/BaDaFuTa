@@ -13,4 +13,8 @@ router.post('/admin/add-partner', adminController.addPartner);
 router.get('/admin/users', adminController.getUsers);
 router.get('/admin/partners', adminController.getPartners);
 
+// Thêm 2 route này vào cuối file của bạn trước dòng export default router:
+router.put('/admin/partners/:id', adminController.updatePartner);
+router.delete('/admin/partners/:id', adminController.deletePartner);
+
 export default router;

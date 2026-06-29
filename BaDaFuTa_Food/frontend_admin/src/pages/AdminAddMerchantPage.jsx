@@ -48,8 +48,8 @@ export default function AdminAddMerchantPage() {
           Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({
-          restaurant_name: restaurantName,
-          owner_name: ownerName,
+          restaurantName: restaurantName,
+          ownerName: ownerName,
           email: email,
           password: password,
           phone: phone,
@@ -223,7 +223,7 @@ export default function AdminAddMerchantPage() {
               <Button
                 type="submit"
                 disabled={loading}
-                className="bg-orange-600 hover:bg-orange-700 text-white rounded-xl py-2 px-6 font-semibold"
+                className="bg-orange-600 hover:bg-orange-700 text-white rounded-xl py-2 px-6 w-[180px] md:w-[260px] font-semibold"
               >
                 {loading ? 'Đang kích hoạt...' : 'Kích hoạt & Tạo tài khoản'}
               </Button>

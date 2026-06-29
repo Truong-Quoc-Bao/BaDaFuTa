@@ -51,4 +51,14 @@ export class AdminService {
   async retrievePartners() {
     return await adminRepository.getAllPartners();
   }
+
+  // Xóa đối tác
+  async executeDeletePartner(id: string) {
+    return await adminRepository.deletePartner(id);
+  }
+
+  // Cập nhật thông tin đối tác
+  async executeUpdatePartner(id: string, partnerData: any) {
+    return await adminRepository.updatePartner(id, partnerData);
+  }
 }

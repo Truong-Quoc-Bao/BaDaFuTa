@@ -118,4 +118,51 @@ export class AdminRepository {
       };
     });
   }
+
+  /**
+   * 🔹 [THẬT] Xóa tài khoản đối tác (Xóa User liên kết sẽ tự động Cascade xóa Merchant)
+   */
+  async deletePartner(id: string) {
+    const merchant = await prisma.merchant.findUnique({
+      where: { id },
+    });
+
+    if (merchant) {
+      return await prisma.users.delete({
+        where: { id: merchant.user_id },
+      });
+    }
+    throw new Error('Không tìm thấy thông tin đối tác để xóa');
+  }
+
+  /**
+   * 🔹 [THẬT] Cập nhật thông tin đối tác trong cả 2 bảng: 'merchant' và 'users' (Transaction)
+   */
+  async updatePartner(id: string, data: any) {
+    return await prisma.$transaction(async (tx) => {
+      // 1. Cập nhật thông tin gian hàng trong bảng merchant
+      const updatedMerchant = await tx.merchant.update({
+        where: { id },
+        data: {
+          merchant_name: data.restaurantName,
+          phone: data.phone,
+          email: data.email,
+          location: { address: data.address } as any,
+        } as any,
+      });
+
+      // 2. Đồng bộ cập nhật thông tin chủ quán trong bảng users liên kết
+      await tx.users.update({
+        where: { id: updatedMerchant.user_id },
+        data: {
+          full_name: data.ownerName,
+          email: data.email,
+          phone: data.phone,
+          address: data.address,
+        },
+      });
+
+      return updatedMerchant;
+    });
+  }
 }
