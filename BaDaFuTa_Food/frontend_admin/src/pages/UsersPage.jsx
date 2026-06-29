@@ -8,7 +8,7 @@ const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://badafuta.onrender.
 
 export default function UsersPage() {
   const [searchTerm, setSearchTerm] = useState('');
-  const [activeTab, setActiveTab] = useState('all');
+  const [activeTab, setActiveTab] = useState('all'); // 'all', 'customer', 'merchant' (Sửa từ 'partner')
   const [usersList, setUsersList] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -52,6 +52,7 @@ export default function UsersPage() {
   return (
     <div className="space-y-6 text-left">
       <div className="flex flex-col md:flex-row justify-between items-stretch md:items-center gap-4">
+        {/* Bộ Tab lọc người dùng */}
         <div className="flex bg-gray-100 p-1 rounded-xl">
           <button
             onClick={() => setActiveTab('all')}
@@ -74,14 +75,14 @@ export default function UsersPage() {
             Khách hàng ({usersList.filter((u) => u.role === 'customer').length})
           </button>
           <button
-            onClick={() => setActiveTab('partner')}
+            onClick={() => setActiveTab('merchant')} // ✅ Sửa từ 'partner' thành 'merchant'
             className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors ${
-              activeTab === 'partner'
+              activeTab === 'merchant'
                 ? 'bg-white text-orange-600 shadow-sm'
                 : 'text-gray-500 hover:text-gray-900'
             }`}
           >
-            Đối tác nhà hàng ({usersList.filter((u) => u.role === 'partner').length})
+            Đối tác nhà hàng ({usersList.filter((u) => u.role === 'merchant').length})
           </button>
         </div>
 
@@ -121,19 +122,20 @@ export default function UsersPage() {
                       <td className="px-6 py-4 font-semibold text-gray-900">{user.name}</td>
                       <td className="px-6 py-4 text-gray-500">{user.email}</td>
                       <td className="px-6 py-4">
+                        {/* ✅ Sửa các logic kiểm tra hiển thị nhãn và Icon từ 'partner' thành 'merchant' */}
                         <span
                           className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold ${
-                            user.role === 'partner'
+                            user.role === 'merchant'
                               ? 'bg-rose-50 text-rose-600'
                               : 'bg-orange-50 text-orange-600'
                           }`}
                         >
-                          {user.role === 'partner' ? (
+                          {user.role === 'merchant' ? (
                             <Store className="w-3.5 h-3.5" />
                           ) : (
                             <Users className="w-3.5 h-3.5" />
                           )}
-                          {user.role === 'partner' ? 'Đối tác' : 'Khách hàng'}
+                          {user.role === 'merchant' ? 'Đối tác' : 'Khách hàng'}
                         </span>
                       </td>
                       <td className="px-6 py-4 text-gray-500">{user.joinDate}</td>
