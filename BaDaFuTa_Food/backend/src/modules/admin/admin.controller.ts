@@ -5,6 +5,7 @@ import { AdminValidation } from './admin.validation';
 const adminService = new AdminService();
 
 export class AdminController {
+  // Đăng nhập Admin
   async login(req: Request, res: Response) {
     try {
       AdminValidation.validateLogin(req.body);
@@ -16,6 +17,7 @@ export class AdminController {
     }
   }
 
+  // Lấy thống kê
   async getDashboardStats(req: Request, res: Response) {
     try {
       const stats = await adminService.retrieveDashboardStats();
@@ -25,6 +27,7 @@ export class AdminController {
     }
   }
 
+  // Thêm đối tác mới
   async addPartner(req: Request, res: Response) {
     try {
       AdminValidation.validateCreatePartner(req.body);
@@ -38,6 +41,7 @@ export class AdminController {
     }
   }
 
+  // Lấy danh sách người dùng thực tế
   async getUsers(req: Request, res: Response) {
     try {
       const users = await adminService.retrieveUsers();
@@ -47,6 +51,7 @@ export class AdminController {
     }
   }
 
+  // Lấy danh sách đối tác/nhà hàng thực tế
   async getPartners(req: Request, res: Response) {
     try {
       const partners = await adminService.retrievePartners();
@@ -56,10 +61,10 @@ export class AdminController {
     }
   }
 
-  // Xóa đối tác
+  // 🔹 Xóa đối tác (Đã cập nhật ép kiểu 'as string' ở dòng 63)
   async deletePartner(req: Request, res: Response) {
     try {
-      const { id } = req.params;
+      const id = req.params.id as string; // <-- Ép kiểu rõ ràng thành 'as string' để sửa lỗi TS2345
       await adminService.executeDeletePartner(id);
       return res.status(200).json({ message: 'Xóa đối tác thành công' });
     } catch (error: any) {
@@ -67,10 +72,10 @@ export class AdminController {
     }
   }
 
-  // Cập nhật thông tin đối tác
+  // 🔹 Cập nhật thông tin đối tác (Đã cập nhật ép kiểu 'as string' ở dòng 74)
   async updatePartner(req: Request, res: Response) {
     try {
-      const { id } = req.params;
+      const id = req.params.id as string; // <-- Ép kiểu rõ ràng thành 'as string' để sửa lỗi TS2345
       const updated = await adminService.executeUpdatePartner(id, req.body);
       return res.status(200).json({
         message: 'Cập nhật đối tác thành công',
