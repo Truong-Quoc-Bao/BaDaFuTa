@@ -3,62 +3,38 @@ import { PrismaClient } from '@prisma/client';
 const prisma = new PrismaClient();
 
 export class AdminRepository {
-  /**
-   * 🔹 [MOCK] Đăng nhập Admin (Do chưa cấu hình bảng Admin trong DB)
-   */
   async findAdminByEmail(email: string) {
-    // Giả lập tài khoản Admin trực tiếp bằng code
     if (email === 'admin@badafuta.com') {
       return {
         id: 'admin_123',
         email: 'admin@badafuta.com',
         name: 'Trần Quốc Bảo',
-        password: 'admin123', // Mật khẩu kiểm tra nhanh
+        password: 'admin123',
         role: 'admin',
       };
     }
     return null;
   }
 
-  /**
-   * 🔹 [THẬT] Đếm số lượng Khách hàng & Đối tác từ Database
-   */
   async countUsersByRole(role: string): Promise<number> {
     if (role === 'customer') {
-      // Đếm số lượng khách hàng thật trong bảng users
-      return await prisma.users.count({
-        where: {
-          role: 'customer',
-        },
-      });
+      return await prisma.users.count({ where: { role: 'customer' } });
     }
-
-    if (role === 'partner') {
-      // Đếm số lượng nhà hàng thật trong bảng merchant
+    if (role === 'merchant') {
       return await prisma.merchant.count();
     }
-
     return 0;
   }
 
-  /**
-   * 🔹 [THẬT] Lấy danh sách hoạt động gần đây từ lượt đăng ký thật trong bảng Users
-   */
   async getRecentActivities() {
     const recentSignups = await prisma.users.findMany({
-      where: {
-        role: {
-          in: ['customer', 'partner'], // Chỉ lấy khách hàng hoặc đối tác
-        },
-      },
-      orderBy: {
-        created_at: 'desc',
-      },
-      take: 5, // Lấy ra tối đa 5 lượt đăng ký mới nhất
+      where: { role: { in: ['customer', 'merchant'] } },
+      orderBy: { created_at: 'desc' },
+      take: 5,
     });
 
     return recentSignups.map((u) => {
-      const isPartner = u.role === 'partner';
+      const isPartner = u.role === 'merchant';
       return {
         text: isPartner
           ? `Đối tác nhà hàng "${u.full_name}" đã được đăng ký tài khoản`
@@ -69,19 +45,10 @@ export class AdminRepository {
     });
   }
 
-  /**
-   * 🔹 [THẬT] Lấy danh sách toàn bộ Users (Khách hàng & Đối tác) từ bảng 'users'
-   */
   async getAllUsers() {
     const dbUsers = await prisma.users.findMany({
-      where: {
-        role: {
-          in: ['customer', 'partner'], // Lọc lấy khách hàng và đối tác thật trong DB
-        },
-      },
-      orderBy: {
-        created_at: 'desc',
-      },
+      where: { role: { in: ['customer', 'merchant'] } },
+      orderBy: { created_at: 'desc' },
     });
 
     return dbUsers.map((user) => ({
@@ -94,21 +61,13 @@ export class AdminRepository {
     }));
   }
 
-  /**
-   * 🔹 [THẬT] Lấy danh sách các đối tác từ bảng 'merchant' (kèm join bảng 'users' để lấy thông tin chủ quán)
-   */
   async getAllPartners() {
     const dbMerchants = await prisma.merchant.findMany({
-      include: {
-        users: true, // Join khóa ngoại fk_merchant_user
-      },
-      orderBy: {
-        id: 'desc',
-      },
+      include: { users: true },
+      orderBy: { id: 'desc' },
     });
 
     return dbMerchants.map((m) => {
-      // Đọc địa chỉ được cấu hình dưới dạng Json trong database
       let addressString = m.description || 'N/A';
       if (m.location && typeof m.location === 'object') {
         const loc = m.location as Record<string, any>;
@@ -128,32 +87,26 @@ export class AdminRepository {
     });
   }
 
-  /**
-   * 🔹 [THẬT] Lưu thông tin tài khoản đối tác & cửa hàng mới vào Database (Transaction)
-   */
   async saveNewPartner(data: any) {
     return await prisma.$transaction(async (tx) => {
-      // 1. Tạo tài khoản trong bảng users (gán role là 'partner')
       const newUser = await tx.users.create({
         data: {
           full_name: data.ownerName,
           email: data.email,
-          password: data.password, // Mật khẩu đã được mã hóa ở tầng Service
+          password: data.password,
           phone: data.phone,
-          role: 'partner',
+          role: 'merchant',
           address: data.address,
         },
       });
 
-      // 2. Tạo gian hàng đối tác tương ứng trong bảng merchant sử dụng cấu trúc phẳng (Unchecked)
-      // Ép kiểu 'as any' cho toàn bộ object data để giải quyết dứt điểm lỗi TypeScript ts(2322)
       const newMerchant = await tx.merchant.create({
         data: {
-          user_id: newUser.id, // Truyền trực tiếp ID vừa tạo vào khóa ngoại user_id
+          user_id: newUser.id,
           merchant_name: data.restaurantName,
           phone: data.phone,
           email: data.email,
-          location: { address: data.address } as any, // Định dạng Json chuẩn hóa an toàn
+          location: { address: data.address } as any,
         } as any,
       });
 
