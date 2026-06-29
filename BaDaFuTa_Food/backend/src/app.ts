@@ -35,6 +35,7 @@ export const createApp = () => {
       origin: [
         'http://localhost:5173', // customer
         'http://localhost:5174', // ➕ thêm merchant
+        'http://localhost:5175',
         'http://192.168.100.124:5173',
         'http://192.168.100.124:5174', // ➕ nếu merchant chạy cùng mạng LAN
         'http://172.20.10.3:5173',

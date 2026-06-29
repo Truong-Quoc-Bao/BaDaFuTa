@@ -55,6 +55,7 @@ const io = new IOServer(httpServer, {
     origin: [
       'http://localhost:5173', // React dev
       'http://localhost:5174', // Merchant dev
+      'http://localhost:5175', // Admin
       'https://ba-da-fu-ta-partner.vercel.app', // Prod
       'https://badafuta-production.up.railway.app',
       'https://badafuta.onrender.com',
