@@ -9,31 +9,30 @@ The project is structured as a **Monorepo Workspace** that separates TypeScript 
 ## 🏗️ Monorepo System Architecture
 
 ```text
-                               +-------------------+
-                               |   PostgreSQL DB   |
-                               |    (Supabase)     |
-                               +---+-----------+---+
-                                   |           |
-               +-------------------+           +-------------------+
-               | (Prisma ORM)                                      | (Native Pg Driver)
-               v                                                   v
-+--------------+-------------------+               +---------------+-------------------+
-|     backend (TypeScript Core)     |               |  server (Secondary JS Service)   |
-|   - Express, Socket.IO, JWT       |               |   - Native controllers & routes   |
-|   - Domain Modular Modules        |               |   - Legacy flow helpers           |
-+--------------+-------------------+               +---------------+-------------------+
-               ^                                                   ^
-               | (HTTP REST & Real-time WebSockets)               | (HTTP REST)
-               +-------------------+-----------+-------------------+
-                                   |           |
-         +-------------------------+-----------+-------------------------+
-         |                         |           |                         |
-         v                         v           v                         v
-+--------+-----------+   +---------+--------+  +--------+--------+   +---------+-----------+
-| frontend_customer  |   | frontend_admin   |  |frontend_merchant|   |       mobile        |
-| (Customer PWA Web) |   | (Admin Web)      |  |(Store Admin Web)|   | (Expo Android/iOS)  |
-| - Vite, React, JS  |   | - Vite, React,JS |  |- Vite, React,JS |   | - React Native, TS  |
-+--------------------+   +------------------+  +-----------------+   +---------------------+
+                                    +-------------------+
+                                    |   PostgreSQL DB   |
+                                    |    (Supabase)     |
+                                    +--------+----------+
+                                             |
+                                      (Prisma ORM)
+                                             |
+                                             v
+                          +-----------------+------------------+
+                          |       backend (TypeScript Core)    |
+                          |   - Express, Socket.IO, JWT        |
+                          |   - Domain Modular Modules         |
+                          +-----------------+------------------+
+                                            ^
+                          (HTTP REST & Real-time WebSockets)
+                                            |
+              +-----------------------------+-----------------------------+
+              |                             |                             |
+              v                             v                             v
++-------------+------+   +-----------------+--+   +----+------------+   +---------+-----------+
+| frontend_customer  |   |  frontend_admin    |   | frontend_merchant|   |       mobile        |
+| (Customer PWA Web) |   |  (Admin Web)       |   | (Store Admin Web)|   | (Expo Android/iOS)  |
+| - Vite, React, JS  |   |  - Vite, React, JS |   | - Vite, React,JS |   | - React Native, TS  |
++--------------------+   +--------------------+   +-----------------+   +---------------------+
 ```
 
 ---
@@ -41,14 +40,57 @@ The project is structured as a **Monorepo Workspace** that separates TypeScript 
 ## 🚀 Live Demo & Deployment
 
 - **Customer Web Demo:** [https://ba-da-fu-ta-food.vercel.app](https://ba-da-fu-ta-food.vercel.app)
+- **Partner Web Demo:** [https://ba-da-fu-ta-partner.vercel.app](https://ba-da-fu-ta-partner.vercel.app)
+
+- **Admin Web Demo:** [https://ba-da-fu-ta-admin.vercel.app](https://ba-da-fu-ta-admin.vercel.app)
+
 - **Deployment Setup:** Frontend: Vercel | Backend: Render | Database: Supabase (PostgreSQL)
+
+### Admin
+
+| Field    | Value              |
+| -------- | ------------------ |
+| Email    | admin@badafuta.com |
+| Name     | Trương Quốc Bảo    |
+| Password | admin123           |
+
+### Partner (Merchant)
+
+| Tên                                | Email                    | Password |
+| ---------------------------------- | ------------------------ | -------- |
+| Jollibee Vietnam                   | jollibee@gmail.com       | 123456a  |
+| KFC Vietnam                        | kfc@gmail.com            | 123456a  |
+| McDonald's Vietnam                 | mcdonalds@gmail.com      | 123456a  |
+| Phê La                             | phela2@gmail.com         | 123456a  |
+| Bánh Mì Huynh Hoa                  | huynhhoa@gmail.com       | 123456a  |
+| Katinat Saigon Kafe                | katinat@gmail.com        | 123456a  |
+| Busan Korean Street Food           | busanbbq2@gmail.com      | 123456a  |
+| Phở Hà Nội                         | pho@gmail.com            | 123456a  |
+| Cơm Tấm Phúc Lộc Thọ               | phucloctho2@gmail.com    | 123456a  |
+| TukTuk Thai Bistro                 | tuktuk@gmail.com         | 123456a  |
+| Bò Né Lệ Hồng Phú Nhuận            | lehongphunhuan@gmail.com | 123456a  |
+| Hải Sản Gió Biển Nha Trang         | giobiennt@gmail.com      | 123456a  |
+| Seoul Tofu & BBQ                   | seoultofu2@gmail.com     | 123456a  |
+| Phúc Long                          | phuclong2@gmail.com      | 123456a  |
+| Nem Nướng Đặng Văn Quyên Nha Trang | dangvanquyennt@gmail.com | 123456a  |
+
+### Customer
+
+| Tên               | Email                        | Password |
+| ----------------- | ---------------------------- | -------- |
+| Phan Bảo Trâm     | baotram.phan@gmail.com       | 123456a  |
+| Nguyễn Minh Khang | khang.nguyen@gmail.com       | 123456a  |
+| Nguyễn Hoàng Yến  | hoangyen.nguyen@gmail.com    | 123456a  |
+| Đỗ Tuấn Kiệt      | tuankiet.do@gmail.com        | 123456a  |
+| Lê Thị Mai Anh    | maianh.le@gmail.com          | 123456a  |
+| Vũ Quỳnh Chi      | quynhchi.vu@gmail.com        | 123456a  |
+| Lê Minh Triết     | minhtriet.le@gmail.com       | 123456a  |
 
 ---
 
 ## 🛠️ Technology Stack
 
 - **Main Backend Service:** Node.js, TypeScript, Express, Prisma ORM, Docker
-- **Legacy/Secondary Service:** Node.js, JavaScript, Express
 - **Customer & Merchant Web Portals:** ReactJS, Vite, Tailwind CSS, Service Worker (PWA)
 - **Mobile Client:** React Native, Expo, Tailwind CSS
 - **Database:** PostgreSQL (Supabase)
@@ -735,7 +777,6 @@ docker-compose up --build
 
 ## 📝 Notes
 
-- The `server/` directory is a **legacy secondary service** using native PostgreSQL driver. It is kept for reference and backward compatibility.
 - The `sql/` directory contains raw SQL migration and seed scripts used during initial database setup.
 - For MoMo payment callbacks during local development, use [ngrok](https://ngrok.com/) to expose your local backend port and set the tunnel URL in `MOMO_IPN_URL`.
 - VNPay is configured for **sandbox** by default. Update `VNP_URL` and credentials for production.
