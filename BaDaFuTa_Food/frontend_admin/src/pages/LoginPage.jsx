@@ -7,7 +7,7 @@ import { Label } from '../components/ui/label';
 import { toast } from 'react-hot-toast';
 import { Shield, Lock, User } from 'lucide-react';
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || '/apiLocal';
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://badafuta.onrender.com/api';
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');

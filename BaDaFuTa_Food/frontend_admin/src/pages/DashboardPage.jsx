@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card'
 import { Link } from 'react-router-dom';
 import { toast } from 'react-hot-toast';
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || '/apiLocal';
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://badafuta.onrender.com/api';
 
 export default function DashboardPage() {
   const [statsData, setStatsData] = useState({

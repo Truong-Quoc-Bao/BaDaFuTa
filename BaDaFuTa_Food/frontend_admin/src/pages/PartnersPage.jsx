@@ -6,7 +6,7 @@ import { Card, CardContent } from '../components/ui/card';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'react-hot-toast';
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || '/apiLocal';
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://badafuta.onrender.com/api';
 
 export default function PartnersPage() {
   const navigate = useNavigate();

@@ -7,7 +7,7 @@ import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
 import { Store, User, Mail, Lock, Phone, MapPin } from 'lucide-react';
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || '/apiLocal';
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://badafuta.onrender.com/api';
 
 export default function AdminAddMerchantPage() {
   const navigate = useNavigate();
