@@ -36,7 +36,7 @@ import {
   AlertDialogTrigger,
 } from '../components/ui/alert-dialog';
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || '/apiLocal';
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://badafuta.onrender.com/api';
 
 export default function PartnersPage() {
   const navigate = useNavigate();

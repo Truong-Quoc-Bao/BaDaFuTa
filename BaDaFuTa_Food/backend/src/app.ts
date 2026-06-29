@@ -43,6 +43,7 @@ export const createApp = () => {
         'https://unnibbed-unthrilled-averi.ngrok-free.dev',
         'https://ba-da-fu-ta-food.vercel.app',
         'https://ba-da-fu-ta-partner.vercel.app',
+        'https://ba-da-fu-ta-admin.vercel.app/',
       ],
       methods: ['GET', 'POST', 'PUT', 'DELETE'],
       credentials: true,

@@ -9,6 +9,7 @@ export const initSocket = (server: HttpServer) => {
         'http://localhost:5174',
         'http://localhost:5175',
         'https://ba-da-fu-ta-partner.vercel.app',
+        'https://ba-da-fu-ta-admin.vercel.app/',
       ],
       methods: ['GET', 'POST'],
       credentials: true,

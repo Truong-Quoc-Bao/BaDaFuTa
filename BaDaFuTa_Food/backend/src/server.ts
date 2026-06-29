@@ -61,6 +61,7 @@ const io = new IOServer(httpServer, {
       'https://badafuta.onrender.com',
       'https://ba-da-fu-ta-food.vercel.app',
       'https://ba-da-fu-ta-partner.vercel.app',
+      'https://ba-da-fu-ta-admin.vercel.app/',
     ],
     methods: ['GET', 'POST'],
     credentials: true,
