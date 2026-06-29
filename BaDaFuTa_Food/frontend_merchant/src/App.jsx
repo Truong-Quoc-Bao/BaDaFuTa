@@ -1,6 +1,7 @@
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { MerchantLayout } from './components/MerchantLayout';
 import MerchantLoginPage from './pages/MerchantLoginPage';
+import MerchantRegisterPage from './pages/MerchantRegisterPage';
 import { MerchantOverviewPage } from './pages/MerchantOverviewPage';
 import { MerchantProvider, useMerchant } from './contexts/MerchantContext';
 import { MerchantOrderManagementPage } from './pages/MerchantOrderManagementPage';
@@ -24,7 +25,8 @@ function App() {
       <Routes>
         {/* Trang đăng nhập công khai */}
         <Route path="merchant/login" element={<MerchantLoginPage />} />
-
+        <Route path="merchant/register" element={<MerchantRegisterPage />} />
+        
         {/* Layout dùng chung và toàn bộ trang con được bảo vệ bởi Guard [1] */}
         <Route
           path="/"

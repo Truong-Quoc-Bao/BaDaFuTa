@@ -8,7 +8,7 @@ export class AdminRepository {
       return {
         id: 'admin_123',
         email: 'admin@badafuta.com',
-        name: 'Trần Quốc Bảo',
+        name: 'Trương Quốc Bảo',
         password: 'admin123',
         role: 'admin',
       };

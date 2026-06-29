@@ -110,9 +110,18 @@ export default function MerchantLoginPage() {
               </div>
             </form>
 
-            <div className="mt-8 text-center">
+            <div className="mt-6 text-center space-y-4">
+              <p className="text-sm text-gray-500">
+                Bạn chưa có tài khoản gian hàng?{' '}
+                <Link
+                  to="/merchant/register"
+                  className="text-orange-600 hover:text-orange-700 hover:underline font-bold"
+                >
+                  Đăng ký đối tác ngay
+                </Link>
+              </p>
               <Separator />
-              <p className="text-sm pt-6 text-gray-600 pb-6">
+              <p className="text-sm pt-2 text-gray-600">
                 Bạn là khách hàng?{' '}
                 <Link
                   to="/homepage"

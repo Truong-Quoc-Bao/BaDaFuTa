@@ -25,4 +25,15 @@ export const merchantService = {
       email: user.email, // Email dùng để đăng nhập
     };
   },
+
+  async registerMerchant(registerData: any) {
+    const saltRounds = 10;
+    // Mã hóa mật khẩu mong muốn của đối tác
+    const hashedPassword = await bcrypt.hash(registerData.password, saltRounds);
+
+    return await merchantRepository.registerNewMerchantBySelf({
+      ...registerData,
+      password: hashedPassword,
+    });
+  },
 };
