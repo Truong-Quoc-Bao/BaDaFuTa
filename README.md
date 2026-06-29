@@ -18,7 +18,7 @@ The project is structured as a **Monorepo Workspace** that separates TypeScript 
                | (Prisma ORM)                                      | (Native Pg Driver)
                v                                                   v
 +--------------+-------------------+               +---------------+-------------------+
-|  backend-clean (TypeScript Core)  |               |  server (Secondary JS Service)   |
+|     backend (TypeScript Core)     |               |  server (Secondary JS Service)   |
 |   - Express, Socket.IO, JWT       |               |   - Native controllers & routes   |
 |   - Domain Modular Modules        |               |   - Legacy flow helpers           |
 +--------------+-------------------+               +---------------+-------------------+
@@ -27,13 +27,13 @@ The project is structured as a **Monorepo Workspace** that separates TypeScript 
                +-------------------+-----------+-------------------+
                                    |           |
          +-------------------------+-----------+-------------------------+
-         |                                     |                         |
-         v                                     v                         v
-+--------+-----------+               +---------+-----------+   +---------+-----------+
-|      frontend      |               |  frontend_merchant  |   |       mobile        |
-| (Customer PWA Web) |               | (Store Admin Web)   |   | (Expo Android/iOS)  |
-| - Vite, React, JS  |               | - Vite, React, JS   |   | - React Native, TS  |
-+--------------------+               +---------------------+   +---------------------+
+         |                         |           |                         |
+         v                         v           v                         v
++--------+-----------+   +---------+--------+  +--------+--------+   +---------+-----------+
+| frontend_customer  |   | frontend_admin   |  |frontend_merchant|   |       mobile        |
+| (Customer PWA Web) |   | (Admin Web)      |  |(Store Admin Web)|   | (Expo Android/iOS)  |
+| - Vite, React, JS  |   | - Vite, React,JS |  |- Vite, React,JS |   | - React Native, TS  |
++--------------------+   +------------------+  +-----------------+   +---------------------+
 ```
 
 ---
@@ -77,7 +77,7 @@ BaDaFuTa_Food
 ├── .expo
 │   ├── README.md
 │   └── settings.json
-├── backend-clean
+├── backend
 │   ├── .env
 │   ├── .env.production
 │   ├── docker-compose.yml
@@ -97,6 +97,14 @@ BaDaFuTa_Food
 │   │   │   ├── error.middleware.ts
 │   │   │   └── logger.middleware.ts
 │   │   ├── modules
+│   │   │   ├── admin
+│   │   │   │   ├── admin.controller.ts
+│   │   │   │   ├── admin.repository.ts
+│   │   │   │   ├── admin.route.ts
+│   │   │   │   ├── admin.service.ts
+│   │   │   │   ├── admin.types.ts
+│   │   │   │   ├── admin.validation.ts
+│   │   │   │   └── index.ts
 │   │   │   ├── customer
 │   │   │   │   ├── customer-routes
 │   │   │   │   │   └── index.ts
@@ -221,7 +229,51 @@ BaDaFuTa_Food
 │   │   │   └── response.ts
 │   │   └── ws.ts
 │   └── tsconfig.json
-├── frontend
+├── frontend_admin
+│   ├── .env
+│   ├── README.md
+│   ├── eslint.config.js
+│   ├── index.html
+│   ├── package-lock.json
+│   ├── package.json
+│   ├── postcss.config.js
+│   ├── public
+│   │   ├── favicon.svg
+│   │   └── icons.svg
+│   ├── src
+│   │   ├── App.css
+│   │   ├── App.jsx
+│   │   ├── api
+│   │   │   └── api.js
+│   │   ├── assets
+│   │   │   ├── hero.png
+│   │   │   ├── react.svg
+│   │   │   └── vite.svg
+│   │   ├── components
+│   │   │   ├── AdminLayout.jsx
+│   │   │   ├── ProtectedRoute.jsx
+│   │   │   └── ui
+│   │   │       ├── alert-dialog.jsx
+│   │   │       ├── button.jsx
+│   │   │       ├── card.jsx
+│   │   │       ├── dialog.jsx
+│   │   │       ├── input.jsx
+│   │   │       ├── label.jsx
+│   │   │       └── utils.js
+│   │   ├── index.css
+│   │   ├── main.jsx
+│   │   ├── pages
+│   │   │   ├── AdminAddMerchantPage.jsx
+│   │   │   ├── DashboardPage.jsx
+│   │   │   ├── LoginPage.jsx
+│   │   │   ├── PartnersPage.jsx
+│   │   │   └── UsersPage.jsx
+│   │   └── utils
+│   │       └── utils.js
+│   ├── tailwind.config.js
+│   ├── vercel.json
+│   └── vite.config.js
+├── frontend_customer
 │   ├── .env
 │   ├── cert
 │   │   ├── cert.pem
@@ -375,7 +427,7 @@ BaDaFuTa_Food
 │   │   │       ├── switch.jsx
 │   │   │       ├── table.jsx
 │   │   │       ├── tabs.jsx
-│   │   │       └── textarea.jsx
+│   │   │       ├── textarea.jsx
 │   │   │       └── utils.js
 │   │   ├── contexts
 │   │   │   └── MerchantContext.jsx
@@ -551,7 +603,7 @@ BaDaFuTa_Food
 
 > ⚠️ **Security Notice:** Never commit real credentials to version control. Copy the `.env.example` files below and fill in your own values.
 
-### `backend-clean/.env`
+### `backend/.env`
 
 ```env
 # Server
@@ -601,7 +653,7 @@ MOMO_IPN_URL=https://your-ngrok-url.ngrok-free.dev/api/momo/callback
 GOOGLE_CLIENT_ID=your_google_client_id
 ```
 
-### `frontend/.env`
+### `frontend_customer/.env`
 
 ```env
 VITE_API_URL=https://your-backend.onrender.com
@@ -611,6 +663,12 @@ VITE_GOOGLE_CLIENT_ID=your_google_client_id
 
 # Facebook OAuth
 VITE_FACEBOOK_APP_ID=your_facebook_app_id
+```
+
+### `frontend_admin/.env`
+
+```env
+VITE_API_URL=https://your-backend.onrender.com
 ```
 
 ### `frontend_merchant/.env`
@@ -623,24 +681,32 @@ VITE_API_URL=https://your-backend.onrender.com
 
 ## ⚙️ Local Setup & Run Commands
 
-### 1. Start Main Backend (`backend-clean`)
+### 1. Start Main Backend (`backend`)
 
 ```bash
-cd backend-clean
+cd backend
 npm install
 npx prisma db push
 npm run dev
 ```
 
-### 2. Start Customer Web App (`frontend`)
+### 2. Start Customer Web App (`frontend_customer`)
 
 ```bash
-cd ../frontend
+cd ../frontend_customer
 npm install
 npm run dev
 ```
 
-### 3. Start Merchant Dashboard (`frontend_merchant`)
+### 3. Start Admin Dashboard (`frontend_admin`)
+
+```bash
+cd ../frontend_admin
+npm install
+npm run dev
+```
+
+### 4. Start Merchant Dashboard (`frontend_merchant`)
 
 ```bash
 cd ../frontend_merchant
@@ -648,7 +714,7 @@ npm install
 npm run dev
 ```
 
-### 4. Start Expo Mobile Application (`mobile`)
+### 5. Start Expo Mobile Application (`mobile`)
 
 ```bash
 cd ../mobile
@@ -661,7 +727,7 @@ npx expo start
 ## 🐳 Docker (Backend)
 
 ```bash
-cd backend-clean
+cd backend
 docker-compose up --build
 ```
 
